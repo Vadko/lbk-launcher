@@ -1,5 +1,5 @@
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from 'lucide-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useEffectEvent, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { t } from '@/shared/i18n/i18n';
 
@@ -14,14 +14,13 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const isOpen = openIndex !== null;
 
-  const close = useCallback(() => setOpenIndex(null), []);
-  const step = useCallback(
-    (direction: -1 | 1) =>
-      setOpenIndex((current) =>
-        current === null ? current : (current + direction + images.length) % images.length
-      ),
-    [images.length]
-  );
+  const close = () => setOpenIndex(null);
+  const step = (direction: -1 | 1) =>
+    setOpenIndex((current) =>
+      current === null ? current : (current + direction + images.length) % images.length
+    );
+  // The keydown listener reads the current image count without resubscribing
+  const stepByKey = useEffectEvent(step);
 
   useEffect(() => {
     if (!isOpen) {
@@ -31,14 +30,14 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
       if (e.key === 'Escape') {
         close();
       } else if (e.key === 'ArrowLeft') {
-        step(-1);
+        stepByKey(-1);
       } else if (e.key === 'ArrowRight') {
-        step(1);
+        stepByKey(1);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, close, step]);
+  }, [isOpen]);
 
   if (images.length === 0) {
     return null;

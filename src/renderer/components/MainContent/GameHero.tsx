@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bookmark, BookmarkCheck } from 'lucide';
 import { Share2Icon } from 'lucide-react';
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
@@ -60,14 +60,14 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
   const [logoError, setLogoError] = useState(false);
   const [shouldRoundLogo, setShouldRoundLogo] = useState(false);
 
-  const { toggleFavoriteGame, isFavoriteGame } = useSettingsStore();
-  const isFavorite = game ? isFavoriteGame(game.id) : false;
+  const toggleFavoriteGame = useSettingsStore((state) => state.toggleFavoriteGame);
+  const isFavorite = useSettingsStore((state) => !!game && state.isFavoriteGame(game.id));
   // Toggle favorite handler
-  const handleToggleFavorite = useCallback(() => {
+  const handleToggleFavorite = () => {
     if (game) {
       toggleFavoriteGame(game.id, game.name);
     }
-  }, [game, toggleFavoriteGame]);
+  };
 
   // Reset state when game changes
   const [prevGameId, setPrevGameId] = useState(game.id);
@@ -80,10 +80,10 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
   }
 
   // Check transparency when the logo loads
-  const handleLogoLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+  const handleLogoLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const hasTransparency = checkImageHasTransparentCorners(e.currentTarget);
     setShouldRoundLogo(!hasTransparency);
-  }, []);
+  };
 
   const showBanner = bannerUrl && !bannerError;
   const showLogo = logoUrl && !logoError;

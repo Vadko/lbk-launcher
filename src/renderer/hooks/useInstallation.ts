@@ -80,12 +80,8 @@ export function useInstallation({
   isCheckingInstallation,
   onFirstInstallComplete,
 }: UseInstallationParams): UseInstallationResult {
-  const {
-    getInstallationProgress,
-    setInstallationProgress,
-    clearInstallationProgress,
-    checkInstallationStatus,
-  } = useStore();
+  const { setInstallationProgress, clearInstallationProgress, checkInstallationStatus } =
+    useStore();
 
   const { showModal } = useModalStore();
   const { showConfirm } = useConfirmStore();
@@ -112,10 +108,10 @@ export function useInstallation({
   } = useActionPhase();
   const installFlowRef = useRef(false);
 
-  const closeInstallOptions = useCallback(() => {
+  const closeInstallOptions = () => {
     setShowInstallOptions(false);
     resetInstallPrecheck();
-  }, [resetInstallPrecheck]);
+  };
 
   useEffect(() => {
     installFlowRef.current = false;
@@ -125,9 +121,9 @@ export function useInstallation({
 
   const isWorkshopChangePending = useIsWorkshopChangePending(selectedGame?.id);
 
-  const gameProgress = selectedGame
-    ? getInstallationProgress(selectedGame.id)
-    : undefined;
+  const gameProgress = useStore((state) =>
+    selectedGame ? state.getInstallationProgress(selectedGame.id) : undefined
+  );
   const isInstalling = gameProgress?.isInstalling || false;
   const isUninstalling = gameProgress?.isUninstalling || false;
   const isPaused = gameProgress?.isPaused || false;
@@ -426,118 +422,116 @@ export function useInstallation({
     setInstallationProgress,
   ]);
 
-  const handleConflictingTranslation = useCallback(
-    async (conflict: ConflictingTranslation): Promise<boolean> =>
-      new Promise((resolve) => {
-        const teamInfo = conflict.team ? ` (${conflict.team})` : '';
-        showConfirm({
-          title: t('installConflict.title'),
-          message: t('installConflict.message', {
-            name: conflict.gameName,
-            team: teamInfo,
-            version: conflict.version,
-          }),
-          confirmText: t('installConflict.confirm'),
-          cancelText: t('common.cancel'),
-          onConfirm: async () => {
-            try {
-              // Get conflicting game info
-              const [conflictingGame] = await window.electronAPI.fetchGamesByIds([
-                conflict.gameId,
-              ]);
+  const handleConflictingTranslation = async (
+    conflict: ConflictingTranslation
+  ): Promise<boolean> =>
+    new Promise((resolve) => {
+      const teamInfo = conflict.team ? ` (${conflict.team})` : '';
+      showConfirm({
+        title: t('installConflict.title'),
+        message: t('installConflict.message', {
+          name: conflict.gameName,
+          team: teamInfo,
+          version: conflict.version,
+        }),
+        confirmText: t('installConflict.confirm'),
+        cancelText: t('common.cancel'),
+        onConfirm: async () => {
+          try {
+            // Get conflicting game info
+            const [conflictingGame] = await window.electronAPI.fetchGamesByIds([
+              conflict.gameId,
+            ]);
 
-              if (!conflictingGame) {
-                showModal({
-                  title: t('common.error'),
-                  message: t('installConflict.infoNotFound'),
-                  type: 'error',
-                });
-                resolve(false);
-                return;
-              }
-
-              // Uninstall conflicting translation
-              const result =
-                await window.electronAPI.uninstallTranslation(conflictingGame);
-
-              if (!result.success) {
-                showModal({
-                  title: t('common.uninstallError'),
-                  message: result.error?.message || t('installConflict.removeFailed'),
-                  type: 'error',
-                });
-                resolve(false);
-                return;
-              }
-
-              // Track removal of conflicting translation
-              trackEvent('Actions', {
-                'Game Id': conflict.gameId,
-                'Game Name': conflict.gameName,
-                Team: conflict.team || 'Unknown',
-                Type: 'delete',
-              });
-
-              // Refresh installed translations cache
-              await useStore.getState().loadInstalledGamesFromSystem();
-
-              resolve(true);
-            } catch (error) {
-              console.error('Error removing conflicting translation:', error);
+            if (!conflictingGame) {
               showModal({
                 title: t('common.error'),
-                message:
-                  error instanceof Error
-                    ? error.message
-                    : t('installConflict.removeFailed'),
+                message: t('installConflict.infoNotFound'),
                 type: 'error',
               });
               resolve(false);
+              return;
             }
-          },
-          onCancel: () => {
+
+            // Uninstall conflicting translation
+            const result = await window.electronAPI.uninstallTranslation(conflictingGame);
+
+            if (!result.success) {
+              showModal({
+                title: t('common.uninstallError'),
+                message: result.error?.message || t('installConflict.removeFailed'),
+                type: 'error',
+              });
+              resolve(false);
+              return;
+            }
+
+            // Track removal of conflicting translation
+            trackEvent('Actions', {
+              'Game Id': conflict.gameId,
+              'Game Name': conflict.gameName,
+              Team: conflict.team || 'Unknown',
+              Type: 'delete',
+            });
+
+            // Refresh installed translations cache
+            await useStore.getState().loadInstalledGamesFromSystem();
+
+            resolve(true);
+          } catch (error) {
+            console.error('Error removing conflicting translation:', error);
+            showModal({
+              title: t('common.error'),
+              message:
+                error instanceof Error
+                  ? error.message
+                  : t('installConflict.removeFailed'),
+              type: 'error',
+            });
             resolve(false);
-          },
-        });
-      }),
-    [showConfirm, showModal]
-  );
+          }
+        },
+        onCancel: () => {
+          resolve(false);
+        },
+      });
+    });
 
-  const handleInstall = useCallback(
-    async (customGamePath?: string) => {
-      if (
-        !selectedGame ||
-        isInstalling ||
-        isCheckingInstallation ||
-        isInstallPrecheckPending ||
-        installFlowRef.current
-      ) {
-        return;
-      }
+  const handleInstall = async (customGamePath?: string) => {
+    if (
+      !selectedGame ||
+      isInstalling ||
+      isCheckingInstallation ||
+      isInstallPrecheckPending ||
+      installFlowRef.current
+    ) {
+      return;
+    }
 
-      if (!isTranslationInstallable(selectedGame.status)) {
-        return;
-      }
+    if (!isTranslationInstallable(selectedGame.status)) {
+      return;
+    }
 
-      if (!isOnline) {
-        showModal({
-          title: t('installNetwork.offlineTitle'),
-          message: t('installNetwork.offlineMessage'),
-          type: 'error',
-        });
-        return;
-      }
+    if (!isOnline) {
+      showModal({
+        title: t('installNetwork.offlineTitle'),
+        message: t('installNetwork.offlineMessage'),
+        type: 'error',
+      });
+      return;
+    }
 
-      if (!window.electronAPI) {
-        showModal({
-          title: t('installUnavailable.title'),
-          message: t('installUnavailable.message'),
-          type: 'error',
-        });
-        return;
-      }
+    if (!window.electronAPI) {
+      showModal({
+        title: t('installUnavailable.title'),
+        message: t('installUnavailable.message'),
+        type: 'error',
+      });
+      return;
+    }
 
-      installFlowRef.current = true;
+    installFlowRef.current = true;
+    const precheck = async () => {
       try {
         const conflict = await runInstallPrecheck(
           () => window.electronAPI.getConflictingTranslation(selectedGame),
@@ -565,154 +559,133 @@ export function useInstallation({
         setShowInstallOptions(true);
       } catch (error) {
         console.error('[useInstallation] Install pre-check failed:', error);
-      } finally {
-        installFlowRef.current = false;
       }
-    },
-    [
-      selectedGame,
-      isInstalling,
-      isCheckingInstallation,
-      isOnline,
-      showModal,
-      handleConflictingTranslation,
-      isInstallPrecheckPending,
-      runInstallPrecheck,
-      resetInstallPrecheck,
-    ]
-  );
+    };
+    await precheck().finally(() => {
+      installFlowRef.current = false;
+    });
+  };
 
-  const handleInstallOptionsConfirm = useCallback(
-    async (installOptions: InstallOptions, removeOptions: InstallComponentChanges) => {
-      if (!selectedGame) {
-        return;
-      }
+  const handleInstallOptionsConfirm = async (
+    installOptions: InstallOptions,
+    removeOptions: InstallComponentChanges
+  ) => {
+    if (!selectedGame) {
+      return;
+    }
 
-      // First, remove components if requested
-      if (removeOptions.removeVoice || removeOptions.removeAchievements) {
-        try {
-          setInstallationProgress(selectedGame.id, {
-            isInstalling: true,
-            statusMessage: t('installComponents.removing'),
-          });
+    // First, remove components if requested
+    if (removeOptions.removeVoice || removeOptions.removeAchievements) {
+      try {
+        setInstallationProgress(selectedGame.id, {
+          isInstalling: true,
+          statusMessage: t('installComponents.removing'),
+        });
 
-          const result = await window.electronAPI.removeComponents(selectedGame, {
-            voice: removeOptions.removeVoice,
-            achievements: removeOptions.removeAchievements,
-          });
+        const result = await window.electronAPI.removeComponents(selectedGame, {
+          voice: removeOptions.removeVoice,
+          achievements: removeOptions.removeAchievements,
+        });
 
-          if (!result.success) {
-            showModal({
-              title: t('common.uninstallError'),
-              message: result.error?.message || t('installComponents.removeFailed'),
-              type: 'error',
-            });
-            clearInstallationProgress(selectedGame.id);
-            return;
-          }
-
-          await checkInstallationStatus(selectedGame.id, selectedGame);
-        } catch (error) {
-          console.error('Error removing components:', error);
+        if (!result.success) {
           showModal({
             title: t('common.uninstallError'),
-            message: error instanceof Error ? error.message : t('common.unknownError'),
+            message: result.error?.message || t('installComponents.removeFailed'),
             type: 'error',
           });
           clearInstallationProgress(selectedGame.id);
           return;
         }
-      }
 
-      // If only removing components (no new downloads needed), we're done
-      const needsDownload =
-        !installationInfo ||
-        installOptions.installText ||
-        (installOptions.installVoice &&
-          !installationInfo?.components?.voice?.installed) ||
-        (installOptions.installAchievements &&
-          !installationInfo?.components?.achievements?.installed);
-
-      let artwork: SteamArtworkChangeResult | null = null;
-      // Set only when nothing else is installed: an install applies the artwork choice itself.
-      if (!needsDownload && removeOptions.updateSteamArtwork) {
-        setInstallationProgress(selectedGame.id, {
-          isInstalling: true,
-          statusMessage: installOptions.installSteamArtwork
-            ? t('installSteamIntegration.artwork')
-            : t('installSteamIntegration.artworkRevert'),
-        });
-        artwork = await window.electronAPI
-          .setSteamArtwork(selectedGame, installOptions.installSteamArtwork)
-          .catch((error: unknown) => ({
-            success: false as const,
-            error: errorMessage(error),
-          }));
-      }
-
-      const removed = removeOptions.removeVoice || removeOptions.removeAchievements;
-      if (!needsDownload && (removed || artwork)) {
-        clearInstallationProgress(selectedGame.id);
-        const artworkFailed = artwork?.success === false;
+        await checkInstallationStatus(selectedGame.id, selectedGame);
+      } catch (error) {
+        console.error('Error removing components:', error);
         showModal({
-          title: artworkFailed
-            ? t('common.error')
-            : removed
-              ? t('installComponents.removedTitle')
-              : t('installComponents.artworkTitle'),
-          message: [
-            removed && t('installComponents.removedMessage'),
-            artwork?.success &&
-              t('installComponents.artworkMessage', {
-                context: installOptions.installSteamArtwork ? 'on' : 'off',
-              }),
-            artwork?.success &&
-              artwork.visibleAfterSteamStart &&
-              t('installComponents.artworkAfterSteamStart'),
-            artwork?.success === false && artwork.error,
-          ]
-            .filter(G.isString)
-            .join('\n\n'),
-          type: artworkFailed ? 'error' : 'success',
+          title: t('common.uninstallError'),
+          message: error instanceof Error ? error.message : t('common.unknownError'),
+          type: 'error',
         });
+        clearInstallationProgress(selectedGame.id);
         return;
       }
+    }
 
-      // Proceed with installation if needed
-      const hasInstaller =
-        selectedGame.installation_file_windows_path ||
-        selectedGame.installation_file_linux_path;
+    // If only removing components (no new downloads needed), we're done
+    const needsDownload =
+      !installationInfo ||
+      installOptions.installText ||
+      (installOptions.installVoice && !installationInfo?.components?.voice?.installed) ||
+      (installOptions.installAchievements &&
+        !installationInfo?.components?.achievements?.installed);
 
-      if (hasInstaller) {
-        // Which file runs (and whether via Proton) is known only after extraction.
-        showConfirm({
-          title: t('runInstaller.exeTitle'),
-          message: t('runInstaller.confirmMessage'),
-          confirmText: t('runInstaller.confirm'),
-          cancelText: t('common.cancel'),
-          onConfirm: () => {
-            void performInstallation(pendingInstallPath, installOptions);
-          },
-        });
-        return;
-      }
+    let artwork: SteamArtworkChangeResult | null = null;
+    // Set only when nothing else is installed: an install applies the artwork choice itself.
+    if (!needsDownload && removeOptions.updateSteamArtwork) {
+      setInstallationProgress(selectedGame.id, {
+        isInstalling: true,
+        statusMessage: installOptions.installSteamArtwork
+          ? t('installSteamIntegration.artwork')
+          : t('installSteamIntegration.artworkRevert'),
+      });
+      artwork = await window.electronAPI
+        .setSteamArtwork(selectedGame, installOptions.installSteamArtwork)
+        .catch((error: unknown) => ({
+          success: false as const,
+          error: errorMessage(error),
+        }));
+    }
 
-      await performInstallation(pendingInstallPath, installOptions);
-    },
-    [
-      selectedGame,
-      pendingInstallPath,
-      performInstallation,
-      showConfirm,
-      showModal,
-      installationInfo,
-      setInstallationProgress,
-      clearInstallationProgress,
-      checkInstallationStatus,
-    ]
-  );
+    const removed = removeOptions.removeVoice || removeOptions.removeAchievements;
+    if (!needsDownload && (removed || artwork)) {
+      clearInstallationProgress(selectedGame.id);
+      const artworkFailed = artwork?.success === false;
+      showModal({
+        title: artworkFailed
+          ? t('common.error')
+          : removed
+            ? t('installComponents.removedTitle')
+            : t('installComponents.artworkTitle'),
+        message: [
+          removed && t('installComponents.removedMessage'),
+          artwork?.success &&
+            t('installComponents.artworkMessage', {
+              context: installOptions.installSteamArtwork ? 'on' : 'off',
+            }),
+          artwork?.success &&
+            artwork.visibleAfterSteamStart &&
+            t('installComponents.artworkAfterSteamStart'),
+          artwork?.success === false && artwork.error,
+        ]
+          .filter(G.isString)
+          .join('\n\n'),
+        type: artworkFailed ? 'error' : 'success',
+      });
+      return;
+    }
 
-  const handleUninstall = useCallback(async () => {
+    // Proceed with installation if needed
+    const hasInstaller =
+      selectedGame.installation_file_windows_path ||
+      selectedGame.installation_file_linux_path;
+
+    if (hasInstaller) {
+      // Which file runs (and whether via Proton) is known only after extraction.
+      showConfirm({
+        title: t('runInstaller.exeTitle'),
+        message: t('runInstaller.confirmMessage'),
+        confirmText: t('runInstaller.confirm'),
+        cancelText: t('common.cancel'),
+        onConfirm: () => {
+          void performInstallation(pendingInstallPath, installOptions);
+        },
+      });
+      return;
+    }
+
+    await performInstallation(pendingInstallPath, installOptions);
+  };
+
+  const handleUninstall = async () => {
     if (!selectedGame || !installationInfo) {
       return;
     }
@@ -728,61 +701,55 @@ export function useInstallation({
       confirmText: t('uninstall.confirm'),
       cancelText: t('common.cancel'),
       onConfirm: async () => {
-        try {
-          setInstallationProgress(selectedGame.id, {
-            isUninstalling: true,
-          });
+        const uninstall = async () => {
+          try {
+            setInstallationProgress(selectedGame.id, {
+              isUninstalling: true,
+            });
 
-          const result: InstallResult =
-            await window.electronAPI.uninstallTranslation(selectedGame);
+            const result: InstallResult =
+              await window.electronAPI.uninstallTranslation(selectedGame);
 
-          if (!result.success && result.error) {
+            if (!result.success && result.error) {
+              showModal({
+                title: t('common.uninstallError'),
+                message: result.error.message,
+                type: 'error',
+              });
+              return;
+            }
+
+            // Track uninstallation event
+            trackEvent('Actions', {
+              'Game Id': selectedGame.id,
+              'Game Name': selectedGame.name,
+              Team: selectedGame.team || 'Unknown',
+              Type: 'delete',
+            });
+
+            // Clear notified version so future installs will get notifications
+            useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
+
+            showModal({
+              title: t('uninstall.doneTitle'),
+              message: t('uninstall.doneMessage', { name: selectedGame.name }),
+              type: 'success',
+            });
+          } catch (error) {
+            console.error('Uninstall error:', error);
             showModal({
               title: t('common.uninstallError'),
-              message: result.error.message,
+              message: error instanceof Error ? error.message : t('common.unknownError'),
               type: 'error',
             });
-            return;
           }
-
-          // Track uninstallation event
-          trackEvent('Actions', {
-            'Game Id': selectedGame.id,
-            'Game Name': selectedGame.name,
-            Team: selectedGame.team || 'Unknown',
-            Type: 'delete',
-          });
-
-          // Clear notified version so future installs will get notifications
-          useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
-
-          showModal({
-            title: t('uninstall.doneTitle'),
-            message: t('uninstall.doneMessage', { name: selectedGame.name }),
-            type: 'success',
-          });
-        } catch (error) {
-          console.error('Uninstall error:', error);
-          showModal({
-            title: t('common.uninstallError'),
-            message: error instanceof Error ? error.message : t('common.unknownError'),
-            type: 'error',
-          });
-        } finally {
-          clearInstallationProgress(selectedGame.id);
-        }
+        };
+        await uninstall().finally(() => clearInstallationProgress(selectedGame.id));
       },
     });
-  }, [
-    selectedGame,
-    installationInfo,
-    setInstallationProgress,
-    clearInstallationProgress,
-    showModal,
-    showConfirm,
-  ]);
+  };
 
-  const handlePauseDownload = useCallback(async () => {
+  const handlePauseDownload = async () => {
     if (!selectedGame || !isInstalling || isPaused) {
       return;
     }
@@ -805,9 +772,9 @@ export function useInstallation({
         type: 'error',
       });
     }
-  }, [selectedGame, isInstalling, isPaused, setInstallationProgress, showModal]);
+  };
 
-  const handleResumeDownload = useCallback(async () => {
+  const handleResumeDownload = async () => {
     if (!selectedGame || !isPaused) {
       return;
     }
@@ -832,15 +799,9 @@ export function useInstallation({
       });
       clearInstallationProgress(selectedGame.id);
     }
-  }, [
-    selectedGame,
-    isPaused,
-    setInstallationProgress,
-    clearInstallationProgress,
-    showModal,
-  ]);
+  };
 
-  const handleCancelDownload = useCallback(async () => {
+  const handleCancelDownload = async () => {
     if (!selectedGame) {
       return;
     }
@@ -857,10 +818,10 @@ export function useInstallation({
     }
 
     clearInstallationProgress(selectedGame.id);
-  }, [selectedGame, isPaused, isInstalling, clearInstallationProgress]);
+  };
 
   // The label is phase-independent: the icon and the progress card show how the install is going
-  const getInstallButtonText = useCallback((): string => {
+  const getInstallButtonText = (): string => {
     if (!isOnline) {
       return t('installButton.offline');
     }
@@ -880,16 +841,9 @@ export function useInstallation({
       return t('installButton.reload', { version: installationInfo.version });
     }
     return t('installButton.install');
-  }, [
-    isOnline,
-    isPlanned,
-    isTechImprovement,
-    isUpdateAvailable,
-    selectedGame?.version,
-    installationInfo,
-  ]);
+  };
 
-  const handleRerunInstaller = useCallback(async () => {
+  const handleRerunInstaller = async () => {
     const installerPath = installationInfo?.installerPath;
     if (!selectedGame || !installerPath) {
       console.warn('[useInstallation] No installer path available');
@@ -929,14 +883,7 @@ export function useInstallation({
         type: 'error',
       });
     }
-  }, [
-    selectedGame,
-    installationInfo,
-    showModal,
-    checkInstallationStatus,
-    isRerunPending,
-    runRerunInstaller,
-  ]);
+  };
 
   return {
     isInstalling,

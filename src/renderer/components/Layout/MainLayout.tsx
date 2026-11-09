@@ -1,5 +1,5 @@
 import { AnimatePresence, MotionConfig } from 'framer-motion';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import mainBg from '../../../../resources/main-bg.webp';
 import { useDeepLink } from '../../hooks/useDeepLink';
@@ -60,8 +60,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const steamPluginSetupOpen = useSteamPluginSetupStore((s) => s.open);
   const reviewAuthorPickerOpen = useReviewAuthorStore((s) => s.isPickerOpen);
 
-  const openHistory = useCallback(() => setShowNotificationHistory(true), []);
-  const closeHistory = useCallback(() => setShowNotificationHistory(false), []);
+  const openHistory = () => setShowNotificationHistory(true);
+  const closeHistory = () => setShowNotificationHistory(false);
 
   // Handle deep link navigation to a translation
   useDeepLink();

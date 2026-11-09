@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutationState } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { FeedbackType } from '@/shared/types';
 import type { ReviewFocus } from '../utils/readReviewLink';
 import {
@@ -31,13 +31,10 @@ export function useGameReviews(
 
   const { fetchNextPage } = query;
   // A next page would cancel the refetch that brings a write's answer, which then never lands
-  const loadNextPage = useCallback(
-    () => fetchNextPage({ cancelRefetch: false }),
-    [fetchNextPage]
-  );
+  const loadNextPage = () => fetchNextPage({ cancelRefetch: false });
 
   const { data: pages } = query;
-  const data = useMemo(() => pages && withReviewWrites(pages, writes), [pages, writes]);
+  const data = pages && withReviewWrites(pages, writes);
 
   return { query, data, loadNextPage };
 }

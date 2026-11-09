@@ -1,5 +1,6 @@
 import { BellIcon, StarIcon, UsersIcon } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { t } from '@/shared/i18n/i18n';
 import { teamMembers } from '@/shared/team-members';
 import { getSpecialTranslatorInfo } from '../../constants/specialTranslators';
@@ -24,9 +25,14 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
   gameName,
   team,
 }) => {
-  const { subscribeToTeam, isSubscribedToTeam } = useSubscriptionsStore();
+  const { subscribeToTeam } = useSubscriptionsStore();
 
+  // The compiler cannot memoize this across the useState calls below, so the useMemo stays
   const authors = useMemo(() => teamMembers(team), [team]);
+  const subscribedAuthors = useSubscriptionsStore(
+    useShallow((state) => authors.filter((author) => state.isSubscribedToTeam(author)))
+  );
+  const isSubscribedToTeam = (author: string) => subscribedAuthors.includes(author);
 
   // Track selected authors (all selected by default, except already subscribed)
   const [selectedAuthors, setSelectedAuthors] = useState<Set<string>>(new Set());
@@ -44,10 +50,9 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
   }
 
   // Count how many authors are not yet subscribed
-  const unsubscribedCount = useMemo(
-    () => authors.filter((author) => !isSubscribedToTeam(author)).length,
-    [authors, isSubscribedToTeam]
-  );
+  const unsubscribedCount = authors.filter(
+    (author) => !isSubscribedToTeam(author)
+  ).length;
 
   const toggleAuthor = (author: string) => {
     setSelectedAuthors((prev) => {

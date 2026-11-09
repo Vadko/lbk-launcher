@@ -1,6 +1,6 @@
 import supportBox from '@resources/images/promo-support-box.svg';
 import { HeartIcon } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { BannerData } from '@/main/db/banners-api';
 import { t } from '@/shared/i18n/i18n';
 import { usePromoModalStore } from '../../store/usePromoModalStore';
@@ -73,43 +73,42 @@ export const PromoModal: React.FC = () => {
   const viewImpressionRecorded = useRef(false);
 
   // Fetch banner data
-  const fetchBanner = useCallback(async () => {
+  const fetchBanner = async () => {
     if (!window.electronAPI?.fetchPromoBanner) {
       return null;
     }
     setIsLoading(true);
-
-    try {
-      const bannerData = await window.electronAPI.fetchPromoBanner();
-      setBanner(bannerData);
-      return bannerData;
-    } catch (error) {
-      console.error('[PromoModal] Error fetching banner:', error);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    return window.electronAPI
+      .fetchPromoBanner()
+      .then((bannerData) => {
+        setBanner(bannerData);
+        return bannerData;
+      })
+      .catch((error: unknown) => {
+        console.error('[PromoModal] Error fetching banner:', error);
+        return null;
+      })
+      .finally(() => setIsLoading(false));
+  };
 
   // Record banner impression
   const bannerId = banner?.id;
-  const recordImpression = useCallback(
-    async (impressionType: 'view' | 'click') => {
-      if (!bannerId || !window.electronAPI?.recordPromoBannerImpression) {
-        return;
-      }
+  const recordImpression = async (impressionType: 'view' | 'click') => {
+    if (!bannerId || !window.electronAPI?.recordPromoBannerImpression) {
+      return;
+    }
 
-      try {
-        await window.electronAPI.recordPromoBannerImpression({
-          campaignId: bannerId,
-          impressionType,
-        });
-      } catch (error) {
-        console.error('[PromoModal] Error recording impression:', error);
-      }
-    },
-    [bannerId]
-  );
+    try {
+      await window.electronAPI.recordPromoBannerImpression({
+        campaignId: bannerId,
+        impressionType,
+      });
+    } catch (error) {
+      console.error('[PromoModal] Error recording impression:', error);
+    }
+  };
+  // The view effect already re-runs when the banner changes, so this keeps the call out of its deps
+  const recordViewImpression = useEffectEvent(() => recordImpression('view'));
 
   // Promo modal initialization - runs only once on mount
   useEffect(() => {
@@ -158,7 +157,7 @@ export const PromoModal: React.FC = () => {
       clearTimeout(timer);
       unsubscribe();
     };
-  }, [shouldShowModal, openModal, fetchBanner, checkAndResetNeverShow]);
+  }, [shouldShowModal, openModal, checkAndResetNeverShow]);
   // Record view impression when modal opens - only once per session
   useEffect(() => {
     if (!isOpen) {
@@ -175,7 +174,7 @@ export const PromoModal: React.FC = () => {
     viewImpressionRecorded.current = true;
 
     if (banner) {
-      recordImpression('view');
+      recordViewImpression();
     }
     trackEvent('ads-placement', {
       ...(banner?.id ? { 'Banner Id': banner.id } : {}),
@@ -183,7 +182,7 @@ export const PromoModal: React.FC = () => {
       Type: 'pop-up_',
       Action: 'view',
     });
-  }, [isOpen, banner, recordImpression]);
+  }, [isOpen, banner]);
 
   const handleClose = () => {
     trackEvent('ads-placement', {
@@ -195,7 +194,7 @@ export const PromoModal: React.FC = () => {
     closeModal(dontShowAgain);
   };
 
-  const handleClick = useCallback(async () => {
+  const handleClick = async () => {
     // Record click impression first
     if (banner) {
       await recordImpression('click');
@@ -217,7 +216,7 @@ export const PromoModal: React.FC = () => {
 
     setDontShowAgain(true);
     closeModal(true);
-  }, [banner, closeModal, recordImpression]);
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} styleModal="promo">

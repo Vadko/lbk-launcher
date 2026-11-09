@@ -37,7 +37,7 @@ export function useReelSounds(
         current.spinning.add(reel);
       }
       if (current.spinning.size > 0) {
-        current.whirr ??= startReelWhirr();
+        current.whirr = current.whirr ?? startReelWhirr();
       }
     }
     wasMoving.current = anyMoving;

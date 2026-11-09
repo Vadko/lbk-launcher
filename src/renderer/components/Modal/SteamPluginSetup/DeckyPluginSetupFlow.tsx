@@ -1,6 +1,6 @@
 import { useMachine } from '@xstate/react';
 import { Save } from 'lucide';
-import React, { useCallback, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { fromPromise } from 'xstate';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
@@ -54,10 +54,10 @@ export const DeckyPluginSetupFlow: React.FC = () => {
     send({ type: 'HOST_STATE', state });
   }, [send, state]);
 
-  const handleDecline = useCallback(() => {
+  const handleDecline = () => {
     declineOffer();
     close();
-  }, [close, declineOffer]);
+  };
 
   const loaderView = (stage: LoaderStage) =>
     deckyLoaderView({

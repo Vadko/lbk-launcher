@@ -12,6 +12,7 @@ type PageView = 'main' | 'trending';
 export const MainPage: React.FC = () => {
   const [currentView, setCurrentView] = useState<PageView>('main');
   const ContainerRef = useRef<HTMLDivElement>(null);
+  const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
 
   // Scroll to top when opening trending page
   useEffect(() => {
@@ -45,7 +46,7 @@ export const MainPage: React.FC = () => {
     <div
       ref={ContainerRef}
       data-gamepad-main-content
-      className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${useGamepadModeStore.getState().isGamepadMode && 'py-4'} overflow-y-auto justify-center custom-scrollbar`}
+      className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${isGamepadMode ? 'py-4' : ''} overflow-y-auto justify-center custom-scrollbar`}
     >
       {/* Main page */}
       {currentView === 'main' && (

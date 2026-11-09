@@ -7,7 +7,7 @@ import {
   TrendingUpIcon,
   UsersIcon,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { SortOrderType } from '../../../shared/types';
 import { Button } from '../ui/Button';
@@ -34,13 +34,10 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const handleSelect = useCallback(
-    (order: SortOrderType) => {
-      onSortChange(order);
-      setIsOpen(false);
-    },
-    [onSortChange]
-  );
+  const handleSelect = (order: SortOrderType) => {
+    onSortChange(order);
+    setIsOpen(false);
+  };
 
   useEffect(() => {
     if (!isOpen) {

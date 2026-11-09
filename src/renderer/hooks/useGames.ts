@@ -342,9 +342,9 @@ export function useGames({
   /**
    * Reload
    */
-  const reload = useCallback(() => {
+  const reload = () => {
     loadGames();
-  }, [loadGames]);
+  };
 
   // Load when parameters change (only once sync is complete)
   useEffect(() => {

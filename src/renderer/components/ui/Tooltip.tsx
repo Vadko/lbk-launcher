@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { type TooltipAlign, tooltipArrowLeft } from './tooltipArrowLeft';
 
@@ -33,17 +33,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const containerRef = useRef<HTMLSpanElement>(null);
 
   // Layout widths, not rects, so the fade-in transform does not skew where the arrow points
-  const measureTooltip = useCallback(
-    (node: HTMLDivElement | null) => {
-      const container = containerRef.current;
-      if (!node || !container) {
-        return;
-      }
-      setPosition(container.getBoundingClientRect().top < 40 ? 'bottom' : 'top');
-      setArrowLeft(tooltipArrowLeft(align, container.offsetWidth, node.offsetWidth));
-    },
-    [align]
-  );
+  const measureTooltip = (node: HTMLDivElement | null) => {
+    const container = containerRef.current;
+    if (!node || !container) {
+      return;
+    }
+    setPosition(container.getBoundingClientRect().top < 40 ? 'bottom' : 'top');
+    setArrowLeft(tooltipArrowLeft(align, container.offsetWidth, node.offsetWidth));
+  };
 
   if (!content) {
     return <>{children}</>;

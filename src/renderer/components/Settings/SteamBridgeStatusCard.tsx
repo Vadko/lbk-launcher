@@ -1,6 +1,6 @@
 import { RefreshCw } from 'lucide';
 import { RotateCwIcon } from 'lucide-react';
-import React, { useCallback } from 'react';
+import React from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useSteamBridgeStatus } from '@/renderer/hooks/useSteamBridgeStatus';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
@@ -33,7 +33,7 @@ export const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({
     run: runRecheck,
   } = useActionPhase();
 
-  const handleRecheck = useCallback(async () => {
+  const handleRecheck = async () => {
     if (isRechecking) {
       return;
     }
@@ -42,9 +42,9 @@ export const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({
     } catch (error) {
       console.error('[Settings] Steam bridge recheck failed:', error);
     }
-  }, [isRechecking, runRecheck, recheck]);
+  };
 
-  const handleRestart = useCallback(() => restartSteamWithStatus(status), [status]);
+  const handleRestart = () => restartSteamWithStatus(status);
 
   if (!status) {
     return null;

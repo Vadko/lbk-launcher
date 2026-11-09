@@ -36,7 +36,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     const [imageLoading, setImageLoading] = useState(true);
     const [erroredUrl, setErroredUrl] = useState<string | null>(null);
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
-    const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
+    const favoriteGameIds = useSettingsStore((state) => state.favoriteGameIds);
     const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
 
     const primaryGame = group.translations[0];
@@ -46,7 +46,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     const anyGameDetected = group.translations.some((t) => isGameDetected(t.id));
     const isInstalled = useIsTranslationInstalled();
     const anyGameInstalled = group.translations.some((t) => isInstalled(t.id));
-    const anyIsFavorite = group.translations.some((t) => isFavoriteGame(t.id));
+    const anyIsFavorite = group.translations.some((t) => favoriteGameIds.includes(t.id));
     const anyTranslationAvailable = group.translations.some(
       (t) => t.status !== 'planned' && t.status !== 'tech-improvement'
     );

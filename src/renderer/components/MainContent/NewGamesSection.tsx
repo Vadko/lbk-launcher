@@ -59,7 +59,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
       return newestGames;
     }
     if (activeTab?.sortOrder === 'updated') {
-      // Виключаємо ігри, що вже показані у вкладці "Новинки", щоб уникнути дублікатів
+      // The updated tab leaves out the games the newest tab already shows, so none is listed twice
       const visibleNewestIds = new Set(
         newestGames.slice(0, showLimit).map((game) => game.id)
       );

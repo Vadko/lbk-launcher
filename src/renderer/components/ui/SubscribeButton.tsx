@@ -21,8 +21,8 @@ export const SubscribeButton: React.FC<SubscribeButtonProps> = ({
   className = '',
   ...rest
 }) => {
-  const { isSubscribed, subscribe, unsubscribe } = useSubscriptionsStore();
-  const subscribed = isSubscribed(gameId);
+  const { subscribe, unsubscribe } = useSubscriptionsStore();
+  const subscribed = useSubscriptionsStore((state) => state.isSubscribed(gameId));
 
   const handleToggle = () => {
     if (subscribed) {

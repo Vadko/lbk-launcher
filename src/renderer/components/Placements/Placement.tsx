@@ -1,7 +1,7 @@
 import kuli from '@resources/kuli.png';
 import team from '@resources/team.svg';
 import { AnimatePresence, motion } from 'framer-motion';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Trans } from 'react-i18next';
 import type { BannerData } from '@/main/db/banners-api';
 import { t } from '@/shared/i18n/i18n';
@@ -59,34 +59,31 @@ export const Placement: React.FC<PlacementProps> = ({
     };
   }, [banner, gameId, gameName, onView, placementType, isKuli]);
 
-  const staticBanner = useCallback(
-    () => (
-      <>
-        <img
-          src={isNarrowType ? kuli : team}
-          className={`${isNarrowType ? 'w-auto h-full max-h-11' : 'h-auto w-full mx-auto mb-auto support-banner'} object-contain object-top`}
-          loading="lazy"
-        />
-        {isNarrowType && (
-          <>
-            <div>
-              <p>{t('kuliPlacement.supported')}</p>{' '}
-              <p className="text-color-mixed">
-                <Trans
-                  i18nKey="kuliPlacement.beFirst"
-                  components={{ b: <span className="font-semibold" /> }}
-                />
-              </p>
-            </div>
+  const staticBanner = () => (
+    <>
+      <img
+        src={isNarrowType ? kuli : team}
+        className={`${isNarrowType ? 'w-auto h-full max-h-11' : 'h-auto w-full mx-auto mb-auto support-banner'} object-contain object-top`}
+        loading="lazy"
+      />
+      {isNarrowType && (
+        <>
+          <div>
+            <p>{t('kuliPlacement.supported')}</p>{' '}
+            <p className="text-color-mixed">
+              <Trans
+                i18nKey="kuliPlacement.beFirst"
+                components={{ b: <span className="font-semibold" /> }}
+              />
+            </p>
+          </div>
 
-            <Button variant="primary" className="shrink-0">
-              {t('kuliPlacement.goToKuli')}
-            </Button>
-          </>
-        )}
-      </>
-    ),
-    [isNarrowType]
+          <Button variant="primary" className="shrink-0">
+            {t('kuliPlacement.goToKuli')}
+          </Button>
+        </>
+      )}
+    </>
   );
 
   if (!banner && !isKuli && !supportUrl) {

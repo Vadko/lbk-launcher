@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Game } from '../../shared/types';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -46,10 +45,7 @@ export function useRecommendedGames(gameId: string | undefined, limit: number) {
     hideAiTranslations,
     showRecommendations
   );
-  const games = useMemo(
-    () => (data ?? []).filter((game) => game.id !== gameId).slice(0, limit),
-    [data, gameId, limit]
-  );
+  const games = (data ?? []).filter((game) => game.id !== gameId).slice(0, limit);
 
   return {
     games,

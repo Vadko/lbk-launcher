@@ -42,6 +42,8 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     onOpenTranslationPicker,
     isGameDetected,
   }) => {
+    // useVirtualizer hands back one mutable instance, which the React Compiler cannot memoize (TanStack/virtual#1119)
+    'use no memo';
     const isInstalled = useIsTranslationInstalled();
     const keys = useMemo(() => gameGroups.map((g) => g.key), [gameGroups]);
 

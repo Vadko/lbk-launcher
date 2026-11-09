@@ -10,6 +10,7 @@ const SITE_ORIGIN = 'https://lbklauncher.com';
  */
 export const SitePage: React.FC = () => {
   const setSelectedGame = useStore((state) => state.setSelectedGame);
+  const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
   const { page } = useParams<{ page: string }>();
   const [iframeHeight, setIframeHeight] = useState<number | null>(null);
   const [measuredPage, setMeasuredPage] = useState(page);
@@ -53,7 +54,7 @@ export const SitePage: React.FC = () => {
   return (
     <div
       data-gamepad-main-content
-      className={`flex-1 flex justify-center px-8 ${useGamepadModeStore.getState().isGamepadMode && 'py-4'} overflow-y-auto custom-scrollbar`}
+      className={`flex-1 flex justify-center px-8 ${isGamepadMode ? 'py-4' : ''} overflow-y-auto custom-scrollbar`}
     >
       <div className="main-page w-full max-w-[1564px] py-4">
         <iframe

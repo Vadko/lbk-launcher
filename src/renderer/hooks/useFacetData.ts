@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import type { FacetRow, LibraryMemberships } from '../../shared/types';
 import { useResource } from './useResource';
 
@@ -23,11 +23,7 @@ export function useFacetData(isModalOpen: boolean): FacetData | null {
     });
   }, [isModalOpen]);
 
-  return useMemo(
-    () =>
-      rows && libraries && installedTranslationIds
-        ? { rows, libraries, installedTranslationIds }
-        : null,
-    [rows, libraries, installedTranslationIds]
-  );
+  return rows && libraries && installedTranslationIds
+    ? { rows, libraries, installedTranslationIds }
+    : null;
 }

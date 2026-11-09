@@ -1,5 +1,5 @@
 import { ImageIcon, XIcon } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Trans } from 'react-i18next';
 import { t } from '@/shared/i18n/i18n';
 
@@ -34,53 +34,44 @@ export const FeedbackScreenshots: React.FC<FeedbackScreenshotsProps> = ({
     [screenshots]
   );
 
-  const addFiles = useCallback(
-    (files: FileList | File[]) => {
-      const newFiles: ScreenshotFile[] = [];
+  const addFiles = (files: FileList | File[]) => {
+    const newFiles: ScreenshotFile[] = [];
 
-      for (const file of Array.from(files)) {
-        if (!ALLOWED_TYPES.includes(file.type)) {
-          continue;
-        }
-        if (screenshots.length + newFiles.length >= MAX_SCREENSHOTS) {
-          break;
-        }
-
-        newFiles.push({
-          name: file.name,
-          file,
-          type: file.type,
-          previewUrl: URL.createObjectURL(file),
-        });
+    for (const file of Array.from(files)) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        continue;
+      }
+      if (screenshots.length + newFiles.length >= MAX_SCREENSHOTS) {
+        break;
       }
 
-      if (newFiles.length > 0) {
-        onChange((prev) => [...prev, ...newFiles]);
-      }
-    },
-    [screenshots.length, onChange]
-  );
-
-  const removeScreenshot = useCallback(
-    (index: number) => {
-      onChange((prev) => {
-        URL.revokeObjectURL(prev[index].previewUrl);
-        return prev.filter((_, i) => i !== index);
+      newFiles.push({
+        name: file.name,
+        file,
+        type: file.type,
+        previewUrl: URL.createObjectURL(file),
       });
-    },
-    [onChange]
-  );
+    }
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragOver(false);
-      if (e.dataTransfer.files.length > 0) {
-        addFiles(e.dataTransfer.files);
-      }
-    },
-    [addFiles]
-  );
+    if (newFiles.length > 0) {
+      onChange((prev) => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeScreenshot = (index: number) => {
+    onChange((prev) => {
+      URL.revokeObjectURL(prev[index].previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      addFiles(e.dataTransfer.files);
+    }
+  };
 
   return (
     <div>

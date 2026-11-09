@@ -21,6 +21,7 @@ export const ReviewAuthorPicker: React.FC = () => {
   const queryClient = useQueryClient();
   const pickAuthor = useReviewAuthorStore((s) => s.pickAuthor);
   const closePicker = useReviewAuthorStore((s) => s.closePicker);
+  const openingSpin = useReviewAuthorStore((s) => s.openingSpin);
   const animate = useSettingsStore((s) => s.animationsEnabled);
   const claimPhase = useActionPhase();
   const [snapshot, send] = useMachine(
@@ -37,7 +38,7 @@ export const ReviewAuthorPicker: React.FC = () => {
     // useMachine reads its input once, when the picker opens
     {
       input: {
-        spin: useReviewAuthorStore.getState().openingSpin(),
+        spin: openingSpin(),
         animate,
         // The lookup that found no nickname runs right before the picker opens
         spinsLeft:

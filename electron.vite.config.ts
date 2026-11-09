@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
-import react from '@vitejs/plugin-react-swc';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'electron-vite';
 import path from 'path';
 import { normalizePath } from 'vite';
@@ -98,7 +98,7 @@ export default defineConfig({
       },
     },
     plugins: [
-      react(),
+      react({ compiler: true }),
       nodePolyfills({
         include: ['path', 'stream', 'crypto', 'buffer', 'process'],
         globals: {
