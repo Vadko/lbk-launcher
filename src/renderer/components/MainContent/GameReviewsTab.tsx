@@ -2,7 +2,7 @@ import { A } from '@mobily/ts-belt';
 import { usePrefetchInfiniteQuery } from '@tanstack/react-query';
 import { RotateCcw } from 'lucide';
 import { InfoIcon } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
 import { useHasReviewNotices } from '../../hooks/useHasReviewNotices';
@@ -35,7 +35,7 @@ interface GameReviewsTabProps {
   onRevealed: () => void;
 }
 
-export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
+export function GameReviewsTab({
   gameId,
   gameName,
   reviewCounts,
@@ -45,7 +45,7 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
   onFocusHandled,
   reveal,
   onRevealed,
-}) => {
+}: GameReviewsTabProps) {
   const [filter, setFilter] = useState<ReviewFilter>('all');
   // Both typed first pages load with the tab, so a filter switch shows a ready list
   usePrefetchInfiniteQuery(gameReviewsQueryOptions(gameId, null, 'feedback'));
@@ -205,4 +205,4 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
       </div>
     </section>
   );
-};
+}

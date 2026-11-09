@@ -1,5 +1,4 @@
 import { BookIcon, GlobeIcon, SendIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { steamStoreUrl } from '@/shared/steam-urls';
 import type { Game, LinkApp } from '../../../shared/types';
@@ -32,25 +31,29 @@ type StoreLinkProps =
   | { type: 'steam'; appId: number }
   | { type: 'gog' | 'epic-store' | 'xbox' | 'uplay' | 'ea'; url: string };
 
-const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, open, color }) => (
-  <button
-    type="button"
-    data-nav-group="main-links"
-    className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-border-hover transition-all duration-300"
-    title={label}
-    onClick={() => void open()}
-    data-gamepad-action="true"
-  >
-    {icon && (
-      <div className={`${color} group-hover:brightness-125 transition-all duration-300`}>
-        {icon}
-      </div>
-    )}
-    {label && <span className="text-sm text-text-main font-medium">{label}</span>}
-  </button>
-);
+function SocialLink({ icon, label, open, color }: SocialLinkProps) {
+  return (
+    <button
+      type="button"
+      data-nav-group="main-links"
+      className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-border-hover transition-all duration-300"
+      title={label}
+      onClick={() => void open()}
+      data-gamepad-action="true"
+    >
+      {icon && (
+        <div
+          className={`${color} group-hover:brightness-125 transition-all duration-300`}
+        >
+          {icon}
+        </div>
+      )}
+      {label && <span className="text-sm text-text-main font-medium">{label}</span>}
+    </button>
+  );
+}
 
-const StoreButton: React.FC<StoreLinkProps> = (props) => {
+function StoreButton(props: StoreLinkProps) {
   const getStoreConfig = () => {
     switch (props.type) {
       case 'steam':
@@ -133,7 +136,7 @@ const StoreButton: React.FC<StoreLinkProps> = (props) => {
       )}
     </button>
   );
-};
+}
 
 const WEBSITE_KINDS: (Omit<SocialLinkProps, 'open' | 'label'> & {
   match: string;
@@ -176,7 +179,7 @@ function describeWebsite(url: string): SocialLinkProps {
   };
 }
 
-export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
+export function SocialLinksCard({ game }: SocialLinksCardProps) {
   const { website, telegram, discord, twitter, youtube } = game;
   const links = [
     website && describeWebsite(website),
@@ -271,4 +274,4 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
       </div>
     )
   );
-};
+}

@@ -1,5 +1,4 @@
 import { CircleCheck, CircleX, Zap } from 'lucide';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { AppActionIcon } from '../ui/AppActionIcon';
 
@@ -25,12 +24,12 @@ const STATUS = {
   },
 };
 
-export const InstallationStatusBadge: React.FC<InstallationStatusBadgeProps> = ({
+export function InstallationStatusBadge({
   isUpdateAvailable,
   installedVersion,
   hasInstallError,
   newVersion,
-}) => {
+}: InstallationStatusBadgeProps) {
   const kind = hasInstallError ? 'error' : isUpdateAvailable ? 'update' : 'installed';
   const status = STATUS[kind];
 
@@ -50,4 +49,4 @@ export const InstallationStatusBadge: React.FC<InstallationStatusBadgeProps> = (
       )}
     </div>
   );
-};
+}

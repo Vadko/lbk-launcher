@@ -1,6 +1,5 @@
 import { useAnimate } from 'framer-motion';
 import { ThumbsUpIcon } from 'lucide-react';
-import type React from 'react';
 import {
   useHasEverInstalledTranslation,
   useIsTranslationInstalledForGame,
@@ -17,7 +16,7 @@ interface LikeButtonProps {
   likes: number;
 }
 
-export const LikeButton: React.FC<LikeButtonProps> = ({ gameId, likes }) => {
+export function LikeButton({ gameId, likes }: LikeButtonProps) {
   const isTranslationInstalled = useIsTranslationInstalledForGame(gameId);
   const hasEverInstalled = useHasEverInstalledTranslation(gameId);
   const canRate = isTranslationInstalled || hasEverInstalled;
@@ -69,4 +68,4 @@ export const LikeButton: React.FC<LikeButtonProps> = ({ gameId, likes }) => {
       </Button>
     </Tooltip>
   );
-};
+}

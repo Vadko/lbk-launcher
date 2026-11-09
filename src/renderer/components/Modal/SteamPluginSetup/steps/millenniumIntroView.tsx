@@ -5,7 +5,6 @@ import {
   RotateCwIcon,
   WrenchIcon,
 } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { PluginHostState } from '@/shared/plugin-host-types';
 import type { SteamPluginSetupSource } from '../../../../store/useSteamPluginSetupStore';

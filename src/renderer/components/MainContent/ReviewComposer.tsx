@@ -1,5 +1,5 @@
 import { Check, Send } from 'lucide';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { TurnstileAction } from '@/shared/game-reviews-api-types';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
@@ -22,7 +22,7 @@ interface ReviewComposerProps {
 
 const MAX_LENGTH = 1000;
 
-export const ReviewComposer: React.FC<ReviewComposerProps> = ({
+export function ReviewComposer({
   initialText = '',
   submitLabel,
   captchaAction,
@@ -30,7 +30,7 @@ export const ReviewComposer: React.FC<ReviewComposerProps> = ({
   isExpired = false,
   onSubmit,
   onClose,
-}) => {
+}: ReviewComposerProps) {
   usePrefetchCaptcha(captchaAction, isPublic);
   const [text, setText] = useState(initialText);
   const submit = useActionPhase();
@@ -101,4 +101,4 @@ export const ReviewComposer: React.FC<ReviewComposerProps> = ({
       )}
     </div>
   );
-};
+}

@@ -8,7 +8,7 @@ import {
   Trash2Icon,
   WrenchIcon,
 } from 'lucide-react';
-import React from 'react';
+import { createElement } from 'react';
 import type { OfferIcon } from '../../utils/pluginHostOffer';
 
 const ICONS: Record<OfferIcon, LucideIcon> = {
@@ -26,5 +26,6 @@ interface OfferActionIconProps {
   size: number;
 }
 
-export const OfferActionIcon: React.FC<OfferActionIconProps> = ({ icon, size }) =>
-  React.createElement(ICONS[icon], { size });
+export function OfferActionIcon({ icon, size }: OfferActionIconProps) {
+  return createElement(ICONS[icon], { size });
+}

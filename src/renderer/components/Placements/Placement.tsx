@@ -1,7 +1,7 @@
 import kuli from '@resources/kuli.png';
 import team from '@resources/team.svg';
 import { AnimatePresence, motion } from 'framer-motion';
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Trans } from 'react-i18next';
 import type { BannerData } from '@/main/db/banners-api';
 import { t } from '@/shared/i18n/i18n';
@@ -20,7 +20,7 @@ interface PlacementProps {
   className?: string;
 }
 
-export const Placement: React.FC<PlacementProps> = ({
+export function Placement({
   banner,
   placementType,
   gameId,
@@ -30,7 +30,7 @@ export const Placement: React.FC<PlacementProps> = ({
   onView,
   onClick,
   className = '',
-}) => {
+}: PlacementProps) {
   const elementRef = useRef<HTMLDivElement>(null);
   const hasTrackedView = useRef(false);
   const isNarrowType = placementType === 'narrow';
@@ -145,4 +145,4 @@ export const Placement: React.FC<PlacementProps> = ({
       </AnimatePresence>
     </div>
   );
-};
+}

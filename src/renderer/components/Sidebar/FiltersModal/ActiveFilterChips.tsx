@@ -1,5 +1,4 @@
 import { XIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 
 interface ActiveFilterChip {
@@ -12,7 +11,7 @@ interface ActiveFilterChipsProps {
   chips: ActiveFilterChip[];
 }
 
-export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ chips }) => {
+export function ActiveFilterChips({ chips }: ActiveFilterChipsProps) {
   if (chips.length === 0) {
     return null;
   }
@@ -37,4 +36,4 @@ export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ chips }) =
       ))}
     </div>
   );
-};
+}

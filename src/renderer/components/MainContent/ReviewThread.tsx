@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'framer-motion';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useFocusEntry } from '../../hooks/useFocusEntry';
 import type { ReviewThreadView } from '../../queries/reviewViewTypes';
@@ -28,7 +28,7 @@ interface ReviewThreadProps {
 // Deeper answers stay on the last level and name whom they answer, so the text keeps its width
 const MAX_DEPTH = 3;
 
-export const ReviewThread: React.FC<ReviewThreadProps> = ({
+export function ReviewThread({
   review,
   onReply,
   onEdit,
@@ -36,7 +36,7 @@ export const ReviewThread: React.FC<ReviewThreadProps> = ({
   onDiscard,
   focusEntryId,
   onFocused,
-}) => {
+}: ReviewThreadProps) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const tree = buildReplyTree(review.id, review.replies, MAX_DEPTH);
@@ -136,4 +136,4 @@ export const ReviewThread: React.FC<ReviewThreadProps> = ({
       />
     </div>
   );
-};
+}

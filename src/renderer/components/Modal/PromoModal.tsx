@@ -1,6 +1,6 @@
 import supportBox from '@resources/images/promo-support-box.svg';
 import { HeartIcon } from 'lucide-react';
-import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { BannerData } from '@/main/db/banners-api';
 import { t } from '@/shared/i18n/i18n';
 import { usePromoModalStore } from '../../store/usePromoModalStore';
@@ -16,53 +16,58 @@ interface SupportContentProps {
   onDonateClick: () => void;
 }
 
-const SupportContent: React.FC<SupportContentProps> = ({
+function SupportContent({
   dontShowAgain,
   setDontShowAgain,
   onDonateClick,
-}) => (
-  <>
-    {/* Image */}
-    <div className="flex justify-center">
-      <img src={supportBox} alt={t('promoModal.imageAlt')} width={190} height={184} />
-    </div>
+}: SupportContentProps) {
+  return (
+    <>
+      {/* Image */}
+      <div className="flex justify-center">
+        <img src={supportBox} alt={t('promoModal.imageAlt')} width={190} height={184} />
+      </div>
 
-    {/* Text content - use fallback if no banner */}
-    <div className="text-center space-y-3">
-      <h2 className="text-4xl font-head font-semibold text-text-main">
-        {t('promoModal.title')}
-      </h2>
-      <p>{t('promoModal.body')}</p>
-      <div className="text-text-muted">{t('promoModal.everyBitCounts')}</div>
-    </div>
+      {/* Text content - use fallback if no banner */}
+      <div className="text-center space-y-3">
+        <h2 className="text-4xl font-head font-semibold text-text-main">
+          {t('promoModal.title')}
+        </h2>
+        <p>{t('promoModal.body')}</p>
+        <div className="text-text-muted">{t('promoModal.everyBitCounts')}</div>
+      </div>
 
-    {/* Checkbox */}
-    <div className="flex items-center justify-center gap-3">
-      <Checkbox
-        id="dont-show-again"
-        checked={dontShowAgain}
-        onCheckedChange={setDontShowAgain}
-      />
-      <label htmlFor="dont-show-again" className="text-sm text-text-muted cursor-pointer">
-        {t('promoModal.dontShowAgain')}
-      </label>
-    </div>
+      {/* Checkbox */}
+      <div className="flex items-center justify-center gap-3">
+        <Checkbox
+          id="dont-show-again"
+          checked={dontShowAgain}
+          onCheckedChange={setDontShowAgain}
+        />
+        <label
+          htmlFor="dont-show-again"
+          className="text-sm text-text-muted cursor-pointer"
+        >
+          {t('promoModal.dontShowAgain')}
+        </label>
+      </div>
 
-    {/* Button */}
-    <div className="flex gap-6 justify-center">
-      <Button
-        variant="primary"
-        icon={<HeartIcon size={20} />}
-        onClick={onDonateClick}
-        data-gamepad-action
-      >
-        {t('promoModal.donate')}
-      </Button>
-    </div>
-  </>
-);
+      {/* Button */}
+      <div className="flex gap-6 justify-center">
+        <Button
+          variant="primary"
+          icon={<HeartIcon size={20} />}
+          onClick={onDonateClick}
+          data-gamepad-action
+        >
+          {t('promoModal.donate')}
+        </Button>
+      </div>
+    </>
+  );
+}
 
-export const PromoModal: React.FC = () => {
+export function PromoModal() {
   const { isOpen, closeModal, shouldShowModal, checkAndResetNeverShow, openModal } =
     usePromoModalStore();
   const [dontShowAgain, setDontShowAgain] = useState(false);
@@ -262,4 +267,4 @@ export const PromoModal: React.FC = () => {
       </div>
     </Modal>
   );
-};
+}

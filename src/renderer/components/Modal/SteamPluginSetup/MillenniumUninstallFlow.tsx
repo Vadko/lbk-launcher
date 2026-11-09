@@ -1,6 +1,5 @@
 import { useMachine } from '@xstate/react';
 import { CheckIcon, Trash2Icon } from 'lucide-react';
-import React from 'react';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
 import { useSteamPluginSetupStore } from '@/renderer/store/useSteamPluginSetupStore';
 import { t } from '@/shared/i18n/i18n';
@@ -16,7 +15,7 @@ import {
 import { restartChoiceView } from './steps/restartChoiceView';
 import { resultView, setupView } from './steps/setupView';
 
-export const MillenniumUninstallFlow: React.FC = () => {
+export function MillenniumUninstallFlow() {
   const close = useSteamPluginSetupStore((s) => s.close);
   const state = useSteamPluginHost(true);
   const [snapshot, send] = useMachine(millenniumUninstallMachine);
@@ -103,4 +102,4 @@ export const MillenniumUninstallFlow: React.FC = () => {
   };
 
   return <SetupFrame view={stepView()} onClose={close} />;
-};
+}

@@ -1,5 +1,4 @@
 import { LockIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { playHoldClick } from '../../../utils/slotSounds';
 import type { SlotReelId } from './slotReels';
@@ -15,14 +14,14 @@ interface SlotHoldButtonProps {
 }
 
 // A pill under its reel; a held one takes the accent
-export const SlotHoldButton: React.FC<SlotHoldButtonProps> = ({
+export function SlotHoldButton({
   reel,
   spokenValue,
   isMoving,
   isHeld,
   canHold,
   onToggleHold,
-}) => {
+}: SlotHoldButtonProps) {
   const name = t(`reviewAuthorPicker.reel.${reel}`);
 
   return (
@@ -52,4 +51,4 @@ export const SlotHoldButton: React.FC<SlotHoldButtonProps> = ({
       </span>
     </button>
   );
-};
+}

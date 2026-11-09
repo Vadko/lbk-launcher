@@ -6,7 +6,6 @@ import {
   EllipsisIcon,
   type LucideIcon,
 } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { pageItems } from './pageItems';
 
@@ -20,12 +19,7 @@ interface PaginationProps {
 const CELL = 'size-8 flex items-center justify-center rounded-lg transition-colors';
 const CONTROL = `${CELL} text-text-main hover:bg-glass-hover aria-disabled:opacity-30 aria-disabled:pointer-events-none`;
 
-export const Pagination: React.FC<PaginationProps> = ({
-  page,
-  pageCount,
-  onChange,
-  label,
-}) => {
+export function Pagination({ page, pageCount, onChange, label }: PaginationProps) {
   // aria-disabled, not disabled: a disabled button drops the focus the gamepad was on
   const control = (Icon: LucideIcon, name: string, target: number, off: boolean) => (
     <button
@@ -79,4 +73,4 @@ export const Pagination: React.FC<PaginationProps> = ({
       {control(ChevronsRightIcon, t('pagination.last'), pageCount, atEnd)}
     </nav>
   );
-};
+}

@@ -1,5 +1,5 @@
 import { AnimatePresence, MotionConfig } from 'framer-motion';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import mainBg from '../../../../resources/main-bg.webp';
 import { useDeepLink } from '../../hooks/useDeepLink';
@@ -35,11 +35,7 @@ interface MainLayoutProps {
   liquidGlassSupported: boolean;
 }
 
-export const MainLayout: React.FC<MainLayoutProps> = ({
-  online,
-  version,
-  liquidGlassSupported,
-}) => {
+export function MainLayout({ online, version, liquidGlassSupported }: MainLayoutProps) {
   // Select individual fields so MainLayout doesn't re-render on every settings
   // change (sortOrder, favorites, etc.) — only when these three flip.
   const animationsEnabled = useSettingsStore((s) => s.animationsEnabled);
@@ -150,4 +146,4 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       </div>
     </MotionConfig>
   );
-};
+}

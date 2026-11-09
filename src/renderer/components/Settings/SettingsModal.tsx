@@ -10,7 +10,7 @@ import {
   SparklesIcon,
   Trash2Icon,
 } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useModalStore } from '@/renderer/store/useModalStore';
 import { t } from '@/shared/i18n/i18n';
@@ -46,27 +46,29 @@ interface SettingItemProps {
   disabled?: boolean;
 }
 
-const SettingItem: React.FC<SettingItemProps> = ({
+function SettingItem({
   id,
   title,
   description,
   enabled,
   onChange,
   disabled = false,
-}) => (
-  <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
-    <div className="flex-1 pr-4">
-      <h4 className="text-sm font-semibold text-text-main mb-1">{title}</h4>
-      <p className="text-xs text-text-muted">{description}</p>
+}: SettingItemProps) {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
+      <div className="flex-1 pr-4">
+        <h4 className="text-sm font-semibold text-text-main mb-1">{title}</h4>
+        <p className="text-xs text-text-muted">{description}</p>
+      </div>
+      <Switch
+        id={`switch-${id}`}
+        checked={enabled}
+        onCheckedChange={onChange}
+        disabled={disabled}
+      />
     </div>
-    <Switch
-      id={`switch-${id}`}
-      checked={enabled}
-      onCheckedChange={onChange}
-      disabled={disabled}
-    />
-  </div>
-);
+  );
+}
 
 const STEAM_ACTION_ERRORS: Record<
   SteamCollectionSyncFailure,
@@ -92,7 +94,7 @@ function steamActionErrorMessage(
   return STEAM_ACTION_ERRORS[reason](purpose);
 }
 
-export const SettingsModal: React.FC = () => {
+export function SettingsModal() {
   const { showModal } = useModalStore();
   const isSettingsModalOpen = useSettingsStore((state) => state.isSettingsModalOpen);
   const closeSettingsModal = useSettingsStore((state) => state.closeSettingsModal);
@@ -959,4 +961,4 @@ export const SettingsModal: React.FC = () => {
       <SendLogsModal isOpen={isSendLogsModalOpen} onClose={handleCloseSendLogsModal} />
     </>
   );
-};
+}

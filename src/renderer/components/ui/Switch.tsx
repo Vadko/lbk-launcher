@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import * as React from 'react';
+import { forwardRef, useState } from 'react';
 
 interface SwitchProps {
   checked: boolean;
@@ -9,10 +9,10 @@ interface SwitchProps {
   disabled?: boolean;
 }
 
-export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
+export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(
   ({ checked, onCheckedChange, className, id, disabled = false }, ref) => {
-    const [isPressed, setIsPressed] = React.useState(false);
-    const [isHovered, setIsHovered] = React.useState(false);
+    const [isPressed, setIsPressed] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
     return (
       <button

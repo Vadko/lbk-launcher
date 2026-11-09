@@ -7,7 +7,7 @@ import {
   TrendingUpIcon,
   UsersIcon,
 } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { SortOrderType } from '../../../shared/types';
 import { Button } from '../ui/Button';
@@ -26,11 +26,11 @@ interface SortDropdownProps {
   onSortChange: (order: SortOrderType) => void;
 }
 
-export const SortDropdown: React.FC<SortDropdownProps> = ({
+export function SortDropdown({
   isHorizontal = false,
   sortOrder,
   onSortChange,
-}) => {
+}: SortDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -101,4 +101,4 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
       </AnimatePresence>
     </div>
   );
-};
+}

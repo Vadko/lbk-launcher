@@ -1,5 +1,4 @@
 import { BookmarkIcon, DownloadIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { SortOrderType } from '../../../shared/types';
 import { Button } from '../ui/Button';
@@ -18,7 +17,7 @@ interface FilterBarProps {
   onSortChange: (order: SortOrderType) => void;
 }
 
-export const FilterBar: React.FC<FilterBarProps> = ({
+export function FilterBar({
   isHorizontal = false,
   activeFilterCount,
   onOpenFilters,
@@ -29,7 +28,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onToggleFavoriteQuick,
   sortOrder,
   onSortChange,
-}) => {
+}: FilterBarProps) {
   const hasModalFilters = activeFilterCount > 0;
   const headerItemProps = isHorizontal ? { 'data-gamepad-header-item': true } : {};
 
@@ -116,4 +115,4 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       </div>
     </div>
   );
-};
+}

@@ -2,7 +2,7 @@ import { useDeferredImage } from '@renderer/hooks/useDeferredImage';
 import { getGameImageUrl } from '@renderer/utils/imageUrl';
 import { useSettingsStore } from '@store/useSettingsStore';
 import { EyeOffIcon } from 'lucide-react';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { Game } from '@/shared/types';
 import { StatusIcons } from '../Elements/StatusIcons';
 import { Loader } from '../ui/Loader';
@@ -19,7 +19,7 @@ interface GamepadCardProps {
   imageDeferred?: boolean;
 }
 
-export const GamepadCard: React.FC<GamepadCardProps> = ({
+export function GamepadCard({
   game,
   translations,
   isSelected,
@@ -28,7 +28,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
   isInstalled,
   onClick,
   imageDeferred = false,
-}) => {
+}: GamepadCardProps) {
   const hasMultipleTranslations = translations.length > 1;
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const [erroredUrl, setErroredUrl] = useState<string | null>(null);
@@ -158,4 +158,4 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
       </div>
     </div>
   );
-};
+}

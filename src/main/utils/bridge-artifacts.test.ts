@@ -10,6 +10,7 @@ import {
   SHARED_STEAM_OPS,
 } from '@lbk/bridge-core/contract';
 import { hmacHex } from '@lbk/bridge-core/protocol';
+// eslint-disable-next-line no-restricted-imports -- the SP_REACT stub spreads the whole React object
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import { renderToStaticMarkup } from 'react-dom/server';

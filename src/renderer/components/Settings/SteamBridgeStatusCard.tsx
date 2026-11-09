@@ -1,6 +1,5 @@
 import { RefreshCw } from 'lucide';
 import { RotateCwIcon } from 'lucide-react';
-import React from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useSteamBridgeStatus } from '@/renderer/hooks/useSteamBridgeStatus';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
@@ -21,9 +20,7 @@ interface SteamBridgeStatusCardProps {
   isOpen: boolean;
 }
 
-export const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({
-  isOpen,
-}) => {
+export function SteamBridgeStatusCard({ isOpen }: SteamBridgeStatusCardProps) {
   const { status, recheck } = useSteamBridgeStatus(isOpen);
   const settingOn = useSettingsStore((state) => state.steamCefDebuggingEnabled);
   const hostState = useSteamPluginHost(isOpen && settingOn);
@@ -124,4 +121,4 @@ export const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({
       )}
     </div>
   );
-};
+}

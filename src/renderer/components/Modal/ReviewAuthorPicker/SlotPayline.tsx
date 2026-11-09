@@ -1,5 +1,5 @@
 import { useAnimate } from 'framer-motion';
-import React, { useEffect, useEffectEvent } from 'react';
+import { useEffect, useEffectEvent } from 'react';
 import {
   flickerDelayMs,
   flickerTarget,
@@ -18,12 +18,7 @@ interface SlotPaylineProps {
 }
 
 // The payline across the middle cells and its two ticks; each new name lights it as a winning line, and at rest its neon now and then flickers
-export const SlotPayline: React.FC<SlotPaylineProps> = ({
-  flashes,
-  isSpinning,
-  isWon,
-  animate,
-}) => {
+export function SlotPayline({ flashes, isSpinning, isWon, animate }: SlotPaylineProps) {
   const [scope, run] = useAnimate<HTMLSpanElement>();
 
   const flash = useEffectEvent(() => {
@@ -96,4 +91,4 @@ export const SlotPayline: React.FC<SlotPaylineProps> = ({
       </span>
     </span>
   );
-};
+}

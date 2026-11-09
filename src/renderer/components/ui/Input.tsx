@@ -1,4 +1,3 @@
-import React from 'react';
 import { useCompositionSafeChange } from '../../hooks/useCompositionSafeChange';
 
 interface InputProps {
@@ -10,14 +9,14 @@ interface InputProps {
   className?: string;
 }
 
-export const Input: React.FC<InputProps> = ({
+export function Input({
   value,
   onChange,
   placeholder,
   icon,
   type = 'text',
   className = '',
-}) => {
+}: InputProps) {
   const changeHandlers = useCompositionSafeChange(onChange);
 
   return (
@@ -38,4 +37,4 @@ export const Input: React.FC<InputProps> = ({
       />
     </div>
   );
-};
+}

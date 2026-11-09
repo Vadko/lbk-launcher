@@ -1,5 +1,4 @@
 import { Bell, BellOff } from 'lucide';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { AppActionIcon } from './AppActionIcon';
@@ -13,14 +12,14 @@ interface SubscribeButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElem
   className?: string;
 }
 
-export const SubscribeButton: React.FC<SubscribeButtonProps> = ({
+export function SubscribeButton({
   gameId,
   gameName,
   gameStatus,
   variant = 'secondary',
   className = '',
   ...rest
-}) => {
+}: SubscribeButtonProps) {
   const { subscribe, unsubscribe } = useSubscriptionsStore();
   const subscribed = useSubscriptionsStore((state) => state.isSubscribed(gameId));
 
@@ -50,4 +49,4 @@ export const SubscribeButton: React.FC<SubscribeButtonProps> = ({
       </span>
     </Button>
   );
-};
+}

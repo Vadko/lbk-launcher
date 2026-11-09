@@ -1,6 +1,6 @@
 import { useMachine } from '@xstate/react';
 import { Save } from 'lucide';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { fromPromise } from 'xstate';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
@@ -21,7 +21,7 @@ import { deckyLoaderView, type LoaderStage } from './steps/deckyLoaderView';
 import { deckyPluginView } from './steps/deckyPluginView';
 import { resultView } from './steps/setupView';
 
-export const DeckyPluginSetupFlow: React.FC = () => {
+export function DeckyPluginSetupFlow() {
   const close = useSteamPluginSetupStore((s) => s.close);
   const source = useSteamPluginSetupStore((s) => s.source);
   const declineOffer = useSettingsStore((s) => s.declineDeckyPluginOffer);
@@ -145,4 +145,4 @@ export const DeckyPluginSetupFlow: React.FC = () => {
   };
 
   return <SetupFrame view={stepView()} onClose={close} />;
-};
+}

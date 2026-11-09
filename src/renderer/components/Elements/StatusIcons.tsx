@@ -1,5 +1,4 @@
 import { BookmarkCheckIcon } from 'lucide-react';
-import React from 'react';
 import { CheckIcon } from '@/renderer/components/Icons/CheckIcon';
 import { DownloadIcon } from '@/renderer/components/Icons/DownloadIcon';
 import { RefreshIcon } from '@/renderer/components/Icons/RefreshIcon';
@@ -17,7 +16,7 @@ interface StatusIconsProps {
   isFavorite?: boolean;
 }
 
-export const StatusIcons: React.FC<StatusIconsProps> = ({
+export function StatusIcons({
   hasUpdate = false,
   isGameDetected = false,
   isInstalled = false,
@@ -25,7 +24,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   floatPosition = null,
   isTranslationAvailable = true,
   isFavorite = false,
-}) => {
+}: StatusIconsProps) {
   let statusIcon = null;
   let aiIcon = null;
   let favoriteIcon = null;
@@ -95,4 +94,4 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
       {aiIcon}
     </div>
   );
-};
+}

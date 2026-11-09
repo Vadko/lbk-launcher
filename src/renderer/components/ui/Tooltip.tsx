@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { type TooltipAlign, tooltipArrowLeft } from './tooltipArrowLeft';
 
@@ -20,12 +20,12 @@ const getAlignClass = (align: TooltipAlign) => {
   }
 };
 
-export const Tooltip: React.FC<TooltipProps> = ({
+export function Tooltip({
   content,
   children,
   className = '',
   align = 'center',
-}) => {
+}: TooltipProps) {
   const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState<'top' | 'bottom'>('top');
@@ -72,4 +72,4 @@ export const Tooltip: React.FC<TooltipProps> = ({
       )}
     </span>
   );
-};
+}

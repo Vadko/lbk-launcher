@@ -1,5 +1,5 @@
 import { motion, PresenceContext } from 'framer-motion';
-import React, { useContext, useState } from 'react';
+import { useContext, useState } from 'react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { REVIEW_REVEAL_MS } from './reviewRevealMs';
 
@@ -8,7 +8,7 @@ interface ReviewRevealProps {
 }
 
 // Clips only while moving: framer never applies a transitionEnd overflow after a height 'auto' entrance
-export const ReviewReveal: React.FC<ReviewRevealProps> = ({ children }) => {
+export function ReviewReveal({ children }: ReviewRevealProps) {
   const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
   const presence = useContext(PresenceContext);
   // Rows already on screen when their list first renders skip the entrance
@@ -30,4 +30,4 @@ export const ReviewReveal: React.FC<ReviewRevealProps> = ({ children }) => {
       {children}
     </motion.div>
   );
-};
+}

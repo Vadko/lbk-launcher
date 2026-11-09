@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import React, { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useNewsFeed } from '@/renderer/queries/useNewsFeed';
 import { t } from '@/shared/i18n/i18n';
 import type { NewsFeedFilter } from '@/shared/types';
@@ -27,7 +27,7 @@ const formatDate = (date?: string) => {
   }).format(parsedDate);
 };
 
-export const NewsFeedSection: React.FC = () => {
+export function NewsFeedSection() {
   const [activeFilter, setActiveFilter] = useState<NewsFeedFilter>('sales');
   const {
     data: feedItems = [],
@@ -88,7 +88,7 @@ export const NewsFeedSection: React.FC = () => {
               <p>{t('newsFeed.empty')}</p>
             </motion.div>
           ) : (
-            <React.Fragment>
+            <Fragment>
               {feedItems.map((item, index) => {
                 const publishedAt = formatDate(item.publishedAt);
 
@@ -141,10 +141,10 @@ export const NewsFeedSection: React.FC = () => {
                   <Loader size="sm" />
                 </div>
               )}
-            </React.Fragment>
+            </Fragment>
           )}
         </AnimatePresence>
       </div>
     </section>
   );
-};
+}

@@ -1,5 +1,4 @@
 import { Gamepad2Icon, InfoIcon, type LucideIcon, MessageSquareIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useHasReviewNotices } from '../../hooks/useHasReviewNotices';
 import type { ReviewCounts } from '../../utils/reviewCounts';
@@ -21,13 +20,13 @@ const TAB_ICONS: Record<GameTab, LucideIcon> = {
   reviews: MessageSquareIcon,
 };
 
-export const GameTabs: React.FC<GameTabsProps> = ({
+export function GameTabs({
   gameId,
   reviewCounts,
   tabs,
   activeTab,
   onChange,
-}) => {
+}: GameTabsProps) {
   const hasReviewNotices = useHasReviewNotices(gameId);
 
   return (
@@ -60,4 +59,4 @@ export const GameTabs: React.FC<GameTabsProps> = ({
       }}
     />
   );
-};
+}

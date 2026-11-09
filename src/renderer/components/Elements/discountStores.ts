@@ -1,11 +1,10 @@
-import type React from 'react';
 import { steamStoreUrl } from '@/shared/steam-urls';
 import type { DiscountStore, Game } from '@/shared/types';
 import { EpicIcon, GOGIcon, SteamIcon } from '../Icons/BrandIcons';
 
 interface DiscountStoreView {
   name: string;
-  Icon: React.FC<{ size?: number }>;
+  Icon: React.ComponentType<{ size?: number }>;
   pageOf: (game: Game) => string | null;
   // GOG Galaxy has no verified link to a store page, so GOG opens in the browser
   open: (url: string) => Promise<unknown>;

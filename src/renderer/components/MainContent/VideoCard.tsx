@@ -1,5 +1,4 @@
 import { PlayIcon } from 'lucide-react';
-import React from 'react';
 import LiteYouTubeEmbed from 'react-lite-youtube-embed';
 import 'react-lite-youtube-embed/dist/LiteYouTubeEmbed.css';
 import { t } from '@/shared/i18n/i18n';
@@ -28,7 +27,7 @@ function getYouTubeVideoId(url: string): string | null {
   return null;
 }
 
-export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
+export function VideoCard({ videoUrl }: VideoCardProps) {
   const videoId = getYouTubeVideoId(videoUrl);
 
   if (!videoId) {
@@ -70,4 +69,4 @@ export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
       </div>
     </div>
   );
-};
+}

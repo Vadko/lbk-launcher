@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
-import React, { useEffect, useMemo } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../../shared/types';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
@@ -29,130 +29,124 @@ interface HorizontalGameListProps {
   isGameDetected: (gameId: string) => boolean;
 }
 
-export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
-  ({
-    gameGroups,
-    totalGames,
-    isLoading,
+export const HorizontalGameList = memo(function HorizontalGameList({
+  gameGroups,
+  totalGames,
+  isLoading,
+  animationsEnabled,
+  selectedGameId,
+  gamesWithUpdates,
+  scrollRef,
+  onSelectGame,
+  onOpenTranslationPicker,
+  isGameDetected,
+}: HorizontalGameListProps) {
+  // useVirtualizer hands back one mutable instance, which the React Compiler cannot memoize (TanStack/virtual#1119)
+  'use no memo';
+  const isInstalled = useIsTranslationInstalled();
+  const keys = useMemo(() => gameGroups.map((g) => g.key), [gameGroups]);
+
+  const { getAnimationProps } = useListAnimation({
+    keys,
     animationsEnabled,
-    selectedGameId,
-    gamesWithUpdates,
-    scrollRef,
-    onSelectGame,
-    onOpenTranslationPicker,
-    isGameDetected,
-  }) => {
-    // useVirtualizer hands back one mutable instance, which the React Compiler cannot memoize (TanStack/virtual#1119)
-    'use no memo';
-    const isInstalled = useIsTranslationInstalled();
-    const keys = useMemo(() => gameGroups.map((g) => g.key), [gameGroups]);
+    staggerCount: 6,
+    direction: 'x',
+  });
 
-    const { getAnimationProps } = useListAnimation({
-      keys,
-      animationsEnabled,
-      staggerCount: 6,
-      direction: 'x',
-    });
+  const virtualizer = useVirtualizer({
+    horizontal: true,
+    count: gameGroups.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => GAMEPAD_CARD_STRIDE,
+    overscan: 8,
+    getItemKey: (index) => gameGroups[index].key,
+  });
 
-    const virtualizer = useVirtualizer({
-      horizontal: true,
-      count: gameGroups.length,
-      getScrollElement: () => scrollRef.current,
-      estimateSize: () => GAMEPAD_CARD_STRIDE,
-      overscan: 8,
-      getItemKey: (index) => gameGroups[index].key,
-    });
-
-    // Give gamepad navigation the virtualizer's canonical scrollToIndex,
-    // so it can scroll to a card that isn't mounted yet
-    const setScrollGameListToIndex = useGamepadModeStore(
-      (s) => s.setScrollGameListToIndex
+  // Give gamepad navigation the virtualizer's canonical scrollToIndex,
+  // so it can scroll to a card that isn't mounted yet
+  const setScrollGameListToIndex = useGamepadModeStore((s) => s.setScrollGameListToIndex);
+  useEffect(() => {
+    setScrollGameListToIndex((index) =>
+      virtualizer.scrollToIndex(index, { align: 'auto' })
     );
-    useEffect(() => {
-      setScrollGameListToIndex((index) =>
-        virtualizer.scrollToIndex(index, { align: 'auto' })
-      );
-      return () => setScrollGameListToIndex(null);
-    }, [virtualizer, setScrollGameListToIndex]);
+    return () => setScrollGameListToIndex(null);
+  }, [virtualizer, setScrollGameListToIndex]);
 
-    const keyPrefix = useListCompositionKey(gameGroups, scrollRef, 'horizontal');
+  const keyPrefix = useListCompositionKey(gameGroups, scrollRef, 'horizontal');
 
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center h-32">
-          <Loader size="md" />
-        </div>
-      );
-    }
-
-    if (totalGames === 0) {
-      return (
-        <div className="flex items-center justify-center h-32 text-text-muted">
-          <p>{t('homeSections.noGames')}</p>
-        </div>
-      );
-    }
-
+  if (isLoading) {
     return (
-      // Only visible cards render, so each card tells assistive tech the size of the whole list
-      <div
-        role="list"
-        className="relative h-48"
-        style={{ width: virtualizer.getTotalSize() }}
-      >
-        {virtualizer.getVirtualItems().map((virtualCol) => {
-          const group = gameGroups[virtualCol.index];
-          const primaryGame = group.translations[0];
-          const isSelected = group.translations.some(
-            (game) => selectedGameId === game.id
-          );
-          const hasUpdate = group.translations.some((game) =>
-            gamesWithUpdates.has(game.id)
-          );
-          const detected = group.translations.some((game) => isGameDetected(game.id));
-
-          const handleClick = () => {
-            if (group.translations.length > 1) {
-              onOpenTranslationPicker(group.translations, group.name, group.variantById);
-            } else {
-              onSelectGame(primaryGame);
-            }
-          };
-
-          const animProps = getAnimationProps(group.key, virtualCol.index);
-
-          return (
-            <div
-              key={virtualCol.key}
-              role="listitem"
-              aria-setsize={gameGroups.length}
-              aria-posinset={virtualCol.index + 1}
-              data-gamepad-index={virtualCol.index}
-              className="absolute inset-y-0 left-0"
-              style={{ transform: `translateX(${virtualCol.start}px)` }}
-            >
-              <motion.div
-                key={`${keyPrefix}_${group.key}`}
-                initial={animProps?.initial ?? false}
-                animate={animProps?.animate ?? { opacity: 1, x: 0 }}
-                transition={animProps?.transition}
-              >
-                <GamepadCard
-                  game={primaryGame}
-                  translations={group.translations}
-                  translationIndex={0}
-                  isSelected={isSelected}
-                  hasUpdate={hasUpdate}
-                  isDetected={detected}
-                  isInstalled={isInstalled(primaryGame.id)}
-                  onClick={handleClick}
-                  imageDeferred={virtualizer.isScrolling}
-                />
-              </motion.div>
-            </div>
-          );
-        })}
+      <div className="flex items-center justify-center h-32">
+        <Loader size="md" />
       </div>
     );
   }
-);
+
+  if (totalGames === 0) {
+    return (
+      <div className="flex items-center justify-center h-32 text-text-muted">
+        <p>{t('homeSections.noGames')}</p>
+      </div>
+    );
+  }
+
+  return (
+    // Only visible cards render, so each card tells assistive tech the size of the whole list
+    <div
+      role="list"
+      className="relative h-48"
+      style={{ width: virtualizer.getTotalSize() }}
+    >
+      {virtualizer.getVirtualItems().map((virtualCol) => {
+        const group = gameGroups[virtualCol.index];
+        const primaryGame = group.translations[0];
+        const isSelected = group.translations.some((game) => selectedGameId === game.id);
+        const hasUpdate = group.translations.some((game) =>
+          gamesWithUpdates.has(game.id)
+        );
+        const detected = group.translations.some((game) => isGameDetected(game.id));
+
+        const handleClick = () => {
+          if (group.translations.length > 1) {
+            onOpenTranslationPicker(group.translations, group.name, group.variantById);
+          } else {
+            onSelectGame(primaryGame);
+          }
+        };
+
+        const animProps = getAnimationProps(group.key, virtualCol.index);
+
+        return (
+          <div
+            key={virtualCol.key}
+            role="listitem"
+            aria-setsize={gameGroups.length}
+            aria-posinset={virtualCol.index + 1}
+            data-gamepad-index={virtualCol.index}
+            className="absolute inset-y-0 left-0"
+            style={{ transform: `translateX(${virtualCol.start}px)` }}
+          >
+            <motion.div
+              key={`${keyPrefix}_${group.key}`}
+              initial={animProps?.initial ?? false}
+              animate={animProps?.animate ?? { opacity: 1, x: 0 }}
+              transition={animProps?.transition}
+            >
+              <GamepadCard
+                game={primaryGame}
+                translations={group.translations}
+                translationIndex={0}
+                isSelected={isSelected}
+                hasUpdate={hasUpdate}
+                isDetected={detected}
+                isInstalled={isInstalled(primaryGame.id)}
+                onClick={handleClick}
+                imageDeferred={virtualizer.isScrolling}
+              />
+            </motion.div>
+          </div>
+        );
+      })}
+    </div>
+  );
+});

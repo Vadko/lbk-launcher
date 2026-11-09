@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import React, { useId } from 'react';
+import { useId } from 'react';
 import { REEL_CELL_PX } from './slotReelMotion';
 import { useSlotReelMotion } from './useSlotReelMotion';
 
@@ -16,7 +16,7 @@ interface SlotReelProps {
 }
 
 // One flat strip in the reel window; its hold button below carries what a screen reader hears
-export const SlotReel: React.FC<SlotReelProps> = ({
+export function SlotReel({
   value,
   decoys,
   isMoving,
@@ -24,7 +24,7 @@ export const SlotReel: React.FC<SlotReelProps> = ({
   renderCell,
   placeholder,
   onLand,
-}) => {
+}: SlotReelProps) {
   const blurId = useId();
   const { cells, y, blurRef, isBlurred, resultIndex } = useSlotReelMotion({
     value,
@@ -68,4 +68,4 @@ export const SlotReel: React.FC<SlotReelProps> = ({
       </div>
     </div>
   );
-};
+}

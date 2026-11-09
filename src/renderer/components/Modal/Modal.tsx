@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { XIcon } from 'lucide-react';
-import React from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getTopDialog } from '../../utils/getTopDialog';
 
@@ -20,7 +20,7 @@ interface ModalProps {
   classNames?: string;
 }
 
-export const Modal: React.FC<ModalProps> = ({
+export function Modal({
   isOpen,
   onClose,
   title,
@@ -32,16 +32,16 @@ export const Modal: React.FC<ModalProps> = ({
   styleModal = 'normal',
   usePortal = false,
   classNames = '',
-}) => {
+}: ModalProps) {
   // Stacked dialogs each need their own title id, or a screen reader names them all after the first
-  const titleId = React.useId();
-  const descriptionId = React.useId();
+  const titleId = useId();
+  const descriptionId = useId();
   const hasDescription = styleModal === 'normal' && !!description;
 
-  const dialogRef = React.useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Every open modal listens on window, so only the top dialog takes the Escape
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isOpen) {
       return;
     }
@@ -165,4 +165,4 @@ export const Modal: React.FC<ModalProps> = ({
   return usePortal
     ? createPortal(content, document.getElementById('root') ?? document.body)
     : content;
-};
+}

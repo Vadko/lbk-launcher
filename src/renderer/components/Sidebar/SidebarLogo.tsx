@@ -1,6 +1,6 @@
 import { F } from '@mobily/ts-belt';
 import { motion, useReducedMotionConfig, type Variants } from 'framer-motion';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 
 interface SidebarLogoProps {
@@ -56,7 +56,7 @@ const logoArrows = F.once(() => {
 });
 
 // Paths mirror resources/logo.svg: an <img> cannot animate the arrows on their own.
-export const SidebarLogo: React.FC<SidebarLogoProps> = ({ className, onClick }) => {
+export function SidebarLogo({ className, onClick }: SidebarLogoProps) {
   const isStill = useReducedMotionConfig();
   const [spins, setSpins] = useState(0);
   const [isPressed, setIsPressed] = useState(false);
@@ -114,4 +114,4 @@ export const SidebarLogo: React.FC<SidebarLogoProps> = ({ className, onClick }) 
       </svg>
     </motion.button>
   );
-};
+}

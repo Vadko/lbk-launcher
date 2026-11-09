@@ -1,5 +1,5 @@
 import { ThumbsUpIcon } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDownloads } from '@/shared/formatters';
 import { t } from '@/shared/i18n/i18n';
@@ -45,7 +45,7 @@ const detailsButton = (onClick: () => void) => (
   </Button>
 );
 
-export const RatingsPage: React.FC = () => {
+export function RatingsPage() {
   const navigate = useNavigate();
   const setSelectedGame = useStore((state) => state.setSelectedGame);
   const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
@@ -215,4 +215,4 @@ export const RatingsPage: React.FC = () => {
       </div>
     </div>
   );
-};
+}

@@ -1,4 +1,4 @@
-import React from 'react';
+import { createElement } from 'react';
 import {
   type SteamPluginSetupVariant,
   useSteamPluginSetupStore,
@@ -7,13 +7,13 @@ import { DeckyPluginSetupFlow } from './DeckyPluginSetupFlow';
 import { MillenniumInstallFlow } from './MillenniumInstallFlow';
 import { MillenniumUninstallFlow } from './MillenniumUninstallFlow';
 
-const FLOWS: Record<SteamPluginSetupVariant, React.FC> = {
+const FLOWS: Record<SteamPluginSetupVariant, React.ComponentType> = {
   'millennium-install': MillenniumInstallFlow,
   'millennium-uninstall': MillenniumUninstallFlow,
   'decky-install': DeckyPluginSetupFlow,
 };
 
-export const SteamPluginSetupModal: React.FC = () => {
+export function SteamPluginSetupModal() {
   const variant = useSteamPluginSetupStore((s) => s.variant);
-  return React.createElement(FLOWS[variant]);
-};
+  return createElement(FLOWS[variant]);
+}

@@ -1,5 +1,5 @@
 import { Copy } from 'lucide';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { trackEvent } from '@/renderer/utils/analytics';
 import { t } from '@/shared/i18n/i18n';
@@ -99,14 +99,14 @@ const GHOST_LABEL_STYLE: React.CSSProperties = {
   visibility: 'hidden',
 };
 
-export const ShareModal: React.FC<ShareModalProps> = ({
+export function ShareModal({
   isOpen,
   onClose,
   gameSlug,
   teamSlug,
   gameName,
   teamName,
-}) => {
+}: ShareModalProps) {
   const [urlCopied, setUrlCopied] = useState(false);
   const copyPhase = useActionPhase({ minPendingMs: 0 });
   const copied = copyPhase.phase === 'done';
@@ -215,4 +215,4 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       </div>
     </Modal>
   );
-};
+}

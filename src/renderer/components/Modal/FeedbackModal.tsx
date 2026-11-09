@@ -1,6 +1,6 @@
 import { Send } from 'lucide';
 import { AlertTriangleIcon, FileEditIcon } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePrefetchCaptcha } from '@/renderer/hooks/usePrefetchCaptcha';
 import { t } from '@/shared/i18n/i18n';
 import type { FeedbackType } from '@/shared/types';
@@ -36,12 +36,7 @@ interface FeedbackModalProps {
   gameName: string;
 }
 
-export const FeedbackModal: React.FC<FeedbackModalProps> = ({
-  isOpen,
-  onClose,
-  gameId,
-  gameName,
-}) => {
+export function FeedbackModal({ isOpen, onClose, gameId, gameName }: FeedbackModalProps) {
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('feedback');
   const [message, setMessage] = useState('');
   const [screenshots, setScreenshots] = useState<ScreenshotFile[]>([]);
@@ -194,4 +189,4 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       </div>
     </Modal>
   );
-};
+}

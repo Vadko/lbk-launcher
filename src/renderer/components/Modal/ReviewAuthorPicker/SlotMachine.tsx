@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import type { NicknameSpin } from '@/shared/game-reviews-api-types';
 import { useIdleEffect } from '../../../hooks/useIdleEffect';
 import { decodePlayerAvatars, playerAvatarUri } from '../../../utils/playerAvatar';
@@ -82,7 +82,7 @@ const REELS: Record<SlotReelId, ReelLook> = {
 
 const NO_DECOYS: readonly string[] = [];
 
-export const SlotMachine: React.FC<SlotMachineProps> = ({
+export function SlotMachine({
   spin,
   heldSpin,
   holds,
@@ -97,7 +97,7 @@ export const SlotMachine: React.FC<SlotMachineProps> = ({
   animate,
   onToggleHold,
   onPull,
-}) => {
+}: SlotMachineProps) {
   const reelLanded = useReelSounds(moving, isSpinning, animate);
   const flashes = usePaylineFlash(spin, isSpinning);
   const allHeld = everyReel(holds);
@@ -183,4 +183,4 @@ export const SlotMachine: React.FC<SlotMachineProps> = ({
       </div>
     </div>
   );
-};
+}

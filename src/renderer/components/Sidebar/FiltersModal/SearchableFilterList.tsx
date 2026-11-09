@@ -1,5 +1,5 @@
 import { CheckIcon, SearchIcon } from 'lucide-react';
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 // Every row in the DOM is re-laid out on each counter animation frame, so rows mount as the list scrolls
 const ROWS_PER_CHUNK = 50;
@@ -21,14 +21,14 @@ interface SearchableFilterListProps {
   emptyLabel: string;
 }
 
-export const SearchableFilterList: React.FC<SearchableFilterListProps> = ({
+export function SearchableFilterList({
   items,
   selectedIds,
   onToggle,
   isLoading,
   searchPlaceholder,
   emptyLabel,
-}) => {
+}: SearchableFilterListProps) {
   const [search, setSearch] = useState('');
   const [renderLimit, setRenderLimit] = useState(ROWS_PER_CHUNK);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -173,4 +173,4 @@ export const SearchableFilterList: React.FC<SearchableFilterListProps> = ({
       </div>
     </div>
   );
-};
+}

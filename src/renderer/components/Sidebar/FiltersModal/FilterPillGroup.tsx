@@ -1,4 +1,3 @@
-import React from 'react';
 import { AppNumberFlow } from '../../ui/AppNumberFlow';
 import { Button } from '../../ui/Button';
 
@@ -16,42 +15,40 @@ interface FilterPillGroupProps {
   onToggle: (value: string) => void;
 }
 
-export const FilterPillGroup: React.FC<FilterPillGroupProps> = ({
-  options,
-  isSelected,
-  onToggle,
-}) => (
-  <div className="flex flex-wrap gap-2">
-    {options.map((option) => {
-      const selected = isSelected(option.value);
-      return (
-        <Button
-          variant="filter"
-          key={option.value}
-          onClick={() => onToggle(option.value)}
-          data-gamepad-modal-item
-          className={
-            selected
-              ? 'bg-glass-hover! text-text-main! border-color-main!'
-              : option.count === 0
-                ? 'opacity-50'
-                : ''
-          }
-        >
-          {option.icon}
-          <span>{option.label}</span>
-          {option.count !== undefined && (
-            <span
-              className={`bg-glass px-1.5 py-0.5 rounded-lg text-xs leading-4 tabular-nums ${selected ? 'text-color-main' : 'text-text-muted'}`}
-            >
-              <AppNumberFlow
-                value={option.count}
-                prefix={option.adds && option.count > 0 ? '+' : undefined}
-              />
-            </span>
-          )}
-        </Button>
-      );
-    })}
-  </div>
-);
+export function FilterPillGroup({ options, isSelected, onToggle }: FilterPillGroupProps) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((option) => {
+        const selected = isSelected(option.value);
+        return (
+          <Button
+            variant="filter"
+            key={option.value}
+            onClick={() => onToggle(option.value)}
+            data-gamepad-modal-item
+            className={
+              selected
+                ? 'bg-glass-hover! text-text-main! border-color-main!'
+                : option.count === 0
+                  ? 'opacity-50'
+                  : ''
+            }
+          >
+            {option.icon}
+            <span>{option.label}</span>
+            {option.count !== undefined && (
+              <span
+                className={`bg-glass px-1.5 py-0.5 rounded-lg text-xs leading-4 tabular-nums ${selected ? 'text-color-main' : 'text-text-muted'}`}
+              >
+                <AppNumberFlow
+                  value={option.count}
+                  prefix={option.adds && option.count > 0 ? '+' : undefined}
+                />
+              </span>
+            )}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}

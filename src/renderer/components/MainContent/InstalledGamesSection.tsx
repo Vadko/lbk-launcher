@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ListFilterIcon } from 'lucide-react';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -24,10 +24,10 @@ interface InstalledGamesSectionProps {
   showLimit?: number;
 }
 
-export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
+export function InstalledGamesSection({
   title = t('homeSections.installedGames'),
   showLimit = 3,
-}) => {
+}: InstalledGamesSectionProps) {
   const navigate = useNavigate();
 
   const { installedTranslations } = useStore(
@@ -207,4 +207,4 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
       </div>
     </section>
   );
-};
+}

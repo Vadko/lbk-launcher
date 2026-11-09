@@ -1,4 +1,3 @@
-import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
 import { useGamepadType } from '../../hooks/useGamepadType';
@@ -75,7 +74,7 @@ const buildHints = (
   }
 };
 
-export const GamepadHints: React.FC = () => {
+export function GamepadHints() {
   const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
   const context = useGamepadModeStore((s) => s.hintContext);
   const { pathname } = useLocation();
@@ -109,4 +108,4 @@ export const GamepadHints: React.FC = () => {
       </div>
     </div>
   );
-};
+}

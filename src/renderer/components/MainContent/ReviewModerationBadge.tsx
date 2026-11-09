@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Clock } from 'lucide';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { ActionPhase } from '../../hooks/useActionPhase';
 import { AppActionIcon } from '../ui/AppActionIcon';
@@ -30,12 +30,12 @@ interface ReviewModerationBadgeProps {
   hint: string;
 }
 
-export const ReviewModerationBadge: React.FC<ReviewModerationBadgeProps> = ({
+export function ReviewModerationBadge({
   isChecking,
   settled,
   isRolledBack,
   hint,
-}) => {
+}: ReviewModerationBadgeProps) {
   // Only a check that just ended confirms; a confirmed entry otherwise shows no badge
   const [flash, setFlash] = useState(false);
   const [wasChecking, setWasChecking] = useState(isChecking);
@@ -78,4 +78,4 @@ export const ReviewModerationBadge: React.FC<ReviewModerationBadgeProps> = ({
       )}
     </AnimatePresence>
   );
-};
+}

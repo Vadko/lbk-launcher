@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { CloseIcon } from '../Icons/CloseIcon';
 import { MaximizeIcon } from '../Icons/MaximizeIcon';
@@ -10,7 +10,7 @@ interface TitleBarProps {
   version: string;
 }
 
-export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
+export function TitleBar({ online, version }: TitleBarProps) {
   const [isMaximized, setIsMaximized] = useState(false);
   // macOS always shows the native traffic lights on the left instead of these controls.
   const isMacOS = window.electronAPI?.getPlatform() === 'macos';
@@ -58,4 +58,4 @@ export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
       {isMacOS && <div />}
     </div>
   );
-};
+}

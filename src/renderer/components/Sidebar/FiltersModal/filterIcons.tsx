@@ -9,7 +9,6 @@ import {
   UserIcon,
   WrenchIcon,
 } from 'lucide-react';
-import React from 'react';
 import { AiIcon } from '../../Icons/AiIcon';
 import { EpicIcon, GOGIcon, SteamIcon, XboxIcon } from '../../Icons/BrandIcons';
 import { PencilIcon } from '../../Icons/PencilIcon';

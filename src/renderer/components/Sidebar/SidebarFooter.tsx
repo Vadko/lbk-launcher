@@ -8,7 +8,7 @@ import {
   SettingsIcon,
   TrophyIcon,
 } from 'lucide-react';
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -22,12 +22,12 @@ interface SidebarFooterProps {
   isCompact?: boolean;
 }
 
-export const SidebarFooter: React.FC<SidebarFooterProps> = ({
+export function SidebarFooter({
   onOpenHistory,
   onOpenSettings,
   unreadCount,
   isCompact = false,
-}) => {
+}: SidebarFooterProps) {
   const navigate = useNavigate();
   const { uiSoundsEnabled, toggleUiSounds } = useSettingsStore();
   const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
@@ -148,4 +148,4 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
       </button>
     </div>
   );
-};
+}

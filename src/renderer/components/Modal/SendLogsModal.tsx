@@ -1,5 +1,5 @@
 import { Send } from 'lucide';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { t } from '@/shared/i18n/i18n';
 import { trackEvent } from '../../utils/analytics';
@@ -14,11 +14,7 @@ interface SendLogsModalProps {
   crashReason?: string;
 }
 
-export const SendLogsModal: React.FC<SendLogsModalProps> = ({
-  isOpen,
-  onClose,
-  crashReason,
-}) => {
+export function SendLogsModal({ isOpen, onClose, crashReason }: SendLogsModalProps) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { phase, isPending, isBusy, run } = useActionPhase();
@@ -138,4 +134,4 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
       </div>
     </Modal>
   );
-};
+}

@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useMachine } from '@xstate/react';
 import { Check } from 'lucide';
 import { InfoIcon } from 'lucide-react';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { fromPromise } from 'xstate';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../../hooks/useActionPhase';
@@ -17,7 +17,7 @@ import { reviewAuthorPickerMachine } from './reviewAuthorPickerMachine';
 import { SlotMachine } from './SlotMachine';
 
 // Mounted by MainLayout after the other modals, so it is the top dialog for the gamepad and covers FeedbackModal
-export const ReviewAuthorPicker: React.FC = () => {
+export function ReviewAuthorPicker() {
   const queryClient = useQueryClient();
   const pickAuthor = useReviewAuthorStore((s) => s.pickAuthor);
   const closePicker = useReviewAuthorStore((s) => s.closePicker);
@@ -136,4 +136,4 @@ export const ReviewAuthorPicker: React.FC = () => {
       onClose={closePicker}
     />
   );
-};
+}
