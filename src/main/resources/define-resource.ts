@@ -9,6 +9,8 @@ import { failResource, patchResource, publishResource } from './resource-hub';
 
 // A burst of events (a bulk edit broadcasts every game) gets one read once it goes quiet
 const EVENT_DEBOUNCE_MS = 300;
+// A player's toggle sends one alone, and the page shows its result, so its read starts at once
+const UNBATCHED_EVENTS: ReadonlySet<AppEventName> = new Set(['hide-ai-changed']);
 // A read that never settles is abandoned, not stopped, so the next one may start beside it
 const READ_TIMEOUT_MS = 30_000;
 
@@ -48,7 +50,7 @@ export function defineResource<K extends ResourceKey>(
 
   const start = F.once(() => {
     for (const event of on) {
-      appEvents.on(event, refreshSoon);
+      appEvents.on(event, UNBATCHED_EVENTS.has(event) ? refresh : refreshSoon);
     }
     if (afterCatalogSync) {
       // The sync rewrote the catalog without per-game events, and the page waits on this read

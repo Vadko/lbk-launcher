@@ -153,6 +153,16 @@ describe('source events', () => {
 
     expect(read).toHaveBeenCalledOnce();
   });
+
+  it('reads at once on hide-ai-changed, which a toggle sends alone', async () => {
+    const read = vi.fn(() => ids('a'));
+    await subscribed('likedGameIds', { read, on: ['hide-ai-changed'] });
+
+    env.appEvents.emit('hide-ai-changed');
+    await flush();
+
+    expect(read).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('timers', () => {
