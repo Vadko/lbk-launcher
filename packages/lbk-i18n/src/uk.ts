@@ -1157,7 +1157,7 @@ export const uk = {
   },
   privacyPolicy: {
     title: 'Політика приватності',
-    updated: 'Оновлено: 24 жовтня 2026',
+    updated: 'Оновлено: 9 листопада 2026',
     intro:
       'LBK Launcher — сервіс для пошуку, встановлення та оновлення українських локалізацій.',
     openSource:
@@ -1391,7 +1391,8 @@ export const uk = {
         turnstile:
           '<b>Cloudflare Turnstile</b> — захист від ботів у формах адміністративної панелі та під час публікації відгуків у застосунку (<turnstile>Turnstile Privacy Addendum</turnstile>);',
         googleAnalytics: '<b>Google Analytics</b> — аналітика адміністративної панелі;',
-        resend: '<b>Resend</b> — доставка листів для акаунтів/службових повідомлень;',
+        amazonSes:
+          '<b>Amazon SES</b> — доставка листів для акаунтів/службових повідомлень; листи надсилає useSend, розгорнутий на власних серверах LBK;',
         youtube: '<b>YouTube / Google</b> — вбудоване відео;',
         steam: '<b>Steam</b> — дані, потрібні для роботи інтеграції Steam;',
         github: '<b>GitHub</b> — розповсюдження релізів та перевірка оновлень;',
@@ -1410,7 +1411,7 @@ export const uk = {
         title: '15. Де обробляються дані',
         servers: 'Власні сервери LBK розташовані в <b>Німеччині</b>.',
         external:
-          'Частина зовнішніх сервісів може обробляти дані в інших країнах, зокрема у США — це стосується Cloudflare, Mixpanel, Resend, Google/YouTube, GitHub і Steam.',
+          'Частина зовнішніх сервісів може обробляти дані в інших країнах, зокрема у США — це стосується Cloudflare, Mixpanel, Amazon (AWS), Google/YouTube, GitHub і Steam.',
       },
       rights: {
         title: '16. Права та керування згодою',

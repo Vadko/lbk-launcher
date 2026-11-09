@@ -575,7 +575,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
           </li>
           <li>
             <Trans
-              i18nKey="privacyPolicy.sections.recipients.resend"
+              i18nKey="privacyPolicy.sections.recipients.amazonSes"
               components={markup}
             />
           </li>
