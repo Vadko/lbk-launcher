@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { getGameGroupKey } from '@/shared/game-filters';
@@ -33,10 +33,7 @@ interface SidebarProps {
   isHorizontal?: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
-  onOpenHistory,
-  isHorizontal = false,
-}) => {
+export function Sidebar({ onOpenHistory, isHorizontal = false }: SidebarProps) {
   const navigate = useNavigate();
 
   // Use shallow selectors to prevent unnecessary re-renders
@@ -476,4 +473,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
       />
     </GlassPanel>
   );
-};
+}

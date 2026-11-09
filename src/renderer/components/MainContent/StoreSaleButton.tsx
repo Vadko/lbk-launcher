@@ -1,4 +1,3 @@
-import React from 'react';
 import { DISCOUNT_STORES } from '@/renderer/components/Elements/discountStores';
 import { t } from '@/shared/i18n/i18n';
 import type { StoreDiscount } from '@/shared/types';
@@ -9,7 +8,7 @@ interface StoreSaleButtonProps {
   page: string;
 }
 
-export const StoreSaleButton: React.FC<StoreSaleButtonProps> = ({ discount, page }) => {
+export function StoreSaleButton({ discount, page }: StoreSaleButtonProps) {
   const { name, Icon, open } = DISCOUNT_STORES[discount.store];
 
   return (
@@ -24,4 +23,4 @@ export const StoreSaleButton: React.FC<StoreSaleButtonProps> = ({ discount, page
       <span className="font-bold text-base leading-none">-{discount.percent}%</span>
     </Button>
   );
-};
+}

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ReviewReveal } from './ReviewReveal';
 import { THREAD_LINE } from './reviewThreadLine';
 
@@ -18,12 +17,12 @@ interface ReviewThreadRowProps {
 }
 
 // The 12px corner ends at the vertical centre of the reply's avatar or of the toggle button
-export const ReviewThreadRow: React.FC<ReviewThreadRowProps> = ({
+export function ReviewThreadRow({
   level,
   isLast,
   isToggle,
   children,
-}) => {
+}: ReviewThreadRowProps) {
   const branch = BRANCH[level];
   // Padding lives inside, since a padded box cannot shrink below it and would jump in
   return (
@@ -41,4 +40,4 @@ export const ReviewThreadRow: React.FC<ReviewThreadRowProps> = ({
       </div>
     </ReviewReveal>
   );
-};
+}

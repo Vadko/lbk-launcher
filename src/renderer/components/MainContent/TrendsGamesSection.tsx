@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRightIcon } from 'lucide-react';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/renderer/store/useStore';
@@ -18,12 +18,12 @@ interface GamesSectionProps {
   onViewAll?: () => void;
 }
 
-export const TrendGamesSection: React.FC<GamesSectionProps> = ({
+export function TrendGamesSection({
   title,
   showLimit = 3,
   showDownloadCounter = false,
   onViewAll,
-}) => {
+}: GamesSectionProps) {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
 
@@ -108,4 +108,4 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
       </div>
     </section>
   );
-};
+}

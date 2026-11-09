@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import React, { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useNewGames, useUpdatedGames } from '@/renderer/queries/useHomePageGames';
@@ -23,12 +23,12 @@ interface NewGamesSectionProps {
   showLimit?: number;
 }
 
-export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
+export function NewGamesSection({
   title,
   tabs,
   defaultTabSortOrder,
   showLimit = 3,
-}) => {
+}: NewGamesSectionProps) {
   const navigate = useNavigate();
 
   const [activeTabSortOrder, setActiveTabSortOrder] = useState(
@@ -119,7 +119,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
               <p>{t('homeSections.noGames')}</p>
             </motion.div>
           ) : (
-            <React.Fragment key={`games-${activeTabSortOrder}`}>
+            <Fragment key={`games-${activeTabSortOrder}`}>
               {visibleGames.map((game, index) => (
                 <motion.div
                   key={`${game.id}-${activeTabSortOrder}`}
@@ -141,10 +141,10 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
                   />
                 </motion.div>
               ))}
-            </React.Fragment>
+            </Fragment>
           )}
         </AnimatePresence>
       </div>
     </section>
   );
-};
+}

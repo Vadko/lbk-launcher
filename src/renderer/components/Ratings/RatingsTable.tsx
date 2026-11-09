@@ -1,4 +1,3 @@
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { Loader } from '../ui/Loader';
 import { Pagination } from '../ui/Pagination';

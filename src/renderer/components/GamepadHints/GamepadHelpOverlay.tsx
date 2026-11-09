@@ -1,4 +1,3 @@
-import React from 'react';
 import { createPortal } from 'react-dom';
 import { t } from '@/shared/i18n/i18n';
 import { useGamepadType } from '../../hooks/useGamepadType';
@@ -65,7 +64,7 @@ const buildSections = (g: Glyphs): HelpSection[] => [
   },
 ];
 
-export const GamepadHelpOverlay: React.FC = () => {
+export function GamepadHelpOverlay() {
   const isOpen = useGamepadModeStore((s) => s.isHelpOpen && s.isGamepadMode);
   const setHelpOpen = useGamepadModeStore((s) => s.setHelpOpen);
   const gamepadType = useGamepadType();
@@ -127,4 +126,4 @@ export const GamepadHelpOverlay: React.FC = () => {
     </div>,
     document.getElementById('root') ?? document.body
   );
-};
+}

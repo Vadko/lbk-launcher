@@ -1,5 +1,4 @@
 import { DownloadIcon, ThumbsUpIcon } from 'lucide-react';
-import React from 'react';
 import { formatDownloads } from '@/shared/formatters';
 
 interface InfoIconsProps {
@@ -8,23 +7,25 @@ interface InfoIconsProps {
   floatPosition?: 'default' | 'compact' | null;
 }
 
-export const InfoIcons: React.FC<InfoIconsProps> = ({
+export function InfoIcons({
   likesCount = 0,
   downloadsCount = 0,
   floatPosition = null,
-}) => (
-  <div
-    className={`flex gap-2 ${floatPosition ? 'absolute rounded-ss-lg bg-glass p-2 pr-4 -bottom-px -right-px backdrop-blur-md backdrop-brightness-50' : ''}`}
-  >
-    {likesCount > 0 && (
+}: InfoIconsProps) {
+  return (
+    <div
+      className={`flex gap-2 ${floatPosition ? 'absolute rounded-ss-lg bg-glass p-2 pr-4 -bottom-px -right-px backdrop-blur-md backdrop-brightness-50' : ''}`}
+    >
+      {likesCount > 0 && (
+        <div className="flex items-center gap-1">
+          <ThumbsUpIcon size={16} />
+          <span className="text-sm">{likesCount}</span>
+        </div>
+      )}
       <div className="flex items-center gap-1">
-        <ThumbsUpIcon size={16} />
-        <span className="text-sm">{likesCount}</span>
+        <DownloadIcon size={16} />
+        <span className="text-sm">{formatDownloads(downloadsCount)}</span>
       </div>
-    )}
-    <div className="flex items-center gap-1">
-      <DownloadIcon size={16} />
-      <span className="text-sm">{formatDownloads(downloadsCount)}</span>
     </div>
-  </div>
-);
+  );
+}

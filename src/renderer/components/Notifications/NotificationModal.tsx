@@ -16,7 +16,7 @@ import {
   UsersIcon,
   XIcon,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
@@ -37,10 +37,7 @@ interface NotificationModalProps {
   onClose: () => void;
 }
 
-export const NotificationModal: React.FC<NotificationModalProps> = ({
-  isOpen,
-  onClose,
-}) => {
+export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
   const [showConfirmClear, setShowConfirmClear] = useState(false);
@@ -463,4 +460,4 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       </div>
     </Modal>
   );
-};
+}

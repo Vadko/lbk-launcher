@@ -5,7 +5,6 @@ import {
   NewspaperIcon,
   TrophyIcon,
 } from 'lucide-react';
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
 import { SidebarLogo } from './SidebarLogo';
@@ -14,7 +13,7 @@ interface SidebarHeaderProps {
   isCompact?: boolean;
 }
 
-export const SidebarHeader: React.FC<SidebarHeaderProps> = ({ isCompact = false }) => {
+export function SidebarHeader({ isCompact = false }: SidebarHeaderProps) {
   const navigate = useNavigate();
   return (
     <div
@@ -67,4 +66,4 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({ isCompact = false 
       )}
     </div>
   );
-};
+}

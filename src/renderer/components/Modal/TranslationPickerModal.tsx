@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckIcon, UsersIcon, XIcon } from 'lucide-react';
-import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
@@ -21,13 +20,13 @@ interface TranslationPickerModalProps {
   variantById?: Map<string, string>;
 }
 
-export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
+export function TranslationPickerModal({
   isOpen,
   onClose,
   translations,
   gameName,
   variantById,
-}) => {
+}: TranslationPickerModalProps) {
   const navigate = useNavigate();
   const { selectedGame, gamesWithUpdates } = useStore();
   const isInstalled = useIsTranslationInstalled();
@@ -187,4 +186,4 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
     </AnimatePresence>,
     document.body
   );
-};
+}

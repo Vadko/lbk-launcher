@@ -1,5 +1,4 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/renderer/store/useStore';
@@ -10,7 +9,7 @@ import { useResource } from '../../hooks/useResource';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
 
-export const WeeklyPicksSection: React.FC = () => {
+export function WeeklyPicksSection() {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
   const { gamesWithUpdates, detectedGames } = useStore(
@@ -94,4 +93,4 @@ export const WeeklyPicksSection: React.FC = () => {
       </div>
     </section>
   );
-};
+}

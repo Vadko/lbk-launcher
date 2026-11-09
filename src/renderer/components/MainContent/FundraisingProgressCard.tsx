@@ -1,5 +1,4 @@
 import { DollarSignIcon, ExternalLinkIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 
@@ -16,11 +15,11 @@ interface FundraisingProgressCardProps {
   supportUrl?: string | null;
 }
 
-export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = ({
+export function FundraisingProgressCard({
   current,
   goal,
   supportUrl,
-}) => {
+}: FundraisingProgressCardProps) {
   const percentage = goal > 0 ? Math.min(Math.round((current / goal) * 100), 100) : 0;
 
   const handleClick = () => {
@@ -89,4 +88,4 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
       </div>
     </div>
   );
-};
+}

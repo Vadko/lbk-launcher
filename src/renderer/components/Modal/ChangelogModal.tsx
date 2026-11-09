@@ -1,5 +1,5 @@
 import { ChevronDownIcon, ExternalLinkIcon, SparklesIcon } from 'lucide-react';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { REPO_RELEASES_URL } from '../../../shared/repo';
 import type { ChangelogEntry } from '../../../shared/types';
@@ -8,25 +8,27 @@ import { APP_VERSION } from '../../constants/appVersion';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { Modal } from './Modal';
 
-const Entry: React.FC<{ entry: ChangelogEntry }> = ({ entry }) => (
-  <div className="flex flex-col gap-2">
-    <div className="flex items-baseline gap-2">
-      <h4 className="text-base font-semibold text-text-main">{entry.title}</h4>
-      <span className="text-xs text-text-muted">
-        {entry.version} • {entry.date}
-      </span>
+function Entry({ entry }: { entry: ChangelogEntry }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline gap-2">
+        <h4 className="text-base font-semibold text-text-main">{entry.title}</h4>
+        <span className="text-xs text-text-muted">
+          {entry.version} • {entry.date}
+        </span>
+      </div>
+      <ul className="list-disc list-inside space-y-1">
+        {entry.highlights.map((item, index) => (
+          <li key={`${entry.version}-${index}`} className="text-sm text-text-muted">
+            {item}
+          </li>
+        ))}
+      </ul>
     </div>
-    <ul className="list-disc list-inside space-y-1">
-      {entry.highlights.map((item, index) => (
-        <li key={`${entry.version}-${index}`} className="text-sm text-text-muted">
-          {item}
-        </li>
-      ))}
-    </ul>
-  </div>
-);
+  );
+}
 
-export const ChangelogModal: React.FC = () => {
+export function ChangelogModal() {
   const isOpen = useChangelogStore((state) => state.isOpen);
   const closeModal = useChangelogStore((state) => state.closeModal);
   const entries = useChangelogStore((state) => state.entries);
@@ -98,4 +100,4 @@ export const ChangelogModal: React.FC = () => {
       </div>
     </Modal>
   );
-};
+}

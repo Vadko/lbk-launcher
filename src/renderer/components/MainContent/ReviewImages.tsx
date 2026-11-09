@@ -1,5 +1,5 @@
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from 'lucide-react';
-import React, { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { t } from '@/shared/i18n/i18n';
 
@@ -10,7 +10,7 @@ interface ReviewImagesProps {
 const NAV_BUTTON =
   'absolute top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors cursor-pointer';
 
-export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
+export function ReviewImages({ images }: ReviewImagesProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const isOpen = openIndex !== null;
 
@@ -115,4 +115,4 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
         )}
     </>
   );
-};
+}

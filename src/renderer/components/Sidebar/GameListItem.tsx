@@ -1,5 +1,5 @@
 import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon } from 'lucide-react';
-import React, { useState } from 'react';
+import { memo, useState } from 'react';
 import { DiscountPill } from '@/renderer/components/Elements/DiscountPill';
 import { InfoIcons } from '@/renderer/components/Elements/InfoIcons';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
@@ -32,223 +32,74 @@ interface GameListItemProps {
   imageDeferred?: boolean;
 }
 
-export const GameListItem: React.FC<GameListItemProps> = React.memo(
-  ({
-    game,
-    isSelected,
-    onClick,
-    hasUpdate = false,
-    isGameDetected = false,
-    isInstalled = false,
-    showTeamName = false,
-    isCardStyle = false,
-    showDownloadCounter = false,
-    isTranslationAvailable = true,
-    variant,
-    imageDeferred = false,
-  }) => {
-    const [imageLoading, setImageLoading] = useState(true);
-    const [erroredUrl, setErroredUrl] = useState<string | null>(null);
-    const imageSettled = useDeferredImage(imageDeferred, game.id);
-    const showAdultGames = useSettingsStore((state) => state.showAdultGames);
-    const isFavorite = useSettingsStore((state) => state.isFavoriteGame(game.id));
-    const toggleFavoriteGame = useSettingsStore((state) => state.toggleFavoriteGame);
+export const GameListItem = memo(function GameListItem({
+  game,
+  isSelected,
+  onClick,
+  hasUpdate = false,
+  isGameDetected = false,
+  isInstalled = false,
+  showTeamName = false,
+  isCardStyle = false,
+  showDownloadCounter = false,
+  isTranslationAvailable = true,
+  variant,
+  imageDeferred = false,
+}: GameListItemProps) {
+  const [imageLoading, setImageLoading] = useState(true);
+  const [erroredUrl, setErroredUrl] = useState<string | null>(null);
+  const imageSettled = useDeferredImage(imageDeferred, game.id);
+  const showAdultGames = useSettingsStore((state) => state.showAdultGames);
+  const isFavorite = useSettingsStore((state) => state.isFavoriteGame(game.id));
+  const toggleFavoriteGame = useSettingsStore((state) => state.toggleFavoriteGame);
 
-    // Check if this is an adult game that should be blurred
-    const isAdultBlurred = game.is_adult && !showAdultGames;
+  // Check if this is an adult game that should be blurred
+  const isAdultBlurred = game.is_adult && !showAdultGames;
 
-    const averageProgress = Math.round(
-      (game.translation_progress + game.editing_progress) / 2
-    );
+  const averageProgress = Math.round(
+    (game.translation_progress + game.editing_progress) / 2
+  );
 
-    const thumbnailUrl = getGameImageUrl(
-      (isCardStyle ? game.capsule_path : null) ?? game.thumbnail_path,
-      game.updated_at
-    );
-    const imageError = erroredUrl === thumbnailUrl;
-    const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
-    const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
+  const thumbnailUrl = getGameImageUrl(
+    (isCardStyle ? game.capsule_path : null) ?? game.thumbnail_path,
+    game.updated_at
+  );
+  const imageError = erroredUrl === thumbnailUrl;
+  const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
+  const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
 
-    const teamLabel = game.team || t('gameCard.unknownAuthor');
-    const gameTeamTitle = showTeamName
-      ? variant
-        ? `${teamLabel} ${variant}`
-        : teamLabel
-      : game.name;
-    const gameTeam = showTeamName ? (
-      <>
-        {teamLabel}
-        {variant && <span className="text-text-muted text-xs"> {variant}</span>}
-      </>
-    ) : (
-      game.name
-    );
+  const teamLabel = game.team || t('gameCard.unknownAuthor');
+  const gameTeamTitle = showTeamName
+    ? variant
+      ? `${teamLabel} ${variant}`
+      : teamLabel
+    : game.name;
+  const gameTeam = showTeamName ? (
+    <>
+      {teamLabel}
+      {variant && <span className="text-text-muted text-xs"> {variant}</span>}
+    </>
+  ) : (
+    game.name
+  );
 
-    // Preload banner and logo when this item becomes visible
-    const preloadRef = useImagePreload([bannerUrl, logoUrl]);
+  // Preload banner and logo when this item becomes visible
+  const preloadRef = useImagePreload([bannerUrl, logoUrl]);
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onClick();
-      }
-    };
-
-    const handleToggleFavorite = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      toggleFavoriteGame(game.id, game.name);
-    };
-
-    // Card style rendering
-    if (isCardStyle) {
-      return (
-        <div
-          ref={preloadRef}
-          role="button"
-          tabIndex={0}
-          onClick={onClick}
-          onKeyDown={handleKeyDown}
-          data-game-card
-          data-gamepad-card={true}
-          className={`group glass-card p-0! flex flex-col items-center scroll-m-20`}
-        >
-          <div className="relative aspect-616/353 w-full bg-glass rounded-t-xl overflow-hidden">
-            {thumbnailUrl && !imageError ? (
-              <>
-                {imageLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-glass">
-                    <Loader size="sm" />
-                  </div>
-                )}
-                {imageSettled && (
-                  <img
-                    src={thumbnailUrl}
-                    alt={game.name}
-                    draggable={false}
-                    decoding="async"
-                    className={`w-full h-full object-cover transition-[opacity, scale] duration-300 group-hover:scale-[1.05] ${
-                      imageLoading ? 'opacity-0' : 'opacity-100'
-                    } ${isAdultBlurred ? 'blur-lg' : ''}`}
-                    onLoad={() => setImageLoading(false)}
-                    onError={() => {
-                      setErroredUrl(thumbnailUrl);
-                      setImageLoading(false);
-                    }}
-                  />
-                )}
-              </>
-            ) : (
-              <div
-                className={`w-full h-full bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl  truncate ${
-                  isAdultBlurred ? 'blur-lg' : ''
-                }`}
-                title={game.name}
-              >
-                {game.name.charAt(0)}
-              </div>
-            )}
-
-            {/* Adult content indicator */}
-            {isAdultBlurred && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <EyeOffIcon size={20} className="text-white/80" />
-              </div>
-            )}
-
-            {/* Indicators */}
-            {!isAdultBlurred && (
-              <>
-                <DiscountPill game={game} />
-                <StatusIcons
-                  hasUpdate={hasUpdate}
-                  isGameDetected={isGameDetected}
-                  isInstalled={isInstalled}
-                  aiType={game.ai}
-                  floatPosition="default"
-                  isTranslationAvailable={isTranslationAvailable}
-                  isFavorite={isFavorite}
-                />
-                <InfoIcons
-                  likesCount={game.likes}
-                  downloadsCount={game.downloads}
-                  floatPosition="default"
-                />
-              </>
-            )}
-          </div>
-          <div className="grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
-            <div className="flex items-center gap-2">
-              <h3
-                className="text-lg font-head font-bold truncate flex-1"
-                title={game.name}
-              >
-                {game.name}
-              </h3>
-              <Button
-                variant="ghost"
-                onClick={handleToggleFavorite}
-                className="rounded-lg! px-1! mr-[-10.5px]"
-                icon={
-                  isFavorite ? (
-                    <BookmarkCheckIcon size={20} className="text-color-accent" />
-                  ) : (
-                    <BookmarkIcon
-                      size={20}
-                      className="text-text-muted group-hover/button:text-text-main"
-                    />
-                  )
-                }
-                title={isFavorite ? t('favoriteToggle.remove') : t('favoriteToggle.add')}
-              />
-            </div>
-            {showDownloadCounter && (
-              <div className="flex items-center gap-2">
-                <PopularIcon />
-                <span>{t('gameCard.downloadedByPlayers')}</span>
-                <span className="ml-auto">
-                  <AppNumberFlow
-                    value={
-                      ('trendingDownloads' in game
-                        ? game.trendingDownloads
-                        : game.downloads) ?? 0
-                    }
-                  />
-                </span>
-              </div>
-            )}
-            {/* Info */}
-            <div className="p-3 bg-glass-hover rounded-xl mt-auto">
-              <h4 className="font-semibold mb-2 truncate" title={game.team}>
-                {game.team}
-              </h4>
-
-              <div className="flex gap-3 items-center w-full flex-wrap">
-                {game.status && (
-                  <StatusBadge
-                    status={game.status}
-                    style="capsule"
-                    className="shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
-                  />
-                )}
-                {isTranslationInstallable(game.status) && (
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="h-1 bg-white/10 rounded-full overflow-hidden grow">
-                      <div
-                        className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
-                        style={{ width: `${averageProgress}%` }}
-                      />
-                    </div>
-                    <span className="text-text-main font-bold">{`${averageProgress}%`}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
     }
+  };
 
-    // Vertical mode (default)
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavoriteGame(game.id, game.name);
+  };
+
+  // Card style rendering
+  if (isCardStyle) {
     return (
       <div
         ref={preloadRef}
@@ -256,96 +107,240 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
         tabIndex={0}
         onClick={onClick}
         onKeyDown={handleKeyDown}
-        data-nav-group="game-list"
-        className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ${
-          isSelected
-            ? 'border border-[rgba(168,207,150,0.5)] shadow-[0_0_20px_rgba(168,207,150,0.2)]'
-            : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
-        }`}
+        data-game-card
+        data-gamepad-card={true}
+        className={`group glass-card p-0! flex flex-col items-center scroll-m-20`}
       >
-        <div className="relative w-12 h-12 shrink-0 select-none">
-          <div className="w-full h-full rounded-lg overflow-hidden bg-glass">
-            {thumbnailUrl && !imageError ? (
-              <>
-                {imageLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-glass">
-                    <Loader size="sm" />
-                  </div>
-                )}
-                {imageSettled && (
-                  <img
-                    src={thumbnailUrl}
-                    alt={game.name}
-                    draggable={false}
-                    decoding="async"
-                    className={`w-full h-full object-cover transition-opacity duration-300 ${
-                      imageLoading ? 'opacity-0' : 'opacity-100'
-                    } ${isAdultBlurred ? 'blur-md' : ''}`}
-                    onLoad={() => setImageLoading(false)}
-                    onError={() => {
-                      setErroredUrl(thumbnailUrl);
-                      setImageLoading(false);
-                    }}
-                  />
-                )}
-              </>
-            ) : (
-              <div
-                className={`w-full h-full bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center text-white font-bold text-sm ${
-                  isAdultBlurred ? 'blur-md' : ''
-                }`}
-              >
-                {game.name.charAt(0)}
-              </div>
-            )}
-            {/* Adult content indicator on image */}
-            {isAdultBlurred && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <EyeOffIcon size={14} className="text-white/80" />
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4
-            className="font-semibold text-sm text-text-main truncate mb-1"
-            title={gameTeamTitle}
-          >
-            {gameTeam}
-          </h4>
-          <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
-            <div className="text-text-muted text-xs">
-              {(game.ai === 'edited' || game.ai === 'non-edited') && (
-                <p>
-                  {game.ai === 'edited'
-                    ? t('aiTranslationBadge.edited')
-                    : t('aiTranslationBadge.ai')}
-                </p>
+        <div className="relative aspect-616/353 w-full bg-glass rounded-t-xl overflow-hidden">
+          {thumbnailUrl && !imageError ? (
+            <>
+              {imageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-glass">
+                  <Loader size="sm" />
+                </div>
               )}
-              {showTeamName && <p className="truncate">{averageProgress}%</p>}
-            </div>
-
-            <StatusIcons
-              hasUpdate={hasUpdate}
-              isGameDetected={isGameDetected}
-              isInstalled={isInstalled}
-              aiType={game.ai}
-              isTranslationAvailable={isTranslationAvailable}
-              isFavorite={isFavorite}
-            />
-          </div>
-
-          {!showTeamName && (
-            <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
-              <div
-                className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
-                title={`${averageProgress}%`}
-                style={{ width: `${averageProgress}%` }}
-              />
+              {imageSettled && (
+                <img
+                  src={thumbnailUrl}
+                  alt={game.name}
+                  draggable={false}
+                  decoding="async"
+                  className={`w-full h-full object-cover transition-[opacity, scale] duration-300 group-hover:scale-[1.05] ${
+                    imageLoading ? 'opacity-0' : 'opacity-100'
+                  } ${isAdultBlurred ? 'blur-lg' : ''}`}
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => {
+                    setErroredUrl(thumbnailUrl);
+                    setImageLoading(false);
+                  }}
+                />
+              )}
+            </>
+          ) : (
+            <div
+              className={`w-full h-full bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl  truncate ${
+                isAdultBlurred ? 'blur-lg' : ''
+              }`}
+              title={game.name}
+            >
+              {game.name.charAt(0)}
             </div>
           )}
+
+          {/* Adult content indicator */}
+          {isAdultBlurred && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <EyeOffIcon size={20} className="text-white/80" />
+            </div>
+          )}
+
+          {/* Indicators */}
+          {!isAdultBlurred && (
+            <>
+              <DiscountPill game={game} />
+              <StatusIcons
+                hasUpdate={hasUpdate}
+                isGameDetected={isGameDetected}
+                isInstalled={isInstalled}
+                aiType={game.ai}
+                floatPosition="default"
+                isTranslationAvailable={isTranslationAvailable}
+                isFavorite={isFavorite}
+              />
+              <InfoIcons
+                likesCount={game.likes}
+                downloadsCount={game.downloads}
+                floatPosition="default"
+              />
+            </>
+          )}
+        </div>
+        <div className="grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-head font-bold truncate flex-1" title={game.name}>
+              {game.name}
+            </h3>
+            <Button
+              variant="ghost"
+              onClick={handleToggleFavorite}
+              className="rounded-lg! px-1! mr-[-10.5px]"
+              icon={
+                isFavorite ? (
+                  <BookmarkCheckIcon size={20} className="text-color-accent" />
+                ) : (
+                  <BookmarkIcon
+                    size={20}
+                    className="text-text-muted group-hover/button:text-text-main"
+                  />
+                )
+              }
+              title={isFavorite ? t('favoriteToggle.remove') : t('favoriteToggle.add')}
+            />
+          </div>
+          {showDownloadCounter && (
+            <div className="flex items-center gap-2">
+              <PopularIcon />
+              <span>{t('gameCard.downloadedByPlayers')}</span>
+              <span className="ml-auto">
+                <AppNumberFlow
+                  value={
+                    ('trendingDownloads' in game
+                      ? game.trendingDownloads
+                      : game.downloads) ?? 0
+                  }
+                />
+              </span>
+            </div>
+          )}
+          {/* Info */}
+          <div className="p-3 bg-glass-hover rounded-xl mt-auto">
+            <h4 className="font-semibold mb-2 truncate" title={game.team}>
+              {game.team}
+            </h4>
+
+            <div className="flex gap-3 items-center w-full flex-wrap">
+              {game.status && (
+                <StatusBadge
+                  status={game.status}
+                  style="capsule"
+                  className="shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
+                />
+              )}
+              {isTranslationInstallable(game.status) && (
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="h-1 bg-white/10 rounded-full overflow-hidden grow">
+                    <div
+                      className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
+                      style={{ width: `${averageProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-text-main font-bold">{`${averageProgress}%`}</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
-);
+
+  // Vertical mode (default)
+  return (
+    <div
+      ref={preloadRef}
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      data-nav-group="game-list"
+      className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ${
+        isSelected
+          ? 'border border-[rgba(168,207,150,0.5)] shadow-[0_0_20px_rgba(168,207,150,0.2)]'
+          : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
+      }`}
+    >
+      <div className="relative w-12 h-12 shrink-0 select-none">
+        <div className="w-full h-full rounded-lg overflow-hidden bg-glass">
+          {thumbnailUrl && !imageError ? (
+            <>
+              {imageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-glass">
+                  <Loader size="sm" />
+                </div>
+              )}
+              {imageSettled && (
+                <img
+                  src={thumbnailUrl}
+                  alt={game.name}
+                  draggable={false}
+                  decoding="async"
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${
+                    imageLoading ? 'opacity-0' : 'opacity-100'
+                  } ${isAdultBlurred ? 'blur-md' : ''}`}
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => {
+                    setErroredUrl(thumbnailUrl);
+                    setImageLoading(false);
+                  }}
+                />
+              )}
+            </>
+          ) : (
+            <div
+              className={`w-full h-full bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center text-white font-bold text-sm ${
+                isAdultBlurred ? 'blur-md' : ''
+              }`}
+            >
+              {game.name.charAt(0)}
+            </div>
+          )}
+          {/* Adult content indicator on image */}
+          {isAdultBlurred && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <EyeOffIcon size={14} className="text-white/80" />
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <h4
+          className="font-semibold text-sm text-text-main truncate mb-1"
+          title={gameTeamTitle}
+        >
+          {gameTeam}
+        </h4>
+        <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
+          <div className="text-text-muted text-xs">
+            {(game.ai === 'edited' || game.ai === 'non-edited') && (
+              <p>
+                {game.ai === 'edited'
+                  ? t('aiTranslationBadge.edited')
+                  : t('aiTranslationBadge.ai')}
+              </p>
+            )}
+            {showTeamName && <p className="truncate">{averageProgress}%</p>}
+          </div>
+
+          <StatusIcons
+            hasUpdate={hasUpdate}
+            isGameDetected={isGameDetected}
+            isInstalled={isInstalled}
+            aiType={game.ai}
+            isTranslationAvailable={isTranslationAvailable}
+            isFavorite={isFavorite}
+          />
+        </div>
+
+        {!showTeamName && (
+          <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
+            <div
+              className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
+              title={`${averageProgress}%`}
+              style={{ width: `${averageProgress}%` }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});

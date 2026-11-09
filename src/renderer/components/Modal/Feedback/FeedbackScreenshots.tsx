@@ -1,5 +1,5 @@
 import { ImageIcon, XIcon } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Trans } from 'react-i18next';
 import { t } from '@/shared/i18n/i18n';
 
@@ -18,10 +18,7 @@ interface FeedbackScreenshotsProps {
   onChange: React.Dispatch<React.SetStateAction<ScreenshotFile[]>>;
 }
 
-export const FeedbackScreenshots: React.FC<FeedbackScreenshotsProps> = ({
-  screenshots,
-  onChange,
-}) => {
+export function FeedbackScreenshots({ screenshots, onChange }: FeedbackScreenshotsProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -139,4 +136,4 @@ export const FeedbackScreenshots: React.FC<FeedbackScreenshotsProps> = ({
       />
     </div>
   );
-};
+}

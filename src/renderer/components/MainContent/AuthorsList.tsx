@@ -1,5 +1,5 @@
 import { StarIcon } from 'lucide-react';
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { teamMembers } from '@/shared/team-members';
 import { getSpecialTranslatorInfo } from '../../constants/specialTranslators';
@@ -11,7 +11,7 @@ interface AuthorsListProps {
   maxVisible?: number;
 }
 
-export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }) => {
+export function AuthorsList({ team, maxVisible = 3 }: AuthorsListProps) {
   const [showPopover, setShowPopover] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -121,4 +121,4 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
       )}
     </div>
   );
-};
+}

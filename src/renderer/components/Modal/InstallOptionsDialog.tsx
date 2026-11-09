@@ -8,7 +8,7 @@ import {
   Trash2Icon,
   Volume2Icon,
 } from 'lucide-react';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trans } from 'react-i18next';
 import { t } from '@/shared/i18n/i18n';
 import type {
@@ -48,7 +48,7 @@ interface InstallOptionsDialogProps {
   steamArtworkApplied: boolean;
 }
 
-export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
+export function InstallOptionsDialog({
   isOpen,
   onClose,
   onConfirm,
@@ -60,7 +60,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   installsIntoChosenFolder = false,
   availablePlatforms = [],
   steamArtworkApplied,
-}) => {
+}: InstallOptionsDialogProps) {
   // CheckIcon what's available and what's already installed
   const isSteamGame = game.platforms?.includes('steam');
   // Achievements only available for Steam games installed in Steam folder (not custom path)
@@ -579,4 +579,4 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       </div>
     </Modal>
   );
-};
+}

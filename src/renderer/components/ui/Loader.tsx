@@ -1,11 +1,9 @@
-import React from 'react';
-
 interface LoaderProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-export const Loader: React.FC<LoaderProps> = ({ size = 'md', className = '' }) => {
+export function Loader({ size = 'md', className = '' }: LoaderProps) {
   const sizeClasses = {
     sm: 'w-4 h-4 border-2',
     md: 'w-6 h-6 border-2',
@@ -17,4 +15,4 @@ export const Loader: React.FC<LoaderProps> = ({ size = 'md', className = '' }) =
       className={`${sizeClasses[size]} border-color-accent border-t-transparent rounded-full animate-spin ${className}`}
     />
   );
-};
+}

@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bookmark, BookmarkCheck } from 'lucide';
 import { Share2Icon } from 'lucide-react';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
@@ -52,7 +52,7 @@ function checkImageHasTransparentCorners(img: HTMLImageElement): boolean {
   }
 }
 
-export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
+export function GameHero({ game }: GameHeroProps) {
   const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
   const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
 
@@ -237,4 +237,4 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
       </AnimatePresence>
     </div>
   );
-};
+}

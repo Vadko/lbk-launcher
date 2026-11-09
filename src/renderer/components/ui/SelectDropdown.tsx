@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDownIcon } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 
 export interface SelectOption {
@@ -19,14 +19,14 @@ interface SelectDropdownProps {
   maxHeight?: number; // Maximum height in pixels, 'auto' means no limit (uses available space)
 }
 
-export const SelectDropdown: React.FC<SelectDropdownProps> = ({
+export function SelectDropdown({
   options,
   selectedValue,
   onSelectionChange,
   placeholder = t('selectDropdown.placeholder'),
   className = '',
   maxHeight: customMaxHeight = 300, // Default 300px instead of 120px
-}) => {
+}: SelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [maxHeight, setMaxHeight] = useState(customMaxHeight); // Use prop value as default
   const [isReady, setIsReady] = useState(false); // Track if calculations are done
@@ -191,4 +191,4 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = ({
       </AnimatePresence>
     </div>
   );
-};
+}

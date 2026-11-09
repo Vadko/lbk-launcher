@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
-import React, { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../../shared/types';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
@@ -26,125 +26,119 @@ interface GameListProps {
   isGameDetected: (gameId: string) => boolean;
 }
 
-export const GameList: React.FC<GameListProps> = React.memo(
-  ({
-    gameGroups,
-    totalGames,
-    isLoading,
+export const GameList = memo(function GameList({
+  gameGroups,
+  totalGames,
+  isLoading,
+  animationsEnabled,
+  expandedGroups,
+  selectedGameId,
+  gamesWithUpdates,
+  scrollRef,
+  onToggleGroup,
+  onSelectGame,
+  isGameDetected,
+}: GameListProps) {
+  // useVirtualizer hands back one mutable instance, which the React Compiler cannot memoize (TanStack/virtual#1119)
+  'use no memo';
+  const isInstalled = useIsTranslationInstalled();
+  const keys = useMemo(() => gameGroups.map((g) => g.key), [gameGroups]);
+
+  const { getAnimationProps } = useListAnimation({
+    keys,
     animationsEnabled,
-    expandedGroups,
-    selectedGameId,
-    gamesWithUpdates,
-    scrollRef,
-    onToggleGroup,
-    onSelectGame,
-    isGameDetected,
-  }) => {
-    // useVirtualizer hands back one mutable instance, which the React Compiler cannot memoize (TanStack/virtual#1119)
-    'use no memo';
-    const isInstalled = useIsTranslationInstalled();
-    const keys = useMemo(() => gameGroups.map((g) => g.key), [gameGroups]);
+    staggerCount: 8,
+    direction: 'y',
+  });
 
-    const { getAnimationProps } = useListAnimation({
-      keys,
-      animationsEnabled,
-      staggerCount: 8,
-      direction: 'y',
-    });
+  const virtualizer = useVirtualizer({
+    count: gameGroups.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => GAME_LIST_ROW_ESTIMATE,
+    overscan: 10,
+    getItemKey: (index) => gameGroups[index].key,
+  });
 
-    const virtualizer = useVirtualizer({
-      count: gameGroups.length,
-      getScrollElement: () => scrollRef.current,
-      estimateSize: () => GAME_LIST_ROW_ESTIMATE,
-      overscan: 10,
-      getItemKey: (index) => gameGroups[index].key,
-    });
+  const keyPrefix = useListCompositionKey(gameGroups, scrollRef, 'vertical');
 
-    const keyPrefix = useListCompositionKey(gameGroups, scrollRef, 'vertical');
-
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <Loader size="md" />
-        </div>
-      );
-    }
-
-    if (totalGames === 0) {
-      return (
-        <div className="text-center text-text-muted py-8">
-          <p>{t('homeSections.noGames')}</p>
-        </div>
-      );
-    }
-
-    const isScrolling = virtualizer.isScrolling;
-
+  if (isLoading) {
     return (
-      // Only visible rows render, so each row tells assistive tech the size of the whole list
-      <div
-        role="list"
-        className="relative"
-        style={{ height: virtualizer.getTotalSize() }}
-      >
-        {virtualizer.getVirtualItems().map((virtualRow) => {
-          const group = gameGroups[virtualRow.index];
-          const hasMultipleTranslations = group.translations.length > 1;
-          const primaryGame = group.translations[0];
-
-          const content = hasMultipleTranslations ? (
-            <GameGroupItem
-              group={group}
-              isExpanded={expandedGroups.has(group.key)}
-              onToggle={() => onToggleGroup(group.key)}
-              selectedGameId={selectedGameId}
-              onSelectGame={onSelectGame}
-              gamesWithUpdates={gamesWithUpdates}
-              isGameDetected={isGameDetected}
-              imageDeferred={isScrolling}
-            />
-          ) : (
-            <GameListItem
-              game={primaryGame}
-              isSelected={selectedGameId === primaryGame.id}
-              onClick={() => onSelectGame(primaryGame)}
-              hasUpdate={gamesWithUpdates.has(primaryGame.id)}
-              isGameDetected={isGameDetected(primaryGame.id)}
-              isInstalled={isInstalled(primaryGame.id)}
-              isTranslationAvailable={
-                primaryGame.status !== 'planned' &&
-                primaryGame.status !== 'tech-improvement'
-              }
-              imageDeferred={isScrolling}
-            />
-          );
-
-          const animProps = getAnimationProps(group.key, virtualRow.index);
-
-          return (
-            <div
-              key={virtualRow.key}
-              ref={virtualizer.measureElement}
-              role="listitem"
-              aria-setsize={gameGroups.length}
-              aria-posinset={virtualRow.index + 1}
-              data-index={virtualRow.index}
-              id={`group-${group.key}`}
-              className="absolute top-0 left-0 w-full pb-2"
-              style={{ transform: `translateY(${virtualRow.start}px)` }}
-            >
-              <motion.div
-                key={`${keyPrefix}_${group.key}`}
-                initial={animProps?.initial ?? false}
-                animate={animProps?.animate ?? { opacity: 1, y: 0 }}
-                transition={animProps?.transition}
-              >
-                {content}
-              </motion.div>
-            </div>
-          );
-        })}
+      <div className="flex items-center justify-center py-12">
+        <Loader size="md" />
       </div>
     );
   }
-);
+
+  if (totalGames === 0) {
+    return (
+      <div className="text-center text-text-muted py-8">
+        <p>{t('homeSections.noGames')}</p>
+      </div>
+    );
+  }
+
+  const isScrolling = virtualizer.isScrolling;
+
+  return (
+    // Only visible rows render, so each row tells assistive tech the size of the whole list
+    <div role="list" className="relative" style={{ height: virtualizer.getTotalSize() }}>
+      {virtualizer.getVirtualItems().map((virtualRow) => {
+        const group = gameGroups[virtualRow.index];
+        const hasMultipleTranslations = group.translations.length > 1;
+        const primaryGame = group.translations[0];
+
+        const content = hasMultipleTranslations ? (
+          <GameGroupItem
+            group={group}
+            isExpanded={expandedGroups.has(group.key)}
+            onToggle={() => onToggleGroup(group.key)}
+            selectedGameId={selectedGameId}
+            onSelectGame={onSelectGame}
+            gamesWithUpdates={gamesWithUpdates}
+            isGameDetected={isGameDetected}
+            imageDeferred={isScrolling}
+          />
+        ) : (
+          <GameListItem
+            game={primaryGame}
+            isSelected={selectedGameId === primaryGame.id}
+            onClick={() => onSelectGame(primaryGame)}
+            hasUpdate={gamesWithUpdates.has(primaryGame.id)}
+            isGameDetected={isGameDetected(primaryGame.id)}
+            isInstalled={isInstalled(primaryGame.id)}
+            isTranslationAvailable={
+              primaryGame.status !== 'planned' &&
+              primaryGame.status !== 'tech-improvement'
+            }
+            imageDeferred={isScrolling}
+          />
+        );
+
+        const animProps = getAnimationProps(group.key, virtualRow.index);
+
+        return (
+          <div
+            key={virtualRow.key}
+            ref={virtualizer.measureElement}
+            role="listitem"
+            aria-setsize={gameGroups.length}
+            aria-posinset={virtualRow.index + 1}
+            data-index={virtualRow.index}
+            id={`group-${group.key}`}
+            className="absolute top-0 left-0 w-full pb-2"
+            style={{ transform: `translateY(${virtualRow.start}px)` }}
+          >
+            <motion.div
+              key={`${keyPrefix}_${group.key}`}
+              initial={animProps?.initial ?? false}
+              animate={animProps?.animate ?? { opacity: 1, y: 0 }}
+              transition={animProps?.transition}
+            >
+              {content}
+            </motion.div>
+          </div>
+        );
+      })}
+    </div>
+  );
+});

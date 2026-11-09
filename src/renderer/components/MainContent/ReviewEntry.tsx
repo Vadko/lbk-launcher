@@ -1,5 +1,5 @@
 import { ReplyIcon, RotateCcwIcon, XIcon } from 'lucide-react';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { ReviewFailure } from '@/shared/game-reviews-api-types';
 import type { GameReviewAuthor } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
@@ -44,7 +44,7 @@ function badgeHint(
   );
 }
 
-export const ReviewEntry: React.FC<ReviewEntryProps> = ({
+export function ReviewEntry({
   entry,
   isRoot,
   hasThreadLine,
@@ -57,7 +57,7 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
   onResend,
   onDiscard,
   children,
-}) => {
+}: ReviewEntryProps) {
   const [isEditing, setIsEditing] = useState(false);
   const text = entry.pendingText ?? entry.text;
   const isChecking = entry.isChecking === true;
@@ -178,4 +178,4 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
       </div>
     </article>
   );
-};
+}

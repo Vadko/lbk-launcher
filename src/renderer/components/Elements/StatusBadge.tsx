@@ -1,4 +1,3 @@
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 
 interface StatusBadgeProps {
@@ -7,11 +6,11 @@ interface StatusBadgeProps {
   style?: 'capsule' | 'text';
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({
+export function StatusBadge({
   status,
   className = '',
   style = 'text',
-}) => {
+}: StatusBadgeProps) {
   const badgeConfig = {
     completed: {
       textLabel: t('gameStatus.completed'),
@@ -53,4 +52,4 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       {config.textLabel}
     </span>
   );
-};
+}

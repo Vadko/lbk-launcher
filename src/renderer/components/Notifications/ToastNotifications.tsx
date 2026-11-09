@@ -10,7 +10,6 @@ import {
   TrendingUpIcon,
   XIcon,
 } from 'lucide-react';
-import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
 import type { ToastNotification } from '../../store/subscriptions/types';
@@ -88,7 +87,7 @@ const getToastBorder = (type: ToastNotification['type']) => {
   }
 };
 
-export const ToastNotifications: React.FC = () => {
+export function ToastNotifications() {
   const navigate = useNavigate();
   const toasts = useSubscriptionsStore((state) => state.toasts);
   const dismissToast = useSubscriptionsStore((state) => state.dismissToast);
@@ -158,4 +157,4 @@ export const ToastNotifications: React.FC = () => {
       </AnimatePresence>
     </div>
   );
-};
+}

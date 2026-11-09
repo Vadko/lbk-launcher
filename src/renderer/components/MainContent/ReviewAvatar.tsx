@@ -1,5 +1,4 @@
 import { type LucideIcon, ShieldCheckIcon, UserIcon, UsersIcon } from 'lucide-react';
-import React from 'react';
 import type { GameReviewAuthor } from '@/shared/game-reviews-types';
 import { playerAvatarUri } from '../../utils/playerAvatar';
 
@@ -18,7 +17,7 @@ const ICON_AVATARS: Record<
   moderator: { icon: ShieldCheckIcon, className: 'bg-color-accent/20 text-color-accent' },
 };
 
-export const ReviewAvatar: React.FC<ReviewAvatarProps> = ({ author, size }) => {
+export function ReviewAvatar({ author, size }: ReviewAvatarProps) {
   if (author.role === 'player' && author.avatarSeed) {
     return (
       <img
@@ -39,4 +38,4 @@ export const ReviewAvatar: React.FC<ReviewAvatarProps> = ({ author, size }) => {
       <Icon size={Math.round(size / 2)} />
     </span>
   );
-};
+}

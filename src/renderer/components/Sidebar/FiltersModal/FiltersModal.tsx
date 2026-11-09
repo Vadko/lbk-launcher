@@ -1,6 +1,6 @@
 import { NumberFlowGroup } from '@number-flow/react';
 import { EyeIcon } from 'lucide-react';
-import React, { useDeferredValue, useState } from 'react';
+import { useDeferredValue, useState } from 'react';
 import type { OptionCount } from '@/shared/game-counter';
 import { t } from '@/shared/i18n/i18n';
 import type {
@@ -58,7 +58,7 @@ const NO_GAMES: OptionCount = { count: 0, adds: false };
 const SECTION_TITLE_CLASS =
   'text-xs text-text-muted font-medium uppercase tracking-wider mb-3';
 
-export const FiltersModal: React.FC<FiltersModalProps> = ({
+export function FiltersModal({
   isOpen,
   onClose,
   selectedStatuses,
@@ -80,7 +80,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   tagsLoading,
   facetData,
   searchQuery,
-}) => {
+}: FiltersModalProps) {
   // Selections are staged locally while the modal is open and only committed
   // to the real filters (which re-query the game list) when the modal closes
   // - via the "Переглянути" button, Escape, backdrop click or the X button -
@@ -406,4 +406,4 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
       </Modal>
     </NumberFlowGroup>
   );
-};
+}

@@ -1,5 +1,4 @@
 import { Bell, BellOff } from 'lucide';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { AppActionIcon } from './AppActionIcon';
@@ -13,14 +12,14 @@ interface TeamSubscribeButtonProps extends React.ButtonHTMLAttributes<HTMLButton
   multipleAuthors?: boolean;
 }
 
-export const TeamSubscribeButton: React.FC<TeamSubscribeButtonProps> = ({
+export function TeamSubscribeButton({
   teamName,
   variant = 'secondary',
   className = '',
   showTeamName = false,
   multipleAuthors,
   ...rest
-}) => {
+}: TeamSubscribeButtonProps) {
   const { subscribeToTeam, unsubscribeFromTeam } = useSubscriptionsStore();
   const subscribed = useSubscriptionsStore((state) => state.isSubscribedToTeam(teamName));
   const isMultiple = multipleAuthors ?? teamName.includes(',');
@@ -58,4 +57,4 @@ export const TeamSubscribeButton: React.FC<TeamSubscribeButtonProps> = ({
       </span>
     </Button>
   );
-};
+}

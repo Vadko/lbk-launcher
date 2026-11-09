@@ -1,6 +1,6 @@
 import { Pause, Play } from 'lucide';
 import { XIcon } from 'lucide-react';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useModalStore } from '@/renderer/store/useModalStore';
 import { t } from '@/shared/i18n/i18n';
 import { formatBytes, formatTime } from '../../../shared/formatters';
@@ -16,14 +16,14 @@ interface DownloadProgressCardProps {
   onCancel: () => Promise<void>;
 }
 
-export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
+export function DownloadProgressCard({
   progress,
   downloadProgress,
   isPaused,
   onPause,
   onResume,
   onCancel,
-}) => {
+}: DownloadProgressCardProps) {
   const showModal = useModalStore((state) => state.showModal);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
@@ -147,4 +147,4 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
       </div>
     </>
   );
-};
+}

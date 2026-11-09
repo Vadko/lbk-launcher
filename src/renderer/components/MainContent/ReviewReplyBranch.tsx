@@ -1,6 +1,5 @@
 import { AnimatePresence } from 'framer-motion';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { countReplies, type ReplyNode, VISIBLE_REPLIES } from '../../utils/replyTree';
 import { Button } from '../ui/Button';
@@ -15,14 +14,14 @@ interface ReviewReplyBranchProps {
   renderReply: (node: ReplyNode) => React.ReactNode;
 }
 
-export const ReviewReplyBranch: React.FC<ReviewReplyBranchProps> = ({
+export function ReviewReplyBranch({
   parentId,
   level,
   nodes,
   isExpanded,
   onToggle,
   renderReply,
-}) => {
+}: ReviewReplyBranchProps) {
   const expanded = isExpanded(parentId);
   const hasToggle = nodes.length > VISIBLE_REPLIES;
   const visible = expanded ? nodes : nodes.slice(0, VISIBLE_REPLIES);
@@ -67,4 +66,4 @@ export const ReviewReplyBranch: React.FC<ReviewReplyBranchProps> = ({
       )}
     </AnimatePresence>
   );
-};
+}

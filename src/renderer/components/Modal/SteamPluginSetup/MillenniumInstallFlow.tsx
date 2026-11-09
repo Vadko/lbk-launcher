@@ -1,7 +1,7 @@
 import { useMachine } from '@xstate/react';
 import { RefreshCw } from 'lucide';
 import { PlayIcon, RotateCwIcon, Trash2Icon } from 'lucide-react';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { fromPromise } from 'xstate';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
@@ -25,7 +25,7 @@ import { millenniumIntroView, millenniumSiteButton } from './steps/millenniumInt
 import { restartChoiceView } from './steps/restartChoiceView';
 import { resultView } from './steps/setupView';
 
-export const MillenniumInstallFlow: React.FC = () => {
+export function MillenniumInstallFlow() {
   const close = useSteamPluginSetupStore((s) => s.close);
   const source = useSteamPluginSetupStore((s) => s.source);
   const openSetup = useSteamPluginSetupStore((s) => s.openSetup);
@@ -195,4 +195,4 @@ export const MillenniumInstallFlow: React.FC = () => {
   };
 
   return <SetupFrame view={stepView()} onClose={close} />;
-};
+}

@@ -1,5 +1,4 @@
 import { SettingsIcon, TerminalSquareIcon } from 'lucide-react';
-import React from 'react';
 import { Trans } from 'react-i18next';
 import { t } from '@/shared/i18n/i18n';
 import { isExeInstaller } from '@/shared/installer-kind';
@@ -10,7 +9,7 @@ interface ImportantNoticeProps {
   game: Game;
 }
 
-export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
+export function ImportantNotice({ game }: ImportantNoticeProps) {
   const langHint = getLanguageHint(game.source_language);
   const hasInstaller =
     !!game.installation_file_windows_path || !!game.installation_file_linux_path;
@@ -50,4 +49,4 @@ export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
       )}
     </>
   );
-};
+}

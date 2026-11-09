@@ -1,5 +1,5 @@
 import mixpanel from 'mixpanel-browser';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Route } from 'react-router-dom';
 import { Router } from '../lib/electron-router-dom';
 import { MainLayout } from './components/Layout/MainLayout';
@@ -86,7 +86,7 @@ if (isMixpanelInitialized) {
   });
 }
 
-export const App: React.FC = () => {
+export function App() {
   const { detectInstalledGames, setSyncStatus, syncStatus } = useStore();
   const { liquidGlassEnabled } = useSettingsStore();
   const setGamepadMode = useGamepadModeStore((s) => s.setGamepadMode);
@@ -453,4 +453,4 @@ export const App: React.FC = () => {
       }
     />
   );
-};
+}

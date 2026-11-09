@@ -1,7 +1,7 @@
 import { G } from '@mobily/ts-belt';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SearchIcon, XIcon } from 'lucide-react';
-import React, { useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useCompositionSafeChange } from '../../hooks/useCompositionSafeChange';
 import { optionId } from './optionId';

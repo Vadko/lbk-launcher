@@ -1,4 +1,3 @@
-import React from 'react';
 import { useStoreDiscounts } from '@/renderer/hooks/useStoreDiscounts';
 import { t } from '@/shared/i18n/i18n';
 import type { Game } from '@/shared/types';
@@ -9,7 +8,7 @@ interface DiscountPillProps {
 }
 
 // The biggest discount in a store this translation links to, so the pill matches the hero's buttons
-export const DiscountPill: React.FC<DiscountPillProps> = ({ game }) => {
+export function DiscountPill({ game }: DiscountPillProps) {
   const shown = useStoreDiscounts(game.steam_app_id).find(
     (discount) => DISCOUNT_STORES[discount.store].pageOf(game) !== null
   );
@@ -31,4 +30,4 @@ export const DiscountPill: React.FC<DiscountPillProps> = ({ game }) => {
       <Icon size={20} />-{shown.percent}%
     </div>
   );
-};
+}

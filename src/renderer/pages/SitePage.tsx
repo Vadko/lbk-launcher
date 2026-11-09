@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useStore } from '../store/useStore';
@@ -8,7 +8,7 @@ const SITE_ORIGIN = 'https://lbklauncher.com';
 /**
  * Page for pages from the site
  */
-export const SitePage: React.FC = () => {
+export function SitePage() {
   const setSelectedGame = useStore((state) => state.setSelectedGame);
   const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
   const { page } = useParams<{ page: string }>();
@@ -68,4 +68,4 @@ export const SitePage: React.FC = () => {
       </div>
     </div>
   );
-};
+}

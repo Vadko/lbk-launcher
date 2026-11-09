@@ -9,7 +9,7 @@ import {
   Trash2Icon,
   UsersIcon,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { BannerData } from '@/main/db/banners-api';
@@ -83,7 +83,7 @@ const RECOMMENDED_LIMIT = 9;
  * Detailed game information page
  * Displays all info, banners, install buttons, etc.
  */
-export const GamePage: React.FC = () => {
+export function GamePage() {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
 
@@ -940,4 +940,4 @@ export const GamePage: React.FC = () => {
       </div>
     </>
   );
-};
+}

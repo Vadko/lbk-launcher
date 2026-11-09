@@ -11,7 +11,7 @@ import {
   TrophyIcon,
   Volume2Icon,
 } from 'lucide-react';
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
 import { hasExactDownloads } from '@/shared/formatters';
 import { t } from '@/shared/i18n/i18n';
@@ -31,17 +31,19 @@ interface InfoItemProps {
   compact?: boolean;
 }
 
-const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value, compact }) => (
-  <div className={`flex gap-3 ${compact ? 'items-center' : 'items-start'}`}>
-    <div className={`text-color-main ${compact ? '' : 'mt-0.5'}`}>{icon}</div>
-    <div
-      className={`flex gap-1 transition-all duration-200 ${compact ? 'items-center flex-row' : 'flex-col'}`}
-    >
-      <div className="text-xs text-text-muted">{label}</div>
-      <div className="text-sm font-medium text-text-main">{value}</div>
+function InfoItem({ icon, label, value, compact }: InfoItemProps) {
+  return (
+    <div className={`flex gap-3 ${compact ? 'items-center' : 'items-start'}`}>
+      <div className={`text-color-main ${compact ? '' : 'mt-0.5'}`}>{icon}</div>
+      <div
+        className={`flex gap-1 transition-all duration-200 ${compact ? 'items-center flex-row' : 'flex-col'}`}
+      >
+        <div className="text-xs text-text-muted">{label}</div>
+        <div className="text-sm font-medium text-text-main">{value}</div>
+      </div>
     </div>
-  </div>
-);
+  );
+}
 
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) {
@@ -57,7 +59,7 @@ const formatDate = (dateString: string | null | undefined): string => {
   });
 };
 
-export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
+export function InfoCard({ game }: InfoCardProps) {
   const platformsText = game.platforms.map(getReadablePlatform).join(', ');
   const isPlanned = game.status === 'planned';
   const hasSubscriptions = !!game.subscriptions && game.subscriptions > 0;
@@ -222,4 +224,4 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
       </motion.div>
     </div>
   );
-};
+}

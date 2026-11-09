@@ -1,5 +1,4 @@
 import { ArchiveIcon, CheckIcon, InfoIcon, Trash2Icon, TrophyIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { AchievementsBadge } from '@/shared/plugin-host-types';
 import type { Game } from '@/shared/types';
@@ -23,82 +22,84 @@ interface AchievementsOptionProps {
   onToggle: (checked: boolean) => void;
 }
 
-export const AchievementsOption: React.FC<AchievementsOptionProps> = ({
+export function AchievementsOption({
   game,
   hasArchive,
   installed,
   badge,
   option,
   onToggle,
-}) => (
-  <>
-    <label
-      className={`flex items-start gap-4 group ${option.canToggle ? 'cursor-pointer' : 'cursor-not-allowed'} ${hasArchive ? '' : 'opacity-50'}`}
-    >
-      <OptionCheckbox
-        checked={option.install}
-        onChange={onToggle}
-        disabled={!option.canToggle}
-      />
-      <div className="flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <TrophyIcon
-            size={18}
-            className={option.canToggle ? 'text-green-400' : 'text-text-muted'}
-          />
-          <span
-            className={`font-medium transition-colors ${option.canToggle ? 'text-text-main group-hover:text-green-400' : 'text-text-muted'}`}
-          >
-            {t('achievementsOption.title')}
-          </span>
-          {!hasArchive && (
-            <span className="text-xs text-text-muted">
-              {t('installOptions.unavailable')}
+}: AchievementsOptionProps) {
+  return (
+    <>
+      <label
+        className={`flex items-start gap-4 group ${option.canToggle ? 'cursor-pointer' : 'cursor-not-allowed'} ${hasArchive ? '' : 'opacity-50'}`}
+      >
+        <OptionCheckbox
+          checked={option.install}
+          onChange={onToggle}
+          disabled={!option.canToggle}
+        />
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <TrophyIcon
+              size={18}
+              className={option.canToggle ? 'text-green-400' : 'text-text-muted'}
+            />
+            <span
+              className={`font-medium transition-colors ${option.canToggle ? 'text-text-main group-hover:text-green-400' : 'text-text-muted'}`}
+            >
+              {t('achievementsOption.title')}
             </span>
-          )}
-          {option.checking && (
-            <span className="text-xs text-text-muted">
-              {t('achievementsOption.checking')}
-            </span>
-          )}
-          {installed && (
-            <span className="flex items-center gap-1 text-xs text-green-400">
-              <CheckIcon size={12} />
-              {t('installOptions.installed')}
-            </span>
-          )}
-          {hasArchive && badge && <AchievementsDeliveryBadge badge={badge} />}
-        </div>
-        <div className="text-sm text-text-muted mt-1">
-          <p>{t('achievementsOption.description')}</p>
-          {game.achievements_archive_size && (
-            <p className="flex items-center gap-1 mt-1 text-green-400">
-              <ArchiveIcon size={14} />
-              <span>
-                {t('installOptions.size', { size: game.achievements_archive_size })}
+            {!hasArchive && (
+              <span className="text-xs text-text-muted">
+                {t('installOptions.unavailable')}
               </span>
-            </p>
-          )}
-          {PLANNED_CHANGES.filter(([key]) => option[key]).map(([key, Icon, color]) => (
-            <p key={key} className={`flex items-center gap-1 mt-1 ${color}`}>
-              <Icon size={14} />
-              <span>{t(`installOptions.${key}`)}</span>
-            </p>
-          ))}
+            )}
+            {option.checking && (
+              <span className="text-xs text-text-muted">
+                {t('achievementsOption.checking')}
+              </span>
+            )}
+            {installed && (
+              <span className="flex items-center gap-1 text-xs text-green-400">
+                <CheckIcon size={12} />
+                {t('installOptions.installed')}
+              </span>
+            )}
+            {hasArchive && badge && <AchievementsDeliveryBadge badge={badge} />}
+          </div>
+          <div className="text-sm text-text-muted mt-1">
+            <p>{t('achievementsOption.description')}</p>
+            {game.achievements_archive_size && (
+              <p className="flex items-center gap-1 mt-1 text-green-400">
+                <ArchiveIcon size={14} />
+                <span>
+                  {t('installOptions.size', { size: game.achievements_archive_size })}
+                </span>
+              </p>
+            )}
+            {PLANNED_CHANGES.filter(([key]) => option[key]).map(([key, Icon, color]) => (
+              <p key={key} className={`flex items-center gap-1 mt-1 ${color}`}>
+                <Icon size={14} />
+                <span>{t(`installOptions.${key}`)}</span>
+              </p>
+            ))}
+          </div>
         </div>
-      </div>
-    </label>
+      </label>
 
-    {hasArchive && badge && <AchievementsDeliveryNote badge={badge} />}
+      {hasArchive && badge && <AchievementsDeliveryNote badge={badge} />}
 
-    {option.wants && game.achievements_third_party && (
-      <div className="bg-glass rounded-xl p-3 border border-border flex items-center gap-2 text-sm">
-        <InfoIcon size={16} className="text-color-main shrink-0" />
-        <span className="text-text-muted">
-          {t('achievementsOption.thirdPartyAuthor')}{' '}
-          <span className="text-text-main">{game.achievements_third_party}</span>
-        </span>
-      </div>
-    )}
-  </>
-);
+      {option.wants && game.achievements_third_party && (
+        <div className="bg-glass rounded-xl p-3 border border-border flex items-center gap-2 text-sm">
+          <InfoIcon size={16} className="text-color-main shrink-0" />
+          <span className="text-text-muted">
+            {t('achievementsOption.thirdPartyAuthor')}{' '}
+            <span className="text-text-main">{game.achievements_third_party}</span>
+          </span>
+        </div>
+      )}
+    </>
+  );
+}

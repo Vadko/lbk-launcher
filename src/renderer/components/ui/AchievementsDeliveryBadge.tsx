@@ -1,5 +1,4 @@
 import { CircleCheckIcon, ClockIcon, EyeOffIcon, TriangleAlertIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { AchievementsBadge } from '@/shared/plugin-host-types';
 import { achievementsBadgeDetail } from '../../utils/steamPluginHost';
@@ -42,9 +41,7 @@ interface AchievementsDeliveryBadgeProps {
   badge: AchievementsBadge;
 }
 
-export const AchievementsDeliveryBadge: React.FC<AchievementsDeliveryBadgeProps> = ({
-  badge,
-}) => {
+export function AchievementsDeliveryBadge({ badge }: AchievementsDeliveryBadgeProps) {
   const tone = BADGE_TONES[badge.state];
   return (
     <span
@@ -55,4 +52,4 @@ export const AchievementsDeliveryBadge: React.FC<AchievementsDeliveryBadgeProps>
       <span className="min-w-0 wrap-break-word">{badgeLabel(badge.state)}</span>
     </span>
   );
-};
+}

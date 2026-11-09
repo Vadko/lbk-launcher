@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/renderer/store/useStore';
@@ -18,13 +17,13 @@ interface RecommendedGamesSectionProps {
   isLoading: boolean;
 }
 
-export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = ({
+export function RecommendedGamesSection({
   gameId,
   gameName,
   title = t('homeSections.recommended'),
   games,
   isLoading,
-}) => {
+}: RecommendedGamesSectionProps) {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
   const { gamesWithUpdates, detectedGames } = useStore(
@@ -92,4 +91,4 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
       </div>
     </motion.section>
   );
-};
+}

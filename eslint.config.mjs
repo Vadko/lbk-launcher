@@ -76,6 +76,26 @@ export default tseslint.config(
       '@typescript-eslint/prefer-as-const': 'warn',
       '@typescript-eslint/no-inferrable-types': 'warn',
       '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react',
+              importNames: ['default'],
+              message: 'JSX needs no React import: import memo and hooks by name, and write types as React.X.',
+            },
+          ],
+        },
+      ],
+      '@typescript-eslint/no-restricted-types': [
+        'error',
+        {
+          types: {
+            'React.FC': 'Declare a component as a function: export function Name(props: NameProps).',
+          },
+        },
+      ],
 
       'unused-imports/no-unused-imports': 'warn',
       'unused-imports/no-unused-vars': [
@@ -112,7 +132,8 @@ export default tseslint.config(
 
       'arrow-body-style': ['warn', 'as-needed'],
       'object-shorthand': ['warn', 'always'],
-      'prefer-arrow-callback': 'warn',
+      // memo(function Name(...)) keeps the component's name in DevTools
+      'prefer-arrow-callback': ['warn', { allowNamedFunctions: true }],
       'prefer-template': 'warn',
       'no-useless-concat': 'warn',
       'no-useless-rename': 'warn',

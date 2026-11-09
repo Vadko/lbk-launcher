@@ -1,6 +1,6 @@
 import { Check, LoaderCircle, X } from 'lucide';
 import { type IconInput, MorphIcon, type ReducedMotionMode } from 'morphicons/react';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ActionPhase } from '../../hooks/useActionPhase';
 
 export interface ActionIconProps {
@@ -22,7 +22,7 @@ const PHASE_ICONS: Partial<Record<ActionPhase, IconInput>> = {
   error: X,
 };
 
-export const ActionIcon: React.FC<ActionIconProps> = ({
+export function ActionIcon({
   phase,
   icon,
   size = 16,
@@ -30,7 +30,7 @@ export const ActionIcon: React.FC<ActionIconProps> = ({
   inheritColor = false,
   label,
   reducedMotion = 'user',
-}) => {
+}: ActionIconProps) {
   const [pendingVisible, setPendingVisible] = useState(false);
   const [spinning, setSpinning] = useState(false);
 
@@ -80,4 +80,4 @@ export const ActionIcon: React.FC<ActionIconProps> = ({
       )}
     </span>
   );
-};
+}

@@ -1,5 +1,5 @@
 import { BellIcon, StarIcon, UsersIcon } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { t } from '@/shared/i18n/i18n';
 import { teamMembers } from '@/shared/team-members';
@@ -19,12 +19,12 @@ interface AuthorSubscriptionModalProps {
  * Modal that prompts users to subscribe to game authors
  * Shows when user opens a game for the first time
  */
-export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = ({
+export function AuthorSubscriptionModal({
   isOpen,
   onClose,
   gameName,
   team,
-}) => {
+}: AuthorSubscriptionModalProps) {
   const { subscribeToTeam } = useSubscriptionsStore();
 
   // The compiler cannot memoize this across the useState calls below, so the useMemo stays
@@ -211,4 +211,4 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
       </div>
     </Modal>
   );
-};
+}

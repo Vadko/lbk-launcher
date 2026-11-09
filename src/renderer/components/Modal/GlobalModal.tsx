@@ -1,11 +1,10 @@
 import { CheckCircleIcon, InfoIcon, XCircleIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useModalStore } from '../../store/useModalStore';
 import { SelectDropdown } from '../ui/SelectDropdown';
 import { Modal } from './Modal';
 
-export const GlobalModal: React.FC = () => {
+export function GlobalModal() {
   const { isOpen, config, closeModal } = useModalStore();
 
   if (!config) {
@@ -102,4 +101,4 @@ export const GlobalModal: React.FC = () => {
       </div>
     </Modal>
   );
-};
+}

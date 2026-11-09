@@ -1,10 +1,9 @@
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useConfirmStore } from '../../store/useConfirmStore';
 import { Button } from '../ui/Button';
 import { Modal } from './Modal';
 
-export const ConfirmModal: React.FC = () => {
+export function ConfirmModal() {
   const { isOpen, config, closeConfirm, confirm } = useConfirmStore();
 
   if (!config) {
@@ -41,4 +40,4 @@ export const ConfirmModal: React.FC = () => {
       </div>
     </Modal>
   );
-};
+}

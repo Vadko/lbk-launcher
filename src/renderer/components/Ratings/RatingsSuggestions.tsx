@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { SearchIcon } from 'lucide-react';
-import type React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { optionId } from './optionId';
 import type { NameMatch, Suggestion } from './ratingsFilter';

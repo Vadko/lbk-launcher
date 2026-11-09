@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { NewsFeedSection } from '../components/MainContent/NewsFeedSection';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useStore } from '../store/useStore';
@@ -8,7 +8,7 @@ import { trackEvent } from '../utils/analytics';
  * Launcher news page
  * Shows NewsFeedSection
  */
-export const NewsPage: React.FC = () => {
+export function NewsPage() {
   const setSelectedGame = useStore((state) => state.setSelectedGame);
   const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
 
@@ -34,4 +34,4 @@ export const NewsPage: React.FC = () => {
       </div>
     </div>
   );
-};
+}

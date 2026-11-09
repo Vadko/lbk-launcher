@@ -1,5 +1,4 @@
 import { motion, useTransform } from 'framer-motion';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useSettingsStore } from '../../../store/useSettingsStore';
 import { LEVER_TRAVEL_PX } from './slotLeverMotion';
@@ -32,13 +31,13 @@ const isFocusFromDialog = (event: React.FocusEvent<HTMLElement>): boolean =>
   !!event.currentTarget.closest('[role="dialog"]')?.contains(event.relatedTarget);
 
 // A knob on a track beside the reels; pulled with a click, a key, the gamepad, or by dragging it down
-export const SlotLever: React.FC<SlotLeverProps> = ({
+export function SlotLever({
   canPull,
   isLocked,
   pulledAt,
   animate,
   onPull,
-}) => {
+}: SlotLeverProps) {
   const hintSeen = useSettingsStore((s) => s.reviewLeverHintSeen);
   const markHintSeen = useSettingsStore((s) => s.markReviewLeverHintSeen);
   const { travel, handlers } = useLeverPull({ canPull, pulledAt, animate, onPull });
@@ -83,4 +82,4 @@ export const SlotLever: React.FC<SlotLeverProps> = ({
       </motion.span>
     </button>
   );
-};
+}

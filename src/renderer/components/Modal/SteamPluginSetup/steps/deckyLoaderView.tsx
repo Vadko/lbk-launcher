@@ -1,5 +1,4 @@
 import { DownloadIcon, ExternalLinkIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { SteamPluginSetupSource } from '../../../../store/useSteamPluginSetupStore';
 import { openDeckySite } from '../../../../utils/steamPluginHost';

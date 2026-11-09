@@ -1,4 +1,3 @@
-import React from 'react';
 import type { NicknameSpin } from '@/shared/game-reviews-api-types';
 import { t } from '@/shared/i18n/i18n';
 import { playerAvatarUri } from '../../../utils/playerAvatar';
@@ -15,11 +14,7 @@ interface SlotResultProps {
 }
 
 // The name and the avatar the reels show, as they would sign a review
-export const SlotResult: React.FC<SlotResultProps> = ({
-  spin,
-  isSpinning,
-  spinsLeft,
-}) => {
+export function SlotResult({ spin, isSpinning, spinsLeft }: SlotResultProps) {
   const shown = isSpinning ? null : spin;
 
   return (
@@ -46,4 +41,4 @@ export const SlotResult: React.FC<SlotResultProps> = ({
       <SlotSpinCounter spinsLeft={spinsLeft} />
     </div>
   );
-};
+}

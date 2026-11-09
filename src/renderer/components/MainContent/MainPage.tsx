@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { InstalledGamesSection } from './InstalledGamesSection';
@@ -9,7 +9,7 @@ import { WeeklyPicksSection } from './WeeklyPicksSection';
 
 type PageView = 'main' | 'trending';
 
-export const MainPage: React.FC = () => {
+export function MainPage() {
   const [currentView, setCurrentView] = useState<PageView>('main');
   const ContainerRef = useRef<HTMLDivElement>(null);
   const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
@@ -78,4 +78,4 @@ export const MainPage: React.FC = () => {
       )}
     </div>
   );
-};
+}

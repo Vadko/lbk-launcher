@@ -1,5 +1,4 @@
 import { AlertTriangleIcon } from 'lucide-react';
-import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { InstallationStatusTone } from '../../../shared/types';
 
@@ -21,13 +20,13 @@ const TONE_STYLES: Record<
   retry: { ring: 'bg-yellow-500/20', dot: 'bg-yellow-500', text: 'text-yellow-400' },
 };
 
-export const InstallationStatusMessage: React.FC<InstallationStatusMessageProps> = ({
+export function InstallationStatusMessage({
   statusMessage,
   statusTone,
   isUpdateAvailable,
   isOnline,
   isInstalling,
-}) => {
+}: InstallationStatusMessageProps) {
   const tone = statusTone ? TONE_STYLES[statusTone] : null;
 
   return (
@@ -59,4 +58,4 @@ export const InstallationStatusMessage: React.FC<InstallationStatusMessageProps>
       )}
     </div>
   );
-};
+}
