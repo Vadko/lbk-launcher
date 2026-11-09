@@ -1,6 +1,6 @@
 import { D } from '@mobily/ts-belt';
 import {
-  RESOURCES_PORT_CHANNEL,
+  RESOURCES_CHANNEL,
   type ResourceKey,
   type ResourceSubscribe,
   type ResourceUpdate,
@@ -25,18 +25,31 @@ const SUBSCRIBE_AT = {
 const keysAt = (when: 'start' | 'idle'): ResourceKey[] =>
   D.keys(SUBSCRIBE_AT).filter((key) => SUBSCRIBE_AT[key] === when);
 
+// The port lands once per page; every subscribe waits for it
+const port = Promise.withResolvers<MessagePort>();
+
+function subscribe(keys: ResourceKey[]): void {
+  void port.promise.then((p) =>
+    p.postMessage({ subscribe: keys } satisfies ResourceSubscribe)
+  );
+}
+
 export function initResources(): void {
   window.addEventListener('message', (event) => {
-    const [port] = event.ports;
-    if (event.source !== window || event.data !== RESOURCES_PORT_CHANNEL || !port) {
+    const [received] = event.ports;
+    if (event.source !== window || event.data !== RESOURCES_CHANNEL || !received) {
       return;
     }
-    const subscribe = (keys: ResourceKey[]) =>
-      port.postMessage({ subscribe: keys } satisfies ResourceSubscribe);
-    port.onmessage = ({ data }: MessageEvent<ResourceUpdate>) =>
+    received.onmessage = ({ data }: MessageEvent<ResourceUpdate>) =>
       useResourcesStore.getState().apply(data);
-    subscribe(keysAt('start'));
-    requestIdleCallback(() => subscribe(keysAt('idle')), { timeout: 2000 });
+    port.resolve(received);
   });
   window.electronAPI.connectResources();
+  subscribe(keysAt('start'));
+  requestIdleCallback(() => subscribe(keysAt('idle')), { timeout: 2000 });
+}
+
+// Main reads a key once more on every subscribe, so this is how a view asks for a fresh value
+export function refreshResource(key: ResourceKey): void {
+  subscribe([key]);
 }

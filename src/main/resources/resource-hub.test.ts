@@ -1,16 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ResourceKey, ResourceUpdate } from '@/shared/resources';
+import type { ResourceUpdate } from '@/shared/resources';
 import type { Game } from '@/shared/types';
 import type { WeeklyPicks } from '@/shared/weekly-picks-types';
-import { sink } from './resource-sink.fixture';
+import { sink } from './resources.fixture';
 
-async function load() {
+function load() {
   vi.resetModules();
-  const hub = await import('./resource-hub');
-  const { appEvents } = await import('@/main/app-events');
-  const wanted: ResourceKey[] = [];
-  appEvents.on('resource-wanted', (key) => wanted.push(key));
-  return { ...hub, wanted };
+  return import('./resource-hub');
 }
 
 type Env = Awaited<ReturnType<typeof load>>;
@@ -38,28 +34,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('subscribe', () => {
-  it('asks for every key of every subscribe, the same key again included', () => {
-    const session = env.openResourceSession(sink());
-
-    session.receive({ subscribe: ['ratings', 'facetRows'] });
-    session.receive({ subscribe: ['ratings'] });
-
-    expect(env.wanted).toEqual(['ratings', 'facetRows', 'ratings']);
-  });
-});
-
 describe('publishResource', () => {
-  it('sends every value to the current page, subscribed to its key or not', () => {
+  it('sends every value to the current page', () => {
     const page = sink();
-    env.openResourceSession(page).receive({ subscribe: ['likedGameIds'] });
+    env.openResourceSession(page);
 
     env.publishResource('likedGameIds', ids('a'));
     env.publishResource('weeklyPicks', null);
 
     expect(page.sent).toEqual([
-      { values: { likedGameIds: ids('a') }, failed: [] },
-      { values: { weeklyPicks: null }, failed: [] },
+      { values: { likedGameIds: ids('a') }, failed: new Set() },
+      { values: { weeklyPicks: null }, failed: new Set() },
     ]);
   });
 
@@ -72,8 +57,8 @@ describe('publishResource', () => {
     env.publishResource('likedGameIds', ids('b'));
 
     expect(page.sent).toEqual([
-      { values: { likedGameIds: ids('a') }, failed: [] },
-      { values: { likedGameIds: ids('b') }, failed: [] },
+      { values: { likedGameIds: ids('a') }, failed: new Set() },
+      { values: { likedGameIds: ids('b') }, failed: new Set() },
     ]);
   });
 
@@ -83,7 +68,9 @@ describe('publishResource', () => {
 
     env.openResourceSession(page);
 
-    expect(page.sent).toEqual([{ values: { likedGameIds: ids('a') }, failed: [] }]);
+    expect(page.sent).toEqual([
+      { values: { likedGameIds: ids('a') }, failed: new Set() },
+    ]);
   });
 });
 
@@ -99,11 +86,11 @@ describe('failResource', () => {
     env.openResourceSession(next);
 
     expect(page.sent).toEqual([
-      { values: { weeklyPicks: picks(game('a', 1)) }, failed: [] },
-      { values: {}, failed: ['weeklyPicks'] },
+      { values: { weeklyPicks: picks(game('a', 1)) }, failed: new Set() },
+      { values: {}, failed: new Set(['weeklyPicks']) },
     ]);
     expect(next.sent).toEqual([
-      { values: { weeklyPicks: picks(game('a', 1)) }, failed: ['weeklyPicks'] },
+      { values: { weeklyPicks: picks(game('a', 1)) }, failed: new Set(['weeklyPicks']) },
     ]);
   });
 
@@ -120,8 +107,8 @@ describe('failResource', () => {
     env.publishResource('weeklyPicks', value);
 
     expect(page.sent).toEqual([
-      { values: { weeklyPicks: picks(game('a', 1)) }, failed: ['weeklyPicks'] },
-      { values: { weeklyPicks: value }, failed: [] },
+      { values: { weeklyPicks: picks(game('a', 1)) }, failed: new Set(['weeklyPicks']) },
+      { values: { weeklyPicks: value }, failed: new Set() },
     ]);
   });
 });
@@ -137,10 +124,10 @@ describe('the failed keys', () => {
     env.publishResource('ratings', { teams: [], games: [] });
 
     expect(page.sent).toEqual([
-      { values: {}, failed: ['ratings'] },
-      { values: { likedGameIds: ids('a') }, failed: ['ratings'] },
-      { values: {}, failed: ['ratings', 'weeklyPicks'] },
-      { values: { ratings: { teams: [], games: [] } }, failed: ['weeklyPicks'] },
+      { values: {}, failed: new Set(['ratings']) },
+      { values: { likedGameIds: ids('a') }, failed: new Set(['ratings']) },
+      { values: {}, failed: new Set(['ratings', 'weeklyPicks']) },
+      { values: { ratings: { teams: [], games: [] } }, failed: new Set(['weeklyPicks']) },
     ]);
   });
 });
@@ -154,8 +141,8 @@ describe('patchResource', () => {
     env.patchResource('weeklyPicks', () => picks(game('a', 9)));
 
     expect(page.sent).toEqual([
-      { values: { weeklyPicks: picks(game('a', 1)) }, failed: [] },
-      { values: { weeklyPicks: picks(game('a', 9)) }, failed: [] },
+      { values: { weeklyPicks: picks(game('a', 1)) }, failed: new Set() },
+      { values: { weeklyPicks: picks(game('a', 9)) }, failed: new Set() },
     ]);
   });
 
@@ -189,9 +176,9 @@ describe('patchResource', () => {
     env.publishResource('weeklyPicks', picks(game('a', 9)));
 
     expect(page.sent).toEqual([
-      { values: { weeklyPicks: picks(game('a', 1)) }, failed: ['weeklyPicks'] },
-      { values: { weeklyPicks: picks(game('a', 9)) }, failed: ['weeklyPicks'] },
-      { values: { weeklyPicks: picks(game('a', 9)) }, failed: [] },
+      { values: { weeklyPicks: picks(game('a', 1)) }, failed: new Set(['weeklyPicks']) },
+      { values: { weeklyPicks: picks(game('a', 9)) }, failed: new Set(['weeklyPicks']) },
+      { values: { weeklyPicks: picks(game('a', 9)) }, failed: new Set() },
     ]);
   });
 });
@@ -209,7 +196,7 @@ describe('openResourceSession', () => {
     expect(page.sent).toEqual([
       {
         values: { likedGameIds: ids('a'), weeklyPicks: null },
-        failed: ['weeklyPicks', 'ratings'],
+        failed: new Set(['weeklyPicks', 'ratings']),
       },
     ]);
   });
@@ -233,25 +220,29 @@ describe('openResourceSession', () => {
     expect(first.close).toHaveBeenCalledOnce();
     expect(second.close).not.toHaveBeenCalled();
     expect(first.sent).toEqual([]);
-    expect(second.sent).toEqual([{ values: { likedGameIds: ids('a') }, failed: [] }]);
+    expect(second.sent).toEqual([
+      { values: { likedGameIds: ids('a') }, failed: new Set() },
+    ]);
   });
 
   it('keeps the newest page when an older session ends after it opened', () => {
-    const old = env.openResourceSession(sink());
+    const endOld = env.openResourceSession(sink());
     const page = sink();
     env.openResourceSession(page);
 
-    old.end();
+    endOld();
     env.publishResource('likedGameIds', ids('a'));
 
-    expect(page.sent).toEqual([{ values: { likedGameIds: ids('a') }, failed: [] }]);
+    expect(page.sent).toEqual([
+      { values: { likedGameIds: ids('a') }, failed: new Set() },
+    ]);
   });
 
   it('posts nothing once the current session ends and hands the next page what came', () => {
     const page = sink();
-    const session = env.openResourceSession(page);
+    const endSession = env.openResourceSession(page);
 
-    session.end();
+    endSession();
     env.publishResource('likedGameIds', ids('a'));
     env.failResource('ratings');
     const next = sink();
@@ -259,7 +250,7 @@ describe('openResourceSession', () => {
 
     expect(page.sent).toEqual([]);
     expect(next.sent).toEqual([
-      { values: { likedGameIds: ids('a') }, failed: ['ratings'] },
+      { values: { likedGameIds: ids('a') }, failed: new Set(['ratings']) },
     ]);
   });
 });
@@ -269,7 +260,7 @@ describe('a page that cannot take a message', () => {
     [
       'the snapshot',
       (hub, broken) => hub.openResourceSession(broken),
-      { values: { likedGameIds: ids('a') }, failed: [] },
+      { values: { likedGameIds: ids('a') }, failed: new Set() },
     ],
     [
       'a published value',
@@ -277,7 +268,7 @@ describe('a page that cannot take a message', () => {
         hub.openResourceSession(broken);
         hub.publishResource('likedGameIds', ids('b'));
       },
-      { values: { likedGameIds: ids('b') }, failed: [] },
+      { values: { likedGameIds: ids('b') }, failed: new Set() },
     ],
     [
       'a patch',
@@ -285,7 +276,7 @@ describe('a page that cannot take a message', () => {
         hub.openResourceSession(broken);
         hub.patchResource('likedGameIds', () => ids('b'));
       },
-      { values: { likedGameIds: ids('b') }, failed: [] },
+      { values: { likedGameIds: ids('b') }, failed: new Set() },
     ],
     [
       'a failure',
@@ -293,7 +284,7 @@ describe('a page that cannot take a message', () => {
         hub.openResourceSession(broken);
         hub.failResource('likedGameIds');
       },
-      { values: { likedGameIds: ids('a') }, failed: ['likedGameIds'] },
+      { values: { likedGameIds: ids('a') }, failed: new Set(['likedGameIds']) },
     ],
   ])(
     'logs %s it could not take, throws nothing and keeps the state',

@@ -1,4 +1,3 @@
-import type { ResourceMap } from '@/shared/resources';
 import type { Game } from '@/shared/types';
 
 // A list untouched by the pushed rows keeps its identity, so the resource holding it sends nothing
@@ -12,18 +11,13 @@ export function withUpdatedGames(
     : games;
 }
 
-export function homeInstalledWithCounters(
-  value: ResourceMap['homeInstalled'],
+export function gamesWithCounters<V extends { games: readonly Game[] } | null>(
+  value: V,
   updated: readonly Game[]
-): ResourceMap['homeInstalled'] {
+): V {
+  if (value === null) {
+    return value;
+  }
   const games = withUpdatedGames(value.games, updated);
   return games === value.games ? value : { ...value, games };
-}
-
-export function weeklyPicksWithCounters(
-  picks: ResourceMap['weeklyPicks'],
-  updated: readonly Game[]
-): ResourceMap['weeklyPicks'] {
-  const games = picks && withUpdatedGames(picks.games, updated);
-  return picks && games && games !== picks.games ? { ...picks, games } : picks;
 }

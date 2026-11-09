@@ -87,7 +87,7 @@ export const RatingsTable = <T,>({
         </table>
       </div>
 
-      {items === null && failed ? (
+      {failed ? (
         <p className="text-center text-text-muted py-12">{t('ratings.loadFailed')}</p>
       ) : items === null ? (
         <div className="flex justify-center py-12">

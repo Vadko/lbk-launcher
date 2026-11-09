@@ -18,7 +18,7 @@ interface AchievementsDeliveryNoteProps {
 export const AchievementsDeliveryNote: React.FC<AchievementsDeliveryNoteProps> = ({
   badge,
 }) => {
-  const decky = useResource('steamBridgeStatus')?.decky ?? null;
+  const decky = useResource('steamBridgeStatus').value?.decky ?? null;
   const note = deliveryNote(badge, decky);
   if (!note) {
     return null;

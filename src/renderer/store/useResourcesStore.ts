@@ -13,5 +13,5 @@ export const useResourcesStore = create<ResourcesStore>((set) => ({
   values: {},
   failed: new Set(),
   apply: ({ values, failed }) =>
-    set((state) => ({ values: { ...state.values, ...values }, failed: new Set(failed) })),
+    set((state) => ({ values: { ...state.values, ...values }, failed })),
 }));

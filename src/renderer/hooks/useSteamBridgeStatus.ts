@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
 import type { SteamBridgeStatus } from '@/shared/plugin-host-types';
-import { useResource } from './useResource';
+import { useRefreshedResource } from './useRefreshedResource';
 
 interface UseSteamBridgeStatusResult {
   status: SteamBridgeStatus | null;
@@ -13,17 +12,7 @@ const recheck = () =>
     return null;
   });
 
-// Shows the last pushed status at once; main publishes what a revalidation reads
 export function useSteamBridgeStatus(enabled = true): UseSteamBridgeStatusResult {
-  const status = useResource('steamBridgeStatus') ?? null;
-
-  useEffect(() => {
-    if (enabled) {
-      window.electronAPI.getSteamBridgeStatus().catch((error: unknown) => {
-        console.warn('[SteamBridgeStatus] Status fetch failed:', error);
-      });
-    }
-  }, [enabled]);
-
+  const status = useRefreshedResource('steamBridgeStatus', enabled).value ?? null;
   return { status, recheck };
 }

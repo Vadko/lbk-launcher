@@ -6,6 +6,8 @@ const store = new ElectronStore({
   name: 'lbk-store',
 });
 
+const SETTINGS_KEY = 'lbk-settings';
+
 /**
  * Read a value from the store (returns raw string or null).
  * Used by sync IPC handler and directly by main process (e.g. liquid glass preference).
@@ -35,7 +37,15 @@ function readPersistedStateField<T>(storeKey: string, field: string, defaultValu
 }
 
 export function readRendererSetting<T>(field: string, defaultValue: T): T {
-  return readPersistedStateField('lbk-settings', field, defaultValue);
+  return readPersistedStateField(SETTINGS_KEY, field, defaultValue);
+}
+
+function hideAiTranslations(raw: unknown): boolean {
+  return persistedStateField(raw, 'hideAiTranslations', false);
+}
+
+export function readHideAiTranslations(): boolean {
+  return hideAiTranslations(readStoreFile(SETTINGS_KEY));
 }
 
 /** Opt-out from Settings. Lives here so `steam-cef.ts` reads it cycle-free. */
@@ -56,7 +66,7 @@ export function isCrashDiagnosticsEnabled(): boolean {
 }
 
 export function onRendererSettingsChanged(callback: () => void): () => void {
-  return store.onDidChange('lbk-settings', callback);
+  return store.onDidChange(SETTINGS_KEY, callback);
 }
 
 const WORKSHOP_INSTALLS_KEY = 'workshop-installs-storage';
@@ -142,10 +152,8 @@ export function clearStore(): void {
  */
 export function setupStoreStorageHandlers(): void {
   // The renderer rewrites its whole settings envelope whenever any field changes
-  store.onDidChange('lbk-settings', (next, previous) => {
-    const hideAi = (raw: unknown) =>
-      persistedStateField(raw, 'hideAiTranslations', false);
-    if (hideAi(next) !== hideAi(previous)) {
+  store.onDidChange(SETTINGS_KEY, (next, previous) => {
+    if (hideAiTranslations(next) !== hideAiTranslations(previous)) {
       appEvents.emit('hide-ai-changed');
     }
   });

@@ -1,22 +1,11 @@
 import { isDeepStrictEqual } from 'node:util';
 import { D } from '@mobily/ts-belt';
-import { appEvents } from '@/main/app-events';
-import type {
-  ResourceKey,
-  ResourceMap,
-  ResourceSubscribe,
-  ResourceUpdate,
-} from '@/shared/resources';
+import type { ResourceKey, ResourceMap, ResourceUpdate } from '@/shared/resources';
 
 // A MessagePortMain fits it; its own postMessage takes any
 interface ResourceSink {
   postMessage: (update: ResourceUpdate) => void;
   close: () => void;
-}
-
-interface ResourceSession {
-  receive: (message: ResourceSubscribe) => void;
-  end: () => void;
 }
 
 // Values outlive the page, so a reload starts from them
@@ -29,10 +18,15 @@ const hub: {
 // A port that cannot take a value must not throw into a read, an owner or the counters feed
 function send(values: Partial<ResourceMap>): void {
   try {
-    hub.sink?.postMessage({ values, failed: [...hub.failed] });
+    hub.sink?.postMessage({ values, failed: new Set(hub.failed) });
   } catch (error) {
     console.error('[Resources] Failed to publish:', error);
   }
+}
+
+function hold<K extends ResourceKey>(key: K, value: ResourceMap[K]): void {
+  hub.values[key] = value;
+  send(D.selectKeys(hub.values, [key]));
 }
 
 // An equal value sends nothing, unless it clears a failure
@@ -40,10 +34,9 @@ export function publishResource<K extends ResourceKey>(
   key: K,
   value: ResourceMap[K]
 ): void {
-  const wasFailed = hub.failed.delete(key);
-  if (wasFailed || !isDeepStrictEqual(hub.values[key], value)) {
-    hub.values[key] = value;
-    send(D.selectKeys(hub.values, [key]));
+  const cleared = hub.failed.delete(key);
+  if (cleared || !isDeepStrictEqual(hub.values[key], value)) {
+    hold(key, value);
   }
 }
 
@@ -53,10 +46,12 @@ export function patchResource<K extends ResourceKey>(
   patch: (value: ResourceMap[K]) => ResourceMap[K]
 ): void {
   const value = hub.values[key];
-  const next = value === undefined ? value : patch(value);
+  if (value === undefined) {
+    return;
+  }
+  const next = patch(value);
   if (next !== value) {
-    hub.values[key] = next;
-    send(D.selectKeys(hub.values, [key]));
+    hold(key, next);
   }
 }
 
@@ -68,23 +63,16 @@ export function failResource(key: ResourceKey): void {
   }
 }
 
-// A new page starts from everything held and replaces the old one
-export function openResourceSession(sink: ResourceSink): ResourceSession {
+// A new page starts from everything held and replaces the old one; the returned function ends its session
+export function openResourceSession(sink: ResourceSink): () => void {
   hub.sink?.close();
   hub.sink = sink;
   if (D.isNotEmpty(hub.values) || hub.failed.size > 0) {
     send(hub.values);
   }
-  return {
-    receive: ({ subscribe }) => {
-      for (const key of subscribe) {
-        appEvents.emit('resource-wanted', key);
-      }
-    },
-    end: () => {
-      if (hub.sink === sink) {
-        hub.sink = null;
-      }
-    },
+  return () => {
+    if (hub.sink === sink) {
+      hub.sink = null;
+    }
   };
 }

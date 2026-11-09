@@ -1,7 +1,6 @@
 import { EventEmitter } from 'node:events';
 import type { MillenniumApplyReport } from '@/main/millennium-install/apply';
 import type { SyncStatus } from '@/main/sync-status';
-import type { ResourceKey } from '@/shared/resources';
 import type { Game } from '@/shared/types';
 
 interface AppEventMap {
@@ -23,7 +22,6 @@ interface AppEventMap {
   'likes-changed': [];
   'workshop-installs-changed': [];
   'hide-ai-changed': [];
-  'resource-wanted': [key: ResourceKey];
   error: [error: unknown];
 }
 
@@ -32,7 +30,7 @@ export type AppEventName = keyof AppEventMap;
 // emit() runs listeners synchronously and a sync throw skips the rest; a listener that can fail is async, so captureRejections logs it.
 export const appEvents = new EventEmitter<AppEventMap>({ captureRejections: true });
 
-// Every resource listens for resource-wanted and its own sources, past the default leak warning at 10
+// Seven resources follow catalog-changed and sync-status alike, close to the default leak warning at 10
 appEvents.setMaxListeners(50);
 
 appEvents.on('error', (error) => {

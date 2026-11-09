@@ -4,20 +4,15 @@ import { contextBridge, ipcRenderer } from 'electron';
 const isE2EMode = process.env['LBK_E2E'] === '1';
 Sentry.init({ enabled: !isE2EMode });
 
-import { RESOURCES_CONNECT_CHANNEL, RESOURCES_PORT_CHANNEL } from '../shared/resources';
 import type { ElectronAPI } from '../shared/types';
 import { gameReviewsAPI } from './game-reviews-api';
 import { invoke, listen, send } from './ipc';
+import { resourcesAPI } from './resources-api';
 import { systemNotificationAPI } from './system-notification-api';
-
-// The port lands in this isolated world; window messages carry it to the page's listener
-ipcRenderer.on(RESOURCES_PORT_CHANNEL, (event) => {
-  window.postMessage(RESOURCES_PORT_CHANNEL, '*', event.ports);
-});
 
 const electronAPI: ElectronAPI = {
   ...gameReviewsAPI,
-  connectResources: send(RESOURCES_CONNECT_CHANNEL),
+  ...resourcesAPI,
   fetchGames: invoke('fetch-games'),
   fetchSearchMatchIds: invoke('fetch-search-match-ids'),
   checkStoreLibraries: invoke('check-store-libraries'),

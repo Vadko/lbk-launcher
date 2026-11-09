@@ -11,7 +11,6 @@ import type { RatingsFilter } from '../components/Ratings/ratingsFilter';
 import { Button } from '../components/ui/Button';
 import { SlidingTabs } from '../components/ui/SlidingTabs';
 import { useResource } from '../hooks/useResource';
-import { useResourceFailed } from '../hooks/useResourceFailed';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useStore } from '../store/useStore';
 import { showOnlyAuthors } from '../utils/showOnlyAuthors';
@@ -65,9 +64,9 @@ export const RatingsPage: React.FC = () => {
     setPage(1);
   };
   const ratings = useResource('ratings');
-  const teams = ratings?.teams ?? null;
-  const games = ratings?.games ?? null;
-  const failed = useResourceFailed('ratings');
+  const teams = ratings.value?.teams ?? null;
+  const games = ratings.value?.games ?? null;
+  const failed = ratings.status === 'failed';
 
   useEffect(() => {
     setSelectedGame(null);

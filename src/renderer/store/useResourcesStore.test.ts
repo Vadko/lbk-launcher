@@ -17,25 +17,28 @@ describe('useResourcesStore apply', () => {
   it.each<[string, ResourceUpdate, Partial<ResourceMap>, ResourceKey[]]>([
     [
       'clears a key the update no longer names as failed',
-      { values: { ratings }, failed: [] },
+      { values: { ratings }, failed: new Set() },
       { likedGameIds: liked, weeklyPicks: null, ratings },
       [],
     ],
     [
       'keeps the values the update does not carry',
-      { values: { weeklyPicks: null }, failed: ['ratings'] },
+      { values: { weeklyPicks: null }, failed: new Set(['ratings']) },
       { likedGameIds: liked, weeklyPicks: null },
       ['ratings'],
     ],
     [
       'keeps the last value of a key that failed',
-      { values: {}, failed: ['ratings', 'likedGameIds'] },
+      { values: {}, failed: new Set(['ratings', 'likedGameIds']) },
       { likedGameIds: liked, weeklyPicks: null },
       ['ratings', 'likedGameIds'],
     ],
     [
       'takes the failed keys of a snapshot as they are',
-      { values: { likedGameIds: new Set(['b']), ratings }, failed: ['weeklyPicks'] },
+      {
+        values: { likedGameIds: new Set(['b']), ratings },
+        failed: new Set(['weeklyPicks']),
+      },
       { likedGameIds: new Set(['b']), weeklyPicks: null, ratings },
       ['weeklyPicks'],
     ],

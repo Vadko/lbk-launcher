@@ -30,15 +30,16 @@ export type ResourceKey = keyof ResourceMap;
 // values holds what changed; failed names every key whose last read failed, which keeps its last value
 export interface ResourceUpdate {
   values: Partial<ResourceMap>;
-  failed: readonly ResourceKey[];
+  failed: ReadonlySet<ResourceKey>;
 }
 
+// Main reads each key once more; a page sends its keys as it wants them
 export interface ResourceSubscribe {
   subscribe: ResourceKey[];
 }
 
-export const RESOURCES_CONNECT_CHANNEL = 'resources:connect';
-export const RESOURCES_PORT_CHANNEL = 'resources:port';
+// The preload makes a MessageChannel: main gets one end, the page the other, and main opens with a snapshot of everything held
+export const RESOURCES_CHANNEL = 'resources:connect';
 
 export interface ResourcesAPI {
   connectResources: () => void;

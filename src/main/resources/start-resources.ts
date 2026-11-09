@@ -9,14 +9,17 @@ import { getLikedGameIds } from '@/main/likes';
 import { getPluginHostState } from '@/main/plugin-host/state';
 import { getStoreDiscountsByApp } from '@/main/store-discounts-by-app';
 import { getSteamBridgeStatus } from '@/main/utils/steam-bridge';
-import { readRendererSetting } from '@/main/utils/store-storage';
+import { readHideAiTranslations } from '@/main/utils/store-storage';
 import type { ResourceKey } from '@/shared/resources';
-import { defineResource, type ResourceDefinition } from './define-resource';
+import {
+  defineResource,
+  type Resource,
+  type ResourceDefinition,
+} from './define-resource';
 import { setupResourcePort } from './resource-port';
-import { homeInstalledWithCounters, weeklyPicksWithCounters } from './with-updated-games';
+import { gamesWithCounters } from './with-updated-games';
 
 const repo = () => GamesRepository.getInstance();
-const hideAi = () => readRendererSetting('hideAiTranslations', false);
 
 const DEFINITIONS: { [K in ResourceKey]: ResourceDefinition<K> } = {
   facetRows: {
@@ -40,7 +43,10 @@ const DEFINITIONS: { [K in ResourceKey]: ResourceDefinition<K> } = {
     on: ['installs-changed', 'workshop-installs-changed'],
   },
   ratings: {
-    read: () => ({ teams: getTeamsRating(hideAi()), games: getGamesRating(hideAi()) }),
+    read: () => {
+      const hideAi = readHideAiTranslations();
+      return { teams: getTeamsRating(hideAi), games: getGamesRating(hideAi) };
+    },
     on: ['counters-changed', 'catalog-changed', 'hide-ai-changed'],
     afterCatalogSync: true,
   },
@@ -55,17 +61,17 @@ const DEFINITIONS: { [K in ResourceKey]: ResourceDefinition<K> } = {
   },
   // A read rescans every store library, so new counters are patched in
   homeInstalled: {
-    read: () => getHomeInstalledGames(hideAi()),
+    read: () => getHomeInstalledGames(readHideAiTranslations()),
     on: ['catalog-changed', 'library-changed', 'hide-ai-changed'],
     afterCatalogSync: true,
-    withCounters: homeInstalledWithCounters,
+    withCounters: gamesWithCounters,
   },
   // The set's order does not follow the counters, so the pushed rows are enough
   weeklyPicks: {
-    read: () => getWeeklyPicks(hideAi()),
+    read: () => getWeeklyPicks(readHideAiTranslations()),
     on: ['weekly-picks-changed', 'catalog-changed', 'hide-ai-changed'],
     afterCatalogSync: true,
-    withCounters: weeklyPicksWithCounters,
+    withCounters: gamesWithCounters,
   },
   // Their owners publish every value they compute; the page's subscribe reads it once more
   steamBridgeStatus: { read: getSteamBridgeStatus, on: [] },
@@ -73,11 +79,10 @@ const DEFINITIONS: { [K in ResourceKey]: ResourceDefinition<K> } = {
   pluginHostState: { read: getPluginHostState, on: ['steam-started', 'steam-exited'] },
 };
 
-function start<K extends ResourceKey>(key: K): void {
+const define = <K extends ResourceKey>(key: K): Resource =>
   defineResource(key, DEFINITIONS[key]);
-}
 
 export function startResources(): void {
-  D.keys(DEFINITIONS).forEach(start);
-  setupResourcePort();
+  const resources = D.mapWithKey(DEFINITIONS, define);
+  setupResourcePort((key) => resources[key].wanted());
 }

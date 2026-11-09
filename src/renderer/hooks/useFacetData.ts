@@ -9,9 +9,9 @@ export interface FacetData {
 }
 
 export function useFacetData(isModalOpen: boolean): FacetData | null {
-  const rows = useResource('facetRows');
-  const libraries = useResource('libraries');
-  const installedTranslationIds = useResource('installedTranslationIds');
+  const rows = useResource('facetRows').value;
+  const libraries = useResource('libraries').value;
+  const installedTranslationIds = useResource('installedTranslationIds').value;
 
   useEffect(() => {
     if (!isModalOpen) {

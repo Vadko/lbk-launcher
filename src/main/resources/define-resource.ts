@@ -23,11 +23,16 @@ export interface ResourceDefinition<K extends ResourceKey> {
   withCounters?: (value: ResourceMap[K], games: readonly Game[]) => ResourceMap[K];
 }
 
+export interface Resource {
+  // The page asked for the key: the first call starts following its sources, every call reads at once
+  wanted: () => void;
+}
+
 // Nothing is read before the page first asks for the key; from then on it stays current, page or no page
 export function defineResource<K extends ResourceKey>(
   key: K,
   { read, on, afterCatalogSync = false, withCounters }: ResourceDefinition<K>
-): void {
+): Resource {
   const reads = pLimit(1);
   const readAndPublish = async (): Promise<void> => {
     try {
@@ -40,11 +45,14 @@ export function defineResource<K extends ResourceKey>(
       failResource(key);
     }
   };
-  // One read runs and one waits behind it; a request while one waits is absorbed by it
   const refresh = (): void => {
-    if (reads.pendingCount === 0 && (!afterCatalogSync || isCatalogReady())) {
-      void reads(readAndPublish);
+    // The one read allowed to wait behind the running one already covers this request
+    const readWaiting = reads.pendingCount > 0;
+    const waitingForCatalog = afterCatalogSync && !isCatalogReady();
+    if (readWaiting || waitingForCatalog) {
+      return;
     }
+    void reads(readAndPublish);
   };
   const refreshSoon = F.debounce(refresh, EVENT_DEBOUNCE_MS);
 
@@ -68,11 +76,11 @@ export function defineResource<K extends ResourceKey>(
       });
     }
   });
-  // A new page reads every key once more; an unchanged value sends nothing
-  appEvents.on('resource-wanted', (wanted) => {
-    if (wanted === key) {
+
+  return {
+    wanted: () => {
       start();
       refresh();
-    }
-  });
+    },
+  };
 }

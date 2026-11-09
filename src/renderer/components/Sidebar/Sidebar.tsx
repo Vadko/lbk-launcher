@@ -6,7 +6,7 @@ import type { Game, TagOption } from '@/shared/types';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useFacetData } from '../../hooks/useFacetData';
 import { useGames } from '../../hooks/useGames';
-import { useSettledResource } from '../../hooks/useSettledResource';
+import { useResource } from '../../hooks/useResource';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
@@ -27,7 +27,6 @@ const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = 500;
 const NO_AUTHORS: string[] = [];
 const NO_TAGS: TagOption[] = [];
-const NO_OPTIONS = { teams: NO_AUTHORS, tags: NO_TAGS };
 
 interface SidebarProps {
   onOpenHistory: () => void;
@@ -150,10 +149,10 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       );
     }, [specialFilter, setSpecialFilter]);
 
-    const catalogOptions = useSettledResource('catalogOptions', NO_OPTIONS);
-    const authors = catalogOptions?.teams ?? NO_AUTHORS;
-    const tags = catalogOptions?.tags ?? NO_TAGS;
-    const optionsLoading = catalogOptions === undefined;
+    const catalogOptions = useResource('catalogOptions');
+    const authors = catalogOptions.value?.teams ?? NO_AUTHORS;
+    const tags = catalogOptions.value?.tags ?? NO_TAGS;
+    const optionsLoading = catalogOptions.status === 'loading';
 
     const {
       games: visibleGames,

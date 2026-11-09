@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ResourceKey, ResourceUpdate } from '@/shared/resources';
 import type { Game } from '@/shared/types';
 import type { WeeklyPicks } from '@/shared/weekly-picks-types';
-import type { ResourceDefinition } from './define-resource';
-import { sink } from './resource-sink.fixture';
+import type { Resource, ResourceDefinition } from './define-resource';
+import { controlledRead, type Ids, sink } from './resources.fixture';
 
 const state = vi.hoisted(() => ({ catalogReady: true }));
 
@@ -15,11 +15,12 @@ async function load() {
   const hub = await import('./resource-hub');
   const { appEvents } = await import('@/main/app-events');
   const page = sink();
-  const session = hub.openResourceSession(page);
-  return { defineResource, appEvents, page, session, ...hub };
+  const endSession = hub.openResourceSession(page);
+  return { defineResource, appEvents, page, endSession, ...hub };
 }
 
 let env: Awaited<ReturnType<typeof load>>;
+let resource: Resource;
 
 // Runs what is already due, short of the 300 ms debounce
 const flush = () => vi.advanceTimersByTimeAsync(0);
@@ -31,7 +32,7 @@ const request = {
     await settle();
   },
   subscribe: async () => {
-    env.session.receive({ subscribe: ['likedGameIds'] });
+    resource.wanted();
     await flush();
   },
 };
@@ -40,32 +41,18 @@ async function subscribed<K extends ResourceKey>(
   key: K,
   definition: ResourceDefinition<K>
 ) {
-  env.defineResource(key, definition);
-  env.session.receive({ subscribe: [key] });
+  resource = env.defineResource(key, definition);
+  resource.wanted();
   await flush();
 }
 
-type Ids = ReadonlySet<string>;
-
-// Each call waits for finish(); the nth call resolves with the nth value, the last one repeating
-function controlledRead(...values: Ids[]) {
-  const pending: Array<() => void> = [];
-  const read = vi.fn(
-    () =>
-      new Promise<Ids>((resolve) => {
-        const value = values[Math.min(read.mock.calls.length, values.length) - 1];
-        pending.push(() => resolve(value));
-      })
-  );
-  return { read, finish: () => pending.shift()?.() };
-}
-
 const ids = (...list: string[]): Ids => new Set(list);
+const failedKeys = (...keys: ResourceKey[]) => new Set(keys);
 const liked = (value: Ids): ResourceUpdate => ({
   values: { likedGameIds: value },
-  failed: [],
+  failed: failedKeys(),
 });
-const likedFailed: ResourceUpdate = { values: {}, failed: ['likedGameIds'] };
+const likedFailed: ResourceUpdate = { values: {}, failed: failedKeys('likedGameIds') };
 const game = (id: string, likes: number) => ({ id, likes }) as Game;
 const picks = (likes: number): WeeklyPicks => ({
   title: null,
@@ -73,7 +60,7 @@ const picks = (likes: number): WeeklyPicks => ({
 });
 const picked = (likes: number, ...failed: ResourceKey[]): ResourceUpdate => ({
   values: { weeklyPicks: picks(likes) },
-  failed,
+  failed: failedKeys(...failed),
 });
 const withCounters = (value: WeeklyPicks | null, games: readonly Game[]) =>
   value && games.length > 0 ? { ...value, games } : value;
@@ -95,7 +82,7 @@ afterEach(() => {
 describe('before the first subscribe', () => {
   it('reads nothing and follows no source event until the page subscribes', async () => {
     const read = vi.fn(() => ids('a'));
-    env.defineResource('likedGameIds', { read, on: ['likes-changed'] });
+    resource = env.defineResource('likedGameIds', { read, on: ['likes-changed'] });
 
     await request.change();
 
@@ -120,7 +107,8 @@ describe('subscribe', () => {
     expect(read).toHaveBeenCalledTimes(2);
 
     const next = sink();
-    env.openResourceSession(next).receive({ subscribe: ['likedGameIds'] });
+    env.openResourceSession(next);
+    resource.wanted();
     await flush();
     expect(read).toHaveBeenCalledTimes(3);
 
@@ -234,15 +222,14 @@ describe('the catalog sync', () => {
 
   it('reads at once on every sync-status after the first subscribe', async () => {
     const read = vi.fn(() => []);
-    env.defineResource('facetRows', { read, on: [], afterCatalogSync: true });
+    resource = env.defineResource('facetRows', { read, on: [], afterCatalogSync: true });
 
     env.appEvents.emit('sync-status', 'ready');
     await flush();
 
     expect(read).not.toHaveBeenCalled();
 
-    env.session.receive({ subscribe: ['facetRows'] });
-    await flush();
+    await request.subscribe();
     env.appEvents.emit('sync-status', 'error');
     await flush();
 
@@ -287,7 +274,9 @@ describe('a failed read', () => {
       expect.any(Error)
     );
     expect(env.page.sent).toEqual([liked(ids('a')), likedFailed]);
-    expect(next.sent).toEqual([{ ...liked(ids('a')), failed: ['likedGameIds'] }]);
+    expect(next.sent).toEqual([
+      { ...liked(ids('a')), failed: failedKeys('likedGameIds') },
+    ]);
   });
 
   it('reports a key once while it stays failed', async () => {
@@ -349,17 +338,17 @@ describe('a failed read', () => {
 describe('an owner publish', () => {
   it('reaches the next page in its snapshot, and the subscribe still reads once', async () => {
     const read = vi.fn(() => ids('b'));
-    env.defineResource('likedGameIds', { read, on: [] });
+    resource = env.defineResource('likedGameIds', { read, on: [] });
 
     env.publishResource('likedGameIds', ids('a'));
     const next = sink();
-    const session = env.openResourceSession(next);
+    env.openResourceSession(next);
 
     expect(env.page.sent).toEqual([liked(ids('a'))]);
     expect(next.sent).toEqual([liked(ids('a'))]);
     expect(read).not.toHaveBeenCalled();
 
-    session.receive({ subscribe: ['likedGameIds'] });
+    resource.wanted();
     await settle();
 
     expect(read).toHaveBeenCalledOnce();
@@ -486,7 +475,7 @@ describe('without a page', () => {
   it('keeps a started key current and hands the next page what changed', async () => {
     const read = vi.fn(() => ids('a'));
     await subscribed('likedGameIds', { read, on: ['likes-changed'] });
-    env.session.end();
+    env.endSession();
     read.mockReturnValue(ids('b'));
 
     await request.change();
