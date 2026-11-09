@@ -1122,7 +1122,7 @@ export const be = {
   },
   privacyPolicy: {
     title: 'Палітыка прыватнасці',
-    updated: 'Абноўлена: 24 кастрычніка 2026',
+    updated: 'Абноўлена: 9 лістапада 2026',
     intro:
       'LBK Launcher — сэрвіс для пошуку, усталявання і абнаўлення ўкраінскіх лакалізацый.',
     openSource:
@@ -1354,7 +1354,8 @@ export const be = {
         turnstile:
           '<b>Cloudflare Turnstile</b> — абарона ад ботаў у формах панэлі кіравання і пры публікацыі водгукаў у праграме (<turnstile>Turnstile Privacy Addendum</turnstile>);',
         googleAnalytics: '<b>Google Analytics</b> — аналітыка панэлі кіравання;',
-        resend: '<b>Resend</b> — лісты для ўліковых запісаў і службовыя апавяшчэнні;',
+        amazonSes:
+          '<b>Amazon SES</b> — дастаўка лістоў для ўліковых запісаў і службовых апавяшчэнняў; лісты адпраўляе useSend, разгорнуты на ўласных серверах LBK;',
         youtube: '<b>YouTube / Google</b> — убудаваныя відэа;',
         steam: '<b>Steam</b> — даныя для інтэграцыі са Steam;',
         github: '<b>GitHub</b> — распаўсюджванне рэлізаў і праверка абнаўленняў;',
@@ -1372,7 +1373,7 @@ export const be = {
         title: '15. Дзе апрацоўваюцца даныя',
         servers: 'Уласныя серверы LBK знаходзяцца ў <b>Германіі</b>.',
         external:
-          'Некаторыя знешнія сэрвісы могуць апрацоўваць даныя ў іншых краінах, у тым ліку ў ЗША. Да іх належаць Cloudflare, Mixpanel, Resend, Google/YouTube, GitHub і Steam.',
+          'Некаторыя знешнія сэрвісы могуць апрацоўваць даныя ў іншых краінах, у тым ліку ў ЗША. Да іх належаць Cloudflare, Mixpanel, Amazon (AWS), Google/YouTube, GitHub і Steam.',
       },
       rights: {
         title: '16. Вашы правы і кіраванне згодай',
