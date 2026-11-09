@@ -129,8 +129,38 @@ describe('deckySetupMachine', () => {
     h.actor.send({ type: 'INSTALL_LOADER' });
     await flush();
     expect(h.installLoader).toHaveBeenCalledTimes(1);
+    expect(h.refreshHost).toHaveBeenCalledTimes(1);
     expect(flow(h)).toBe('intro');
     expect(h.actor.getSnapshot().context.loaderInstalled).toBe(true);
+  });
+
+  it('takes the host state from the refresh reply when the push is still on its way', async () => {
+    const loader = { installing: true, blockedBy: null, repair: false };
+    const h = start(host(null, loader));
+    h.actor.send({
+      type: 'HOST_STATE',
+      state: host(null, { ...loader, installing: false }),
+    });
+    const fresh = host(deckyState({ installed: false }), {
+      ...loader,
+      installing: false,
+    });
+    h.refreshHost.mockResolvedValue(fresh);
+    h.actor.send({ type: 'INSTALL_LOADER' });
+    h.actor.send({ type: 'HOST_STATE', state: host(null, loader) });
+    await flush();
+    expect(flow(h)).toBe('intro');
+    expect(h.actor.getSnapshot().context.host).toBe(fresh);
+  });
+
+  it('keeps the host state it has when the refresh finds none', async () => {
+    const known = host(deckyState({ installed: false }));
+    const h = start(known);
+    h.request.mockResolvedValue({ success: false, reason: 'no-decky' });
+    h.actor.send({ type: 'REQUEST' });
+    await flush();
+    expect(flow(h)).toBe('intro');
+    expect(h.actor.getSnapshot().context.host).toBe(known);
   });
 
   it('keeps the failure reason for the retry screen', async () => {

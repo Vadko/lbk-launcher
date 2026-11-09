@@ -5,8 +5,8 @@ import { Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useIsTranslationInstalled } from '@/renderer/hooks/useInstalledTranslations';
+import { useResource } from '@/renderer/hooks/useResource';
 import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
-import { useHomeInstalledGamesStore } from '@/renderer/store/useHomeInstalledGamesStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { getGameGroupKey } from '@/shared/game-filters';
@@ -37,12 +37,9 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
     }))
   );
 
-  const installedGames = useHomeInstalledGamesStore((state) => state.games);
-  const installedPathsCount = useHomeInstalledGamesStore(
-    (state) => state.installedPathsCount
-  );
-  const allInstalledGames = installedGames ?? NO_GAMES;
-  const isLoading = installedGames === null;
+  const homeInstalled = useResource('homeInstalled');
+  const allInstalledGames = homeInstalled.value?.games ?? NO_GAMES;
+  const installedPathsCount = homeInstalled.value?.installedPathsCount ?? 0;
   const isInstalled = useIsTranslationInstalled();
 
   // One card per game, not per translation - two authors' translations are still one installed game
@@ -97,8 +94,12 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
     }
   };
 
-  // Show banner instead of section when no games with translations found
-  if (!isLoading && allInstalledGames.length === 0) {
+  // A failed first read hides the section: the empty banner would tell the player nothing is installed
+  if (homeInstalled.status === 'failed') {
+    return null;
+  }
+
+  if (homeInstalled.status === 'ready' && allInstalledGames.length === 0) {
     const hasInstalledGames = installedPathsCount > 0;
 
     return (
@@ -168,7 +169,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
       {/* Content */}
       <div className="grid grid-cols-3 gap-8">
         <AnimatePresence mode="popLayout">
-          {isLoading ? (
+          {homeInstalled.status === 'loading' ? (
             <motion.div
               key="loader"
               initial={{ opacity: 0 }}

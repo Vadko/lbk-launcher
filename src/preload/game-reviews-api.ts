@@ -1,22 +1,16 @@
-import { ipcRenderer } from 'electron';
 import type { GameReviewsAPI } from '../shared/game-reviews-api-types';
-import type { ReviewEvent } from '../shared/game-reviews-types';
+import { invoke, listen, send } from './ipc';
 
 export const gameReviewsAPI: GameReviewsAPI = {
-  fetchGameReviews: (input) => ipcRenderer.invoke('reviews:list', input),
-  replyToReview: (input) => ipcRenderer.invoke('reviews:reply', input),
-  editReviewEntry: (input) => ipcRenderer.invoke('reviews:edit', input),
-  getReviewAuthor: () => ipcRenderer.invoke('reviews:author'),
-  spinReviewNickname: (input) => ipcRenderer.invoke('reviews:spin', input),
-  claimReviewNickname: (input) => ipcRenderer.invoke('reviews:claim', input),
-  submitFeedback: (input) => ipcRenderer.invoke('reviews:submit-feedback', input),
-  getFeedbackUploadUrls: (input) => ipcRenderer.invoke('reviews:upload-urls', input),
-  prefetchCaptcha: (action) => ipcRenderer.send('reviews:prefetch-captcha', action),
-  onReviewEvents: (callback) => {
-    const handler = (_: unknown, events: ReviewEvent[], live: boolean) =>
-      callback(events, live);
-    ipcRenderer.on('review-events', handler);
-    return () => ipcRenderer.removeListener('review-events', handler);
-  },
-  syncReviewEvents: () => ipcRenderer.invoke('reviews:sync-events'),
+  fetchGameReviews: invoke('reviews:list'),
+  replyToReview: invoke('reviews:reply'),
+  editReviewEntry: invoke('reviews:edit'),
+  getReviewAuthor: invoke('reviews:author'),
+  spinReviewNickname: invoke('reviews:spin'),
+  claimReviewNickname: invoke('reviews:claim'),
+  submitFeedback: invoke('reviews:submit-feedback'),
+  getFeedbackUploadUrls: invoke('reviews:upload-urls'),
+  prefetchCaptcha: send('reviews:prefetch-captcha'),
+  onReviewEvents: listen('review-events'),
+  syncReviewEvents: invoke('reviews:sync-events'),
 };

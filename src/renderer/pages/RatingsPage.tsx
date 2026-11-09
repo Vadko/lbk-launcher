@@ -3,15 +3,15 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDownloads } from '@/shared/formatters';
 import { t } from '@/shared/i18n/i18n';
-import type { GameRatingItem, TeamRatingItem } from '@/shared/ratings-api-types';
+import type { GameRatingItem, TeamRatingItem } from '@/shared/ratings-types';
 import { StatusBadge } from '../components/Elements/StatusBadge';
 import { RatingsSearch } from '../components/Ratings/RatingsSearch';
 import { type RatingsColumn, RatingsTable } from '../components/Ratings/RatingsTable';
 import type { RatingsFilter } from '../components/Ratings/ratingsFilter';
 import { Button } from '../components/ui/Button';
 import { SlidingTabs } from '../components/ui/SlidingTabs';
+import { useResource } from '../hooks/useResource';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
-import { useRatingsStore } from '../store/useRatingsStore';
 import { useStore } from '../store/useStore';
 import { showOnlyAuthors } from '../utils/showOnlyAuthors';
 
@@ -63,9 +63,10 @@ export const RatingsPage: React.FC = () => {
     setFilters((prev) => ({ ...prev, [tab]: filter }));
     setPage(1);
   };
-  const teams = useRatingsStore((state) => state.teams);
-  const games = useRatingsStore((state) => state.games);
-  const failed = useRatingsStore((state) => state.failed);
+  const ratings = useResource('ratings');
+  const teams = ratings.value?.teams ?? null;
+  const games = ratings.value?.games ?? null;
+  const failed = ratings.status === 'failed';
 
   useEffect(() => {
     setSelectedGame(null);

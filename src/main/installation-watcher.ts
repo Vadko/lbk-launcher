@@ -2,6 +2,7 @@ import { F } from '@mobily/ts-belt';
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { appEvents } from './app-events';
 import { invalidateInstalledGameIdsCache } from './installer/cache';
 import { sendToRenderer } from './window';
 
@@ -25,6 +26,7 @@ const flushChanges = F.makeControlledDebounce(
 
     // Notify renderer to refresh installed games list
     sendToRenderer('installed-games-changed');
+    appEvents.emit('installs-changed');
 
     // Optional callback (e.g. process server-side tombstoned games
     // that became uninstalled and can now be removed locally)

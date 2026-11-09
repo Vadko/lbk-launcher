@@ -6,7 +6,6 @@ import type {
   PluginHostState,
 } from '@/shared/plugin-host-types';
 import type { ElectronAPI } from '@/shared/types';
-import { useSteamPluginHostStore } from '../../../store/useSteamPluginHostStore';
 
 export type LoaderFailure = Extract<
   DeckyLoaderInstallResult,
@@ -44,22 +43,23 @@ export const deckySetupMachine = setup({
     input: {} as { host: PluginHostState | null },
   },
   actors: {
-    installLoader: fromPromise<DeckyLoaderInstallResult>(async () => {
-      const result = await window.electronAPI
+    installLoader: fromPromise<DeckyLoaderInstallResult>(() =>
+      window.electronAPI
         .installDeckyLoader()
         .catch((error: unknown): DeckyLoaderInstallResult => {
           console.warn('[DeckySetup] Decky Loader install failed:', error);
           return { success: false, reason: 'not-installed' };
-        });
-      await useSteamPluginHostStore.getState().refresh();
-      return result;
-    }),
+        })
+    ),
     request: fromPromise<DeckyInstallResult>(() =>
       window.electronAPI.requestDeckyPluginInstall()
     ),
     saveZip: fromPromise<SaveZipResult>(() => window.electronAPI.saveDeckyPluginZip()),
     refreshHost: fromPromise<PluginHostState | null>(() =>
-      useSteamPluginHostStore.getState().refresh()
+      window.electronAPI.getPluginHostState().catch((error: unknown) => {
+        console.warn('[DeckySetup] Host state fetch failed:', error);
+        return null;
+      })
     ),
   },
   guards: {
@@ -103,7 +103,7 @@ export const deckySetupMachine = setup({
             onDone: [
               {
                 guard: ({ event }) => event.output.success,
-                target: 'intro',
+                target: 'refreshingHost',
                 actions: assign({ loaderInstalled: true }),
               },
               {
@@ -147,9 +147,18 @@ export const deckySetupMachine = setup({
             },
           },
         },
-        // Waits for the fresh state, so the intro never renders the stale plugin offer first.
+        // Takes the fresh state from the reply: the pushed one comes over another pipe and may land after the intro renders.
         refreshingHost: {
-          invoke: { src: 'refreshHost', onDone: 'intro', onError: 'intro' },
+          invoke: {
+            src: 'refreshHost',
+            onDone: {
+              target: 'intro',
+              actions: assign({
+                host: ({ event, context }) => event.output ?? context.host,
+              }),
+            },
+            onError: 'intro',
+          },
         },
         waiting: {
           always: { guard: 'pluginReady', target: 'done' },

@@ -5,7 +5,6 @@ import { Router } from '../lib/electron-router-dom';
 import { MainLayout } from './components/Layout/MainLayout';
 import { useIdleEffect } from './hooks/useIdleEffect';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
-import { useSteamBridgeStatusSync } from './hooks/useSteamBridgeStatusSync';
 import { useSteamRestartPrompt } from './hooks/useSteamRestartPrompt';
 import { GamePage } from './pages/GamePage';
 import { HomePage } from './pages/HomePage';
@@ -402,7 +401,6 @@ export const App: React.FC = () => {
   }, []);
 
   useSteamRestartPrompt();
-  useSteamBridgeStatusSync();
 
   const handleOnlineEvent = () => {
     setOnline(true);
@@ -425,15 +423,13 @@ export const App: React.FC = () => {
   }, []);
 
   // Listen for maximize state changes to remove border-radius
-  useEffect(() => {
-    window.windowControls?.onMaximizedChange((isMaximized) => {
-      if (isMaximized) {
-        document.documentElement.classList.add('maximized');
-      } else {
-        document.documentElement.classList.remove('maximized');
-      }
-    });
-  }, []);
+  useEffect(
+    () =>
+      window.windowControls?.onMaximizedChange((isMaximized) => {
+        document.documentElement.classList.toggle('maximized', isMaximized);
+      }),
+    []
+  );
 
   return (
     <Router

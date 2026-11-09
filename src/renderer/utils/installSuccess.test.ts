@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/shared/i18n/i18n';
-import { useSteamBridgeStatusStore } from '../store/useSteamBridgeStatusStore';
+import type { SteamBridgeStatus } from '@/shared/plugin-host-types';
+import { useResourcesStore } from '../store/useResourcesStore';
 import {
   type InstallSuccessInput,
   installSuccessActions,
@@ -25,8 +26,11 @@ const noRelease = steamBridgeStatus({
   achievements: { state: 'needs-millennium', unsupportedReason: 'no-release' },
 });
 
+const lastPushed = (status: SteamBridgeStatus | null) =>
+  useResourcesStore.setState({ values: status ? { steamBridgeStatus: status } : {} });
+
 afterEach(() => {
-  useSteamBridgeStatusStore.setState({ status: null });
+  lastPushed(null);
 });
 
 describe('needsBridgeStatus', () => {
@@ -169,12 +173,12 @@ describe('a status fetch that failed', () => {
       },
     ],
   ])('%s', (_label, known, expected) => {
-    useSteamBridgeStatusStore.setState({ status: known });
+    lastPushed(known);
     expect(millennium(input({ delivery: 'needs-millennium' }))).toEqual(expected);
   });
 
   it('prefers the fresh status over the last known one', () => {
-    useSteamBridgeStatusStore.setState({ status: noRelease });
+    lastPushed(noRelease);
     expect(labels(input({ delivery: 'needs-millennium', status: installable }))).toEqual([
       t('installSuccess.ok'),
       t('pluginOffer.installMillennium'),

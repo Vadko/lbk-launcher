@@ -3,10 +3,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/renderer/store/useStore';
-import { useWeeklyPicksStore } from '@/renderer/store/useWeeklyPicksStore';
 import { trackEvent } from '@/renderer/utils/analytics';
 import { t } from '@/shared/i18n/i18n';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
+import { useResource } from '../../hooks/useResource';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
 
@@ -19,25 +19,31 @@ export const WeeklyPicksSection: React.FC = () => {
       isGameDetected: state.isGameDetected,
     }))
   );
-  const picks = useWeeklyPicksStore((state) => state.picks);
+  const picks = useResource('weeklyPicks');
 
-  if (picks === null || picks?.games.length === 0) {
+  if (
+    picks.status === 'failed' ||
+    picks.value === null ||
+    picks.value?.games.length === 0
+  ) {
     return null;
   }
+  // A const binding: TS drops the narrowing of picks.value inside the map callback below
+  const set = picks.value;
 
   return (
     <section>
       <div className="mb-8">
         {/* Keeps the height while the set loads without flashing a default title */}
         <h2
-          className={`text-4xl font-head font-semibold text-text-main ${picks ? '' : 'invisible'}`}
+          className={`text-4xl font-head font-semibold text-text-main ${set ? '' : 'invisible'}`}
         >
-          {picks?.title ?? t('homeSections.weeklyPicks')}
+          {set?.title ?? t('homeSections.weeklyPicks')}
         </h2>
       </div>
       <div className="grid grid-cols-3 gap-8">
         <AnimatePresence mode="popLayout">
-          {picks === undefined ? (
+          {set === undefined ? (
             <motion.div
               key="loader"
               initial={{ opacity: 0 }}
@@ -49,7 +55,7 @@ export const WeeklyPicksSection: React.FC = () => {
               <Loader size="md" />
             </motion.div>
           ) : (
-            picks.games.map((game, index) => (
+            set.games.map((game, index) => (
               <motion.div
                 key={game.id}
                 id={`weekly-pick-${game.slug}`}
@@ -74,7 +80,7 @@ export const WeeklyPicksSection: React.FC = () => {
                   onClick={() => {
                     trackEvent('Select game', {
                       'Is weekly pick': true,
-                      'Weekly pick title': picks.title ?? 'default',
+                      'Weekly pick title': set.title ?? 'default',
                       'Game Id': game.id,
                       'Game Name': game.name,
                     });

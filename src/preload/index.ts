@@ -4,429 +4,161 @@ import { contextBridge, ipcRenderer } from 'electron';
 const isE2EMode = process.env['LBK_E2E'] === '1';
 Sentry.init({ enabled: !isE2EMode });
 
-import type { ImpressionType } from '@/main/db/banners-api';
-import type { DeepLinkTarget } from '../shared/game-link-target';
-import type {
-  MillenniumProgress,
-  PluginHostState,
-  SteamBridgeStatus,
-} from '../shared/plugin-host-types';
-import type {
-  DownloadProgress,
-  ElectronAPI,
-  Game,
-  InstallationStatus,
-  InstallOptions,
-  RunInstallerDecision,
-  RunInstallerRequest,
-  SortOrderType,
-} from '../shared/types';
+import type { ElectronAPI } from '../shared/types';
 import { gameReviewsAPI } from './game-reviews-api';
-import { ratingsAPI } from './ratings-api';
+import { invoke, listen, send } from './ipc';
+import { resourcesAPI } from './resources-api';
 import { systemNotificationAPI } from './system-notification-api';
 
 const electronAPI: ElectronAPI = {
   ...gameReviewsAPI,
-  ...ratingsAPI,
-  fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
-  fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
-  fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
-  fetchFacetRows: () => ipcRenderer.invoke('fetch-facet-rows'),
-  fetchSearchMatchIds: (searchQuery: string) =>
-    ipcRenderer.invoke('fetch-search-match-ids', searchQuery),
-  getLibraryMemberships: () => ipcRenderer.invoke('get-library-memberships'),
-  checkStoreLibraries: () => ipcRenderer.invoke('check-store-libraries'),
-  fetchTrendingGames: (days?: number, limit?: number) =>
-    ipcRenderer.invoke('fetch-trending-games', days, limit),
-  getWeeklyPicks: (hideAiTranslations: boolean) =>
-    ipcRenderer.invoke('get-weekly-picks', hideAiTranslations),
-  onWeeklyPicksUpdated: (callback: () => void) => {
-    const handler = () => callback();
-    ipcRenderer.on('weekly-picks-updated', handler);
-    return () => ipcRenderer.removeListener('weekly-picks-updated', handler);
-  },
-  fetchGamesByIds: (
-    gameIds: string[],
-    searchQuery?: string,
-    hideAiTranslations?: boolean,
-    sortOrder?: SortOrderType
-  ) =>
-    ipcRenderer.invoke(
-      'fetch-games-by-ids',
-      gameIds,
-      searchQuery,
-      hideAiTranslations,
-      sortOrder
-    ),
-  fetchRecommendedGames: (gameId: string, limit = 3, hideAiTranslations = false) =>
-    ipcRenderer.invoke('fetch-recommended-games', gameId, limit, hideAiTranslations),
-  syncKurinGames: () => ipcRenderer.invoke('sync-kurin-games'),
-  getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
-  getDetectedGames: () => ipcRenderer.invoke('get-detected-games'),
-  getAvailableProtons: () => ipcRenderer.invoke('get-available-protons'),
-  findGamesByInstallPaths: (
-    installPaths: string[],
-    searchQuery?: string,
-    hideAiTranslations?: boolean,
-    sortOrder?: SortOrderType
-  ) =>
-    ipcRenderer.invoke(
-      'find-games-by-install-paths',
-      installPaths,
-      searchQuery,
-      hideAiTranslations,
-      sortOrder
-    ),
-  getSteamLibraryAppIds: () => ipcRenderer.invoke('get-steam-library-app-ids'),
-  findGamesBySteamAppIds: (
-    steamAppIds: number[],
-    searchQuery?: string,
-    hideAiTranslations?: boolean,
-    sortOrder?: SortOrderType
-  ) =>
-    ipcRenderer.invoke(
-      'find-games-by-steam-app-ids',
-      steamAppIds,
-      searchQuery,
-      hideAiTranslations,
-      sortOrder
-    ),
-  findGamesByTitles: (
-    titles: string[],
-    searchQuery?: string,
-    hideAiTranslations?: boolean,
-    sortOrder?: SortOrderType
-  ) =>
-    ipcRenderer.invoke(
-      'find-games-by-titles',
-      titles,
-      searchQuery,
-      hideAiTranslations,
-      sortOrder
-    ),
-  getGogLibrary: () => ipcRenderer.invoke('get-gog-library'),
-  getEpicLibrary: () => ipcRenderer.invoke('get-epic-library'),
-  getXboxInstalledPaths: () => ipcRenderer.invoke('get-xbox-installed-paths'),
-  findGamesByXboxPaths: (
-    folderNames: string[],
-    searchQuery?: string,
-    hideAiTranslations?: boolean,
-    sortOrder: SortOrderType = 'name'
-  ) =>
-    ipcRenderer.invoke(
-      'find-games-by-xbox-paths',
-      folderNames,
-      searchQuery,
-      hideAiTranslations,
-      sortOrder
-    ),
-  detectGamePlatforms: (game: Game) => ipcRenderer.invoke('detect-game-platforms', game),
-  setGameVisibility: (gameId: string, hidden: boolean) =>
+  ...resourcesAPI,
+  fetchGames: invoke('fetch-games'),
+  fetchSearchMatchIds: invoke('fetch-search-match-ids'),
+  checkStoreLibraries: invoke('check-store-libraries'),
+  onStoreLibraryChanged: listen('store-library-changed'),
+  fetchTrendingGames: invoke('fetch-trending-games'),
+  fetchGamesByIds: invoke('fetch-games-by-ids'),
+  fetchRecommendedGames: invoke('fetch-recommended-games'),
+  syncKurinGames: invoke('sync-kurin-games'),
+  getAllInstalledGamePaths: invoke('get-all-installed-game-paths'),
+  getDetectedGames: invoke('get-detected-games'),
+  getAvailableProtons: invoke('get-available-protons'),
+  findGamesByInstallPaths: invoke('find-games-by-install-paths'),
+  getSteamLibraryAppIds: invoke('get-steam-library-app-ids'),
+  findGamesBySteamAppIds: invoke('find-games-by-steam-app-ids'),
+  findGamesByTitles: invoke('find-games-by-titles'),
+  getGogLibrary: invoke('get-gog-library'),
+  getEpicLibrary: invoke('get-epic-library'),
+  getXboxInstalledPaths: invoke('get-xbox-installed-paths'),
+  findGamesByXboxPaths: invoke('find-games-by-xbox-paths'),
+  detectGamePlatforms: invoke('detect-game-platforms'),
+  setGameVisibility: (gameId, hidden) =>
     ipcRenderer.invoke('set-game-visibility', { gameId, hidden }),
-  installTranslation: (game: Game, options: InstallOptions, customGamePath?: string) =>
-    ipcRenderer.invoke('install-translation', game, options, customGamePath),
-  uninstallTranslation: (game: Game) => ipcRenderer.invoke('uninstall-translation', game),
-  rerunInstaller: (installerPath: string, protonPath?: string) =>
-    ipcRenderer.invoke('rerun-installer', installerPath, protonPath),
-  showItemInFolder: (filePath: string) =>
-    ipcRenderer.invoke('show-item-in-folder', filePath),
-  onRequestRunInstallerConfirm: (callback) => {
-    const handler = (_: unknown, request: RunInstallerRequest) => callback(request);
-    ipcRenderer.on('installer:confirm-run', handler);
-    return () => ipcRenderer.removeListener('installer:confirm-run', handler);
-  },
-  respondRunInstaller: (gameId: string, decision: RunInstallerDecision) =>
-    ipcRenderer.send('installer:run-decision', gameId, decision),
-  abortDownload: (reason?: string) => ipcRenderer.invoke('abort-download', reason),
-  pauseDownload: (gameId: string) => ipcRenderer.invoke('pause-download', gameId),
-  resumeDownload: (gameId: string) => ipcRenderer.invoke('resume-download', gameId),
-  getPausedDownload: (gameId: string) =>
-    ipcRenderer.invoke('get-paused-download', gameId),
-  cancelPausedDownload: (gameId: string) =>
-    ipcRenderer.invoke('cancel-paused-download', gameId),
-  checkInstallation: (game: Game) => ipcRenderer.invoke('check-installation', game),
-  getConflictingTranslation: (game: Game) =>
-    ipcRenderer.invoke('get-conflicting-translation', game),
-  getAllInstalledGameIds: () => ipcRenderer.invoke('get-all-installed-game-ids'),
-  removeOrphanedMetadata: (gameIds: string[]) =>
-    ipcRenderer.invoke('remove-orphaned-metadata', gameIds),
-  removeComponents: (
-    game: Game,
-    componentsToRemove: { voice?: boolean; achievements?: boolean }
-  ) => ipcRenderer.invoke('remove-components', game, componentsToRemove),
-  isSteamArtworkApplied: (appId: number) =>
-    ipcRenderer.invoke('is-steam-artwork-applied', appId),
-  setSteamArtwork: (game: Game, enabled: boolean) =>
-    ipcRenderer.invoke('set-steam-artwork', game, enabled),
-  checkPlatformCompatibility: (game: Game) =>
-    ipcRenderer.invoke('check-platform-compatibility', game),
-  fetchNewsFeed: (filter, before) =>
-    ipcRenderer.invoke('fetch-news-feed', filter, before),
-  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
-  selectGameFolder: () => ipcRenderer.invoke('select-game-folder'),
-  onDownloadProgress: (callback) => {
-    const handler = (_: unknown, gameId: string, progress: DownloadProgress) =>
-      callback(gameId, progress);
-    ipcRenderer.on('download-progress', handler);
-    return () => ipcRenderer.removeListener('download-progress', handler);
-  },
-  onInstallationStatus: (callback) => {
-    const handler = (_: unknown, gameId: string, status: InstallationStatus) =>
-      callback(gameId, status);
-    ipcRenderer.on('installation-status', handler);
-    return () => ipcRenderer.removeListener('installation-status', handler);
-  },
-  // Auto-updater
-  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
-  downloadUpdate: () => ipcRenderer.invoke('download-update'),
-  installUpdate: () => ipcRenderer.invoke('install-update'),
-  onUpdateAvailable: (callback) => {
-    const handler = (_: unknown, info: unknown) => callback(info);
-    ipcRenderer.on('update-available', handler);
-    return () => ipcRenderer.removeListener('update-available', handler);
-  },
-  onUpdateDownloaded: (callback) => {
-    const handler = (_: unknown, info: unknown) => callback(info);
-    ipcRenderer.on('update-downloaded', handler);
-    return () => ipcRenderer.removeListener('update-downloaded', handler);
-  },
-  onUpdateProgress: (callback) => {
-    const handler = (
-      _: unknown,
-      progress: {
-        percent: number;
-        bytesPerSecond: number;
-        transferred: number;
-        total: number;
-      }
-    ) => callback(progress);
-    ipcRenderer.on('update-progress', handler);
-    return () => ipcRenderer.removeListener('update-progress', handler);
-  },
-  onUpdateError: (callback) => {
-    const handler = (_: unknown, error: Error) => callback(error);
-    ipcRenderer.on('update-error', handler);
-    return () => ipcRenderer.removeListener('update-error', handler);
-  },
-  fetchChangelog: (version) => ipcRenderer.invoke('fetch-changelog', version),
-  // Real-time updates (managed automatically in the main process)
-  onGameUpdated: (callback) => {
-    const handler = (_: unknown, game: Game) => callback(game);
-    ipcRenderer.on('game-updated', handler);
-    return () => ipcRenderer.removeListener('game-updated', handler);
-  },
-  onGameCountersUpdated: (callback) => {
-    const handler = (_: unknown, games: Game[]) => callback(games);
-    ipcRenderer.on('game-counters-updated', handler);
-    return () => ipcRenderer.removeListener('game-counters-updated', handler);
-  },
-  getStoreDiscounts: () => ipcRenderer.invoke('get-store-discounts'),
-  onStoreDiscountsUpdated: (callback: () => void) => {
-    const handler = () => callback();
-    ipcRenderer.on('store-discounts-updated', handler);
-    return () => ipcRenderer.removeListener('store-discounts-updated', handler);
-  },
-  onGameRemoved: (callback: (gameId: string) => void) => {
-    const handler = (_: unknown, gameId: string) => callback(gameId);
-    ipcRenderer.on('game-removed', handler);
-    return () => ipcRenderer.removeListener('game-removed', handler);
-  },
-  isGameTombstoned: (gameId: string) => ipcRenderer.invoke('is-game-tombstoned', gameId),
-  onGameTombstoned: (callback: (gameId: string) => void) => {
-    const handler = (_: unknown, gameId: string) => callback(gameId);
-    ipcRenderer.on('game-tombstoned', handler);
-    return () => ipcRenderer.removeListener('game-tombstoned', handler);
-  },
-  // Game detection
-  onSteamLibraryChanged: (callback: () => void) => {
-    const handler = () => callback();
-    ipcRenderer.on('steam-library-changed', handler);
-    return () => ipcRenderer.removeListener('steam-library-changed', handler);
-  },
-  // [DEV ONLY] Test games hot reload
-  onTestGamesChanged: (callback: () => void) => {
-    const handler = () => callback();
-    ipcRenderer.on('test-games-changed', handler);
-    return () => ipcRenderer.removeListener('test-games-changed', handler);
-  },
-  onInstalledGamesChanged: (callback: () => void) => {
-    const handler = () => callback();
-    ipcRenderer.on('installed-games-changed', handler);
-    return () => ipcRenderer.removeListener('installed-games-changed', handler);
-  },
-  onStoreLibraryChanged: (callback: () => void) => {
-    const handler = () => callback();
-    ipcRenderer.on('store-library-changed', handler);
-    return () => ipcRenderer.removeListener('store-library-changed', handler);
-  },
-  // Game launcher
-  launchGame: (game: Game) => ipcRenderer.invoke('launch-game', game),
-  openAppLink: (app, url) => ipcRenderer.invoke('open-app-link', app, url),
-  // Steam integration
-  restartSteam: () => ipcRenderer.invoke('restart-steam'),
-  applyPendingLaunchOptions: (game: Game) =>
-    ipcRenderer.invoke('apply-pending-launch-options', game),
-  getSteamBridgeStatus: () => ipcRenderer.invoke('get-steam-bridge-status'),
-  recheckSteamBridge: () => ipcRenderer.invoke('recheck-steam-bridge'),
-  onSteamBridgeStatusChanged: (callback) => {
-    const handler = (_: unknown, status: SteamBridgeStatus) => callback(status);
-    ipcRenderer.on('steam-bridge-status-changed', handler);
-    return () => ipcRenderer.removeListener('steam-bridge-status-changed', handler);
-  },
-  onSteamPendingActionsApplied: (callback) => {
-    const handler = (_: unknown, payload: { gameIds: string[] }) => callback(payload);
-    ipcRenderer.on('steam-pending-actions-applied', handler);
-    return () => ipcRenderer.removeListener('steam-pending-actions-applied', handler);
-  },
-  getPluginHostState: () => ipcRenderer.invoke('plugin-host:get-state'),
-  prepareMillennium: () => ipcRenderer.invoke('millennium:prepare'),
-  activateMillennium: (opts) => ipcRenderer.invoke('millennium:activate', opts),
-  uninstallMillennium: (opts) => ipcRenderer.invoke('millennium:uninstall', opts),
-  cancelMillennium: () => ipcRenderer.invoke('millennium:cancel'),
-  requestDeckyPluginInstall: () => ipcRenderer.invoke('decky:request-plugin-install'),
-  installDeckyLoader: () => ipcRenderer.invoke('decky:install-loader'),
-  saveDeckyPluginZip: () => ipcRenderer.invoke('decky:save-plugin-zip'),
-  onMillenniumProgress: (callback) => {
-    const handler = (_: unknown, progress: MillenniumProgress) => callback(progress);
-    ipcRenderer.on('millennium:progress', handler);
-    return () => ipcRenderer.removeListener('millennium:progress', handler);
-  },
-  onPluginHostStateChanged: (callback) => {
-    const handler = (_: unknown, state: PluginHostState) => callback(state);
-    ipcRenderer.on('plugin-host:state-changed', handler);
-    return () => ipcRenderer.removeListener('plugin-host:state-changed', handler);
-  },
-  /**
-   * Fires when the Settings CEF toggle was turned on but the debug port isn't
-   * open yet — the user needs to restart Steam for it to take effect.
-   */
-  onSteamRestartRequired: (callback: () => void) => {
-    const handler = () => callback();
-    ipcRenderer.on('steam-restart-required', handler);
-    return () => ipcRenderer.removeListener('steam-restart-required', handler);
-  },
-  setSteamCefDebugging: (enabled: boolean) =>
-    ipcRenderer.invoke('set-steam-cef-debugging', enabled),
-  syncSteamTranslatedCollection: () =>
-    ipcRenderer.invoke('sync-steam-translated-collection'),
-  addLbkLauncherToSteamLibrary: () =>
-    ipcRenderer.invoke('add-lbk-launcher-to-steam-library'),
-  // Version
+  installTranslation: invoke('install-translation'),
+  uninstallTranslation: invoke('uninstall-translation'),
+  rerunInstaller: invoke('rerun-installer'),
+  showItemInFolder: invoke('show-item-in-folder'),
+  onRequestRunInstallerConfirm: listen('installer:confirm-run'),
+  respondRunInstaller: send('installer:run-decision'),
+  abortDownload: invoke('abort-download'),
+  pauseDownload: invoke('pause-download'),
+  resumeDownload: invoke('resume-download'),
+  getPausedDownload: invoke('get-paused-download'),
+  cancelPausedDownload: invoke('cancel-paused-download'),
+  checkInstallation: invoke('check-installation'),
+  getConflictingTranslation: invoke('get-conflicting-translation'),
+  getAllInstalledGameIds: invoke('get-all-installed-game-ids'),
+  removeOrphanedMetadata: invoke('remove-orphaned-metadata'),
+  removeComponents: invoke('remove-components'),
+  isSteamArtworkApplied: invoke('is-steam-artwork-applied'),
+  setSteamArtwork: invoke('set-steam-artwork'),
+  checkPlatformCompatibility: invoke('check-platform-compatibility'),
+  fetchNewsFeed: invoke('fetch-news-feed'),
+  openExternal: invoke('open-external'),
+  selectGameFolder: invoke('select-game-folder'),
+  onDownloadProgress: listen('download-progress'),
+  onInstallationStatus: listen('installation-status'),
+  checkForUpdates: invoke('check-for-updates'),
+  downloadUpdate: invoke('download-update'),
+  installUpdate: invoke('install-update'),
+  onUpdateAvailable: listen('update-available'),
+  onUpdateDownloaded: listen('update-downloaded'),
+  onUpdateProgress: listen('update-progress'),
+  onUpdateError: listen('update-error'),
+  fetchChangelog: invoke('fetch-changelog'),
+  onGameUpdated: listen('game-updated'),
+  onGameCountersUpdated: listen('game-counters-updated'),
+  onGameRemoved: listen('game-removed'),
+  isGameTombstoned: invoke('is-game-tombstoned'),
+  onGameTombstoned: listen('game-tombstoned'),
+  onSteamLibraryChanged: listen('steam-library-changed'),
+  onTestGamesChanged: listen('test-games-changed'),
+  onInstalledGamesChanged: listen('installed-games-changed'),
+  launchGame: invoke('launch-game'),
+  openAppLink: invoke('open-app-link'),
+  restartSteam: invoke('restart-steam'),
+  applyPendingLaunchOptions: invoke('apply-pending-launch-options'),
+  getSteamBridgeStatus: invoke('get-steam-bridge-status'),
+  recheckSteamBridge: invoke('recheck-steam-bridge'),
+  getPluginHostState: invoke('plugin-host:get-state'),
+  prepareMillennium: invoke('millennium:prepare'),
+  activateMillennium: invoke('millennium:activate'),
+  uninstallMillennium: invoke('millennium:uninstall'),
+  cancelMillennium: invoke('millennium:cancel'),
+  requestDeckyPluginInstall: invoke('decky:request-plugin-install'),
+  installDeckyLoader: invoke('decky:install-loader'),
+  saveDeckyPluginZip: invoke('decky:save-plugin-zip'),
+  onMillenniumProgress: listen('millennium:progress'),
+  onSteamRestartRequired: listen('steam-restart-required'),
+  setSteamCefDebugging: invoke('set-steam-cef-debugging'),
+  syncSteamTranslatedCollection: invoke('sync-steam-translated-collection'),
+  addLbkLauncherToSteamLibrary: invoke('add-lbk-launcher-to-steam-library'),
   getVersion: () => ipcRenderer.sendSync('get-version'),
   isE2E: () => isE2EMode,
-  // Platform
   getPlatform: () => ipcRenderer.sendSync('get-platform'),
-  // System hardware info (accurate, via Node os module)
   getSystemInfo: () => ipcRenderer.sendSync('get-system-info'),
-  // Machine ID - for subscription tracking
-  getMachineId: () => ipcRenderer.invoke('get-machine-id'),
-  // Track subscription events
-  trackSubscription: (gameId: string, action: 'subscribe' | 'unsubscribe') =>
-    ipcRenderer.invoke('track-subscription', gameId, action),
-  // Track support click events
-  trackSupportClick: (gameId: string) =>
-    ipcRenderer.invoke('track-support-click', gameId),
-  getLikedGameIds: () => ipcRenderer.invoke('likes:get'),
-  setLike: (gameId: string, liked: boolean) =>
-    ipcRenderer.invoke('likes:set', gameId, liked),
-  onLikedGamesChanged: (callback) => {
-    const handler = (_: unknown, gameIds: string[]) => callback(gameIds);
-    ipcRenderer.on('liked-games-changed', handler);
-    return () => ipcRenderer.removeListener('liked-games-changed', handler);
-  },
-  // Subscribe to a Workshop translation without opening Steam
-  setWorkshopSubscription: (
-    gameId: string,
-    appId: number,
-    workshopId: string,
-    subscribe: boolean
-  ) =>
-    ipcRenderer.invoke('set-workshop-subscription', gameId, appId, workshopId, subscribe),
-  listInstalledWorkshopGames: () => ipcRenderer.invoke('list-installed-workshop-games'),
-  isWorkshopItemDownloaded: (appId: number, workshopId: string) =>
-    ipcRenderer.invoke('is-workshop-item-downloaded', appId, workshopId),
+  getMachineId: invoke('get-machine-id'),
+  trackSubscription: invoke('track-subscription'),
+  trackSupportClick: invoke('track-support-click'),
+  setLike: invoke('likes:set'),
+  setWorkshopSubscription: invoke('set-workshop-subscription'),
+  listInstalledWorkshopGames: invoke('list-installed-workshop-games'),
+  isWorkshopItemDownloaded: invoke('is-workshop-item-downloaded'),
   // Navigating to the Workshop counts as a download
-  trackWorkshopOpen: (gameId: string, isFirstSession?: boolean) =>
-    ipcRenderer.invoke('track-workshop-open', gameId, isFirstSession),
-  // Track failed search (0 results)
-  trackFailedSearch: (query: string) => ipcRenderer.invoke('track-failed-search', query),
-  submitLogs: (message: string, crashReason?: string) =>
-    ipcRenderer.invoke('submit-logs', message, crashReason),
-  // Deep link handling
-  onDeepLink: (callback: (data: DeepLinkTarget) => void) => {
-    const handler = (_: unknown, data: DeepLinkTarget) => callback(data);
-    ipcRenderer.on('deep-link', handler);
-    return () => ipcRenderer.removeListener('deep-link', handler);
-  },
-  findDeepLinkGameId: (slug: string, team: string) =>
-    ipcRenderer.invoke('find-deep-link-game-id', slug, team),
-  notifyReady: () => ipcRenderer.send('renderer-ready'),
-  // Sync status
-  onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => {
-    const handler = (_: unknown, status: 'syncing' | 'ready' | 'error') =>
-      callback(status);
-    ipcRenderer.on('sync-status', handler);
-    return () => ipcRenderer.removeListener('sync-status', handler);
-  },
-  getSyncStatus: () =>
-    ipcRenderer.invoke('get-sync-status') as Promise<'syncing' | 'ready' | 'error'>,
-  // Banner API
-  fetchPromoBanner: () => ipcRenderer.invoke('fetch-promo-banner'),
-  fetchBannersForGame: (gameId: string, gameSlug: string) =>
-    ipcRenderer.invoke('fetch-banners-for-game', gameId, gameSlug), // Use gameId as gameSlug for simplicity
-  recordPromoBannerImpression: (params: {
-    campaignId: string;
-    impressionType: ImpressionType;
-    gameSlug?: string;
-  }) => ipcRenderer.invoke('record-promo-banner-impression', params),
-  recordBannerImpression: (bannerId: string, impressionType: ImpressionType = 'view') =>
-    ipcRenderer.invoke('record-banner-impression', bannerId, impressionType),
+  trackWorkshopOpen: invoke('track-workshop-open'),
+  trackFailedSearch: invoke('track-failed-search'),
+  submitLogs: invoke('submit-logs'),
+  onDeepLink: listen('deep-link'),
+  findDeepLinkGameId: invoke('find-deep-link-game-id'),
+  notifyReady: send('renderer-ready'),
+  onSyncStatus: listen('sync-status'),
+  getSyncStatus: invoke('get-sync-status'),
+  fetchPromoBanner: invoke('fetch-promo-banner'),
+  fetchBannersForGame: invoke('fetch-banners-for-game'),
+  recordPromoBannerImpression: invoke('record-promo-banner-impression'),
+  recordBannerImpression: invoke('record-banner-impression'),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 
-// Window controls
-contextBridge.exposeInMainWorld('windowControls', {
-  minimize: () => ipcRenderer.send('window:minimize'),
-  maximize: () => ipcRenderer.send('window:maximize'),
-  close: () => ipcRenderer.send('window:close'),
-  onMaximizedChange: (callback: (isMaximized: boolean) => void) => {
-    const handler = (_: unknown, isMaximized: boolean) => callback(isMaximized);
-    ipcRenderer.on('window:maximized', handler);
-    return () => ipcRenderer.removeListener('window:maximized', handler);
-  },
-  isVisible: () => ipcRenderer.invoke('window:is-visible'),
+const windowControls: WindowControlsAPI = {
+  minimize: send('window:minimize'),
+  maximize: send('window:maximize'),
+  close: send('window:close'),
+  onMaximizedChange: listen('window:maximized'),
+  isVisible: invoke('window:is-visible'),
   ...systemNotificationAPI,
-});
+};
+contextBridge.exposeInMainWorld('windowControls', windowControls);
 
-// Liquid Glass API
-contextBridge.exposeInMainWorld('liquidGlassAPI', {
-  isSupported: () => ipcRenderer.invoke('liquid-glass:is-supported'),
-  toggle: (enabled: boolean) => ipcRenderer.invoke('liquid-glass:toggle', enabled),
-});
+const liquidGlassAPI: LiquidGlassAPI = {
+  isSupported: invoke('liquid-glass:is-supported'),
+  toggle: invoke('liquid-glass:toggle'),
+};
+contextBridge.exposeInMainWorld('liquidGlassAPI', liquidGlassAPI);
 
-// Logger API
-contextBridge.exposeInMainWorld('loggerAPI', {
-  openLogsFolder: () => ipcRenderer.invoke('logger:open-logs-folder'),
-  log: (level: string, message: string, ...args: unknown[]) =>
-    ipcRenderer.send('logger:log', level, message, args),
-});
+const loggerAPI: LoggerAPI = {
+  openLogsFolder: invoke('logger:open-logs-folder'),
+  log: (level, message, ...args) => ipcRenderer.send('logger:log', level, message, args),
+};
+contextBridge.exposeInMainWorld('loggerAPI', loggerAPI);
 
-// Error handling API
-contextBridge.exposeInMainWorld('api', {
-  logError: (message: string, stack: string) =>
-    ipcRenderer.send('logger:log', 'error', message, [stack]),
-  clearCacheOnly: () => ipcRenderer.invoke('clear-cache-only'),
-  clearAllData: () => ipcRenderer.invoke('clear-all-data-and-restart'),
-});
+const api: API = {
+  logError: (message, stack) => ipcRenderer.send('logger:log', 'error', message, [stack]),
+  clearCacheOnly: invoke('clear-cache-only'),
+  clearAllData: invoke('clear-all-data-and-restart'),
+};
+contextBridge.exposeInMainWorld('api', api);
 
-// Electron-store storage API (replaces localStorage for Zustand persist)
-contextBridge.exposeInMainWorld('storeStorage', {
-  getItem: (key: string): string | null => ipcRenderer.sendSync('store-storage:get', key),
-  setItem: (key: string, value: string): void => {
+// getItem is sync so a persisted store rehydrates before its first render
+const storeStorage: StoreStorageAPI = {
+  getItem: (key) => ipcRenderer.sendSync('store-storage:get', key),
+  setItem: (key, value) => {
     ipcRenderer.invoke('store-storage:set', key, value);
   },
-  removeItem: (key: string): void => {
+  removeItem: (key) => {
     ipcRenderer.invoke('store-storage:remove', key);
   },
-});
+};
+contextBridge.exposeInMainWorld('storeStorage', storeStorage);

@@ -1,7 +1,7 @@
 import { InfoIcon } from 'lucide-react';
 import React from 'react';
 import type { AchievementsBadge } from '@/shared/plugin-host-types';
-import { useSteamBridgeStatusStore } from '../../../store/useSteamBridgeStatusStore';
+import { useResource } from '../../../hooks/useResource';
 import { openOfferTarget } from '../../../utils/openOfferTarget';
 import { deliveryNote } from '../../../utils/pluginHostOffer';
 import { OfferActionIcon } from '../../ui/OfferActionIcon';
@@ -18,7 +18,7 @@ interface AchievementsDeliveryNoteProps {
 export const AchievementsDeliveryNote: React.FC<AchievementsDeliveryNoteProps> = ({
   badge,
 }) => {
-  const decky = useSteamBridgeStatusStore((s) => s.status?.decky ?? null);
+  const decky = useResource('steamBridgeStatus').value?.decky ?? null;
   const note = deliveryNote(badge, decky);
   if (!note) {
     return null;

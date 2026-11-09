@@ -13,6 +13,7 @@ import {
   getHostSnapshot,
   pendingMillenniumAction,
 } from '@/main/plugin-host/state';
+import { publishResource } from '@/main/resources/resource-hub';
 import {
   getConnectedPluginInfo,
   invokeViaPlugin,
@@ -37,7 +38,6 @@ import {
   resolveCefEndpoint,
 } from '@/main/utils/steam-cef';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
-import { sendToRenderer } from '@/main/window';
 import type {
   SteamBridgeStatus,
   SteamBridgeStatusCode,
@@ -59,7 +59,6 @@ const DEFAULT_OP_TIMEOUT_MS = 15000;
 const SLOW_OP_TIMEOUT_MS = 30000;
 const SLOW_OPS: ReadonlySet<SteamOpName> = new Set(['setArtwork', 'syncCollection']);
 let lastTransport: SteamBridgeTransport | null = null;
-let lastPublished: string | null = null;
 
 function opTimeout(op: SteamOpName): number {
   return SLOW_OPS.has(op) ? SLOW_OP_TIMEOUT_MS : DEFAULT_OP_TIMEOUT_MS;
@@ -295,18 +294,9 @@ async function computeStatus(): Promise<SteamBridgeStatus> {
   };
 }
 
-function publish(status: SteamBridgeStatus): void {
-  const serialized = JSON.stringify(status);
-  if (serialized === lastPublished) {
-    return;
-  }
-  lastPublished = serialized;
-  sendToRenderer('steam-bridge-status-changed', status);
-}
-
 export async function getSteamBridgeStatus(): Promise<SteamBridgeStatus> {
   const status = await computeStatus();
-  publish(status);
+  publishResource('steamBridgeStatus', status);
   return status;
 }
 

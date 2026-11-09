@@ -3,7 +3,6 @@ import type {
   GetGamesParams,
   GetGamesResult,
   SortOrderType,
-  TagOption,
 } from '../shared/types';
 import { GamesRepository } from './db/games-repository';
 import { getRecommendedGameIds } from './db/recommendations-source';
@@ -58,24 +57,6 @@ export function findGamesByInstallPaths(
   } catch (error) {
     console.error('[API] Error finding games by install paths:', error);
     return { games: [], total: 0 };
-  }
-}
-
-export function fetchTagOptions(): TagOption[] {
-  try {
-    return gamesRepo.getTagOptions();
-  } catch (error) {
-    console.error('[API] Error fetching tag options:', error);
-    return [];
-  }
-}
-
-export function fetchTeams(): string[] {
-  try {
-    return gamesRepo.getUniqueAuthors();
-  } catch (error) {
-    console.error('[API] Error fetching authors:', error);
-    return [];
   }
 }
 

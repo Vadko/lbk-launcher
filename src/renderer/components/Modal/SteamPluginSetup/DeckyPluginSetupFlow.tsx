@@ -67,7 +67,9 @@ export const DeckyPluginSetupFlow: React.FC = () => {
       onDecline: handleDecline,
       onClose: close,
     });
-  const { loaderInstalled, loaderFailure, showSaveZip, savedMessage } = snapshot.context;
+  // The machine's host: every push plus the refresh reply, which may land before the push it answers
+  const { host, loaderInstalled, loaderFailure, showSaveZip, savedMessage } =
+    snapshot.context;
   const saveZipButton = (primary: boolean) => (
     <SetupButton
       tone={primary ? 'primary' : 'secondary'}
@@ -85,8 +87,8 @@ export const DeckyPluginSetupFlow: React.FC = () => {
       case 'intro':
       case 'requesting':
       case 'refreshingHost': {
-        const loader = state?.deckyLoader;
-        if (loader && (!state?.decky?.installed || loader.repair)) {
+        const loader = host?.deckyLoader;
+        if (loader && (!host?.decky?.installed || loader.repair)) {
           return loaderView({
             kind: 'offer',
             repair: loader.repair,
@@ -94,7 +96,7 @@ export const DeckyPluginSetupFlow: React.FC = () => {
           });
         }
         return deckyPluginView({
-          state,
+          state: host,
           source,
           loaderInstalled,
           requestPhase,

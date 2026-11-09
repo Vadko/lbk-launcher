@@ -1,5 +1,5 @@
+import { useResourcesStore } from '../store/useResourcesStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { useSteamBridgeStatusStore } from '../store/useSteamBridgeStatusStore';
 import {
   type SteamPluginSetupSource,
   useSteamPluginSetupStore,
@@ -19,7 +19,7 @@ const OPENERS: Record<OfferTarget, (source: SteamPluginSetupSource) => void> = {
   'decky-install': (source) =>
     useSteamPluginSetupStore.getState().openSetup('decky-install', source),
   'steam-restart': () =>
-    restartSteamWithStatus(useSteamBridgeStatusStore.getState().status),
+    restartSteamWithStatus(useResourcesStore.getState().values.steamBridgeStatus ?? null),
 };
 
 export function openOfferTarget(

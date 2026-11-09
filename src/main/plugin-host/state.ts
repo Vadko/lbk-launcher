@@ -28,6 +28,7 @@ import {
   type SelectedMillenniumRelease,
   selectMillenniumAsset,
 } from '@/main/millennium-install/release';
+import { publishResource } from '@/main/resources/resource-hub';
 import { getConnectedPluginInfo } from '@/main/steam-bridge-server/bridge-server';
 import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
 import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
@@ -51,7 +52,6 @@ import {
 import { refreshSteamBridgeStatus } from '@/main/utils/steam-bridge';
 import { currentLinuxSteamType } from '@/main/utils/steam-launcher';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
-import { sendToRenderer } from '@/main/window';
 import type { AchievementsBadge, PluginHostState } from '@/shared/plugin-host-types';
 import { compareVersions } from '@/shared/version';
 import {
@@ -339,7 +339,7 @@ export async function getAchievementsBadge(
   });
 }
 
-export async function getPluginHostState(): Promise<PluginHostState> {
+async function computePluginHostState(): Promise<PluginHostState> {
   const snapshot = await getHostSnapshot();
   const steamRunning = (await findSteamPids()).length > 0;
   const elevated = steamRunning ? await isSteamElevated() : false;
@@ -382,10 +382,16 @@ export async function getPluginHostState(): Promise<PluginHostState> {
   };
 }
 
+// Every read reaches the open page too, so a caller that awaits one and the views agree
+export async function getPluginHostState(): Promise<PluginHostState> {
+  const state = await computePluginHostState();
+  publishResource('pluginHostState', state);
+  return state;
+}
+
 export async function publishPluginHostState(): Promise<void> {
   try {
-    const state = await getPluginHostState();
-    sendToRenderer('plugin-host:state-changed', state);
+    await getPluginHostState();
   } catch (error) {
     console.warn('[Millennium] State refresh failed:', error);
   }

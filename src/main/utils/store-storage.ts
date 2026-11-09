@@ -1,9 +1,12 @@
 import { ipcMain } from 'electron';
 import ElectronStore from 'electron-store';
+import { appEvents } from '@/main/app-events';
 
 const store = new ElectronStore({
   name: 'lbk-store',
 });
+
+const SETTINGS_KEY = 'lbk-settings';
 
 /**
  * Read a value from the store (returns raw string or null).
@@ -18,10 +21,9 @@ function readStoreFile(key: string): string | null {
  * Read one field of a renderer zustand persist envelope (`{"state":{...}}`).
  * Returns the default on any miss or parse error.
  */
-function readPersistedStateField<T>(storeKey: string, field: string, defaultValue: T): T {
+function persistedStateField<T>(raw: unknown, field: string, defaultValue: T): T {
   try {
-    const raw = readStoreFile(storeKey);
-    if (!raw) {
+    if (typeof raw !== 'string') {
       return defaultValue;
     }
     return (JSON.parse(raw).state?.[field] as T) ?? defaultValue;
@@ -30,8 +32,20 @@ function readPersistedStateField<T>(storeKey: string, field: string, defaultValu
   }
 }
 
+function readPersistedStateField<T>(storeKey: string, field: string, defaultValue: T): T {
+  return persistedStateField(readStoreFile(storeKey), field, defaultValue);
+}
+
 export function readRendererSetting<T>(field: string, defaultValue: T): T {
-  return readPersistedStateField('lbk-settings', field, defaultValue);
+  return readPersistedStateField(SETTINGS_KEY, field, defaultValue);
+}
+
+function hideAiTranslations(raw: unknown): boolean {
+  return persistedStateField(raw, 'hideAiTranslations', false);
+}
+
+export function readHideAiTranslations(): boolean {
+  return hideAiTranslations(readStoreFile(SETTINGS_KEY));
 }
 
 /** Opt-out from Settings. Lives here so `steam-cef.ts` reads it cycle-free. */
@@ -52,7 +66,7 @@ export function isCrashDiagnosticsEnabled(): boolean {
 }
 
 export function onRendererSettingsChanged(callback: () => void): () => void {
-  return store.onDidChange('lbk-settings', callback);
+  return store.onDidChange(SETTINGS_KEY, callback);
 }
 
 const WORKSHOP_INSTALLS_KEY = 'workshop-installs-storage';
@@ -65,10 +79,6 @@ export function getWorkshopInstalledGameIds(): string[] {
       {}
     )
   );
-}
-
-export function onWorkshopInstallsChanged(callback: () => void): () => void {
-  return store.onDidChange(WORKSHOP_INSTALLS_KEY, callback);
 }
 
 // Keys main has touched through the helpers below; the renderer's storeStorage bridge may not overwrite them.
@@ -141,6 +151,16 @@ export function clearStore(): void {
  * Must be called once during app initialization (before window creation).
  */
 export function setupStoreStorageHandlers(): void {
+  // The renderer rewrites its whole settings envelope whenever any field changes
+  store.onDidChange(SETTINGS_KEY, (next, previous) => {
+    if (hideAiTranslations(next) !== hideAiTranslations(previous)) {
+      appEvents.emit('hide-ai-changed');
+    }
+  });
+  store.onDidChange(WORKSHOP_INSTALLS_KEY, () =>
+    appEvents.emit('workshop-installs-changed')
+  );
+
   // Sync read — used by Zustand getItem for immediate hydration (no flash of defaults)
   ipcMain.on('store-storage:get', (event, key: string) => {
     event.returnValue = readStoreFile(key);

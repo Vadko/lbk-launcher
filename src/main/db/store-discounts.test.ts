@@ -16,7 +16,7 @@ const state = vi.hoisted(() => ({
   calls: [] as { since: string | undefined; after?: string }[],
   metadata: new Map<string, string>(),
   savedWatermarks: [] as string[],
-  sent: vi.fn(),
+  changed: vi.fn(),
   // Runs between a page's query and its answer
   whilePageInFlight: undefined as (() => void) | undefined,
 }));
@@ -67,10 +67,11 @@ vi.mock('@/main/db/supabase-client', () => ({
     },
   }),
 }));
-vi.mock('@/main/window', () => ({ sendToRenderer: state.sent }));
 
 const { createStoreDiscountsSubscription, getActiveStoreDiscounts, syncStoreDiscounts } =
   await import('./store-discounts');
+const { appEvents } = await import('@/main/app-events');
+appEvents.on('store-discounts-changed', state.changed);
 
 const DAY = 24 * 60 * 60 * 1000;
 const future = (days: number) => new Date(Date.now() + days * DAY).toISOString();
@@ -121,7 +122,7 @@ beforeEach(() => {
   state.metadata.clear();
   state.savedWatermarks = [];
   state.whilePageInFlight = undefined;
-  state.sent.mockReset();
+  state.changed.mockReset();
   state.db = new DatabaseSync(':memory:');
   sqlite().exec(`
     CREATE TABLE store_discounts (
@@ -172,7 +173,7 @@ describe('syncStoreDiscounts', () => {
 
     expect(state.calls).toEqual([{ since: '2026-11-03T09:00:00Z' }]);
     expect(state.savedWatermarks).toEqual(['2026-11-03T09:00:00Z']);
-    expect(state.sent).not.toHaveBeenCalled();
+    expect(state.changed).not.toHaveBeenCalled();
   });
 
   it('inserts, updates and deletes, and notifies once per changed batch', async () => {
@@ -210,7 +211,7 @@ describe('syncStoreDiscounts', () => {
         ends_at: Date.parse(ends),
       },
     ]);
-    expect(state.sent.mock.calls).toEqual([['store-discounts-updated']]);
+    expect(state.changed).toHaveBeenCalledTimes(1);
   });
 
   it('leaves out a store this build does not know', async () => {
@@ -219,7 +220,7 @@ describe('syncStoreDiscounts', () => {
     await syncStoreDiscounts();
 
     expect(stored()).toEqual([]);
-    expect(state.sent).not.toHaveBeenCalled();
+    expect(state.changed).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -271,7 +272,7 @@ describe('syncStoreDiscounts', () => {
 
     await syncStoreDiscounts();
 
-    expect(state.sent).not.toHaveBeenCalled();
+    expect(state.changed).not.toHaveBeenCalled();
   });
 });
 
@@ -296,7 +297,7 @@ describe('the discounts broadcast', () => {
         ends_at: endsAtSeconds * 1000,
       },
     ]);
-    expect(state.sent).toHaveBeenCalledWith('store-discounts-updated');
+    expect(state.changed).toHaveBeenCalled();
   });
 
   it('keeps a discount with no end and deletes one at 0 percent', () => {
@@ -313,14 +314,14 @@ describe('the discounts broadcast', () => {
     expect(stored()).toEqual([
       { store: 'gog', steam_app_id: 10, discount_percent: 35, ends_at: null },
     ]);
-    expect(state.sent).toHaveBeenCalledWith('store-discounts-updated');
+    expect(state.changed).toHaveBeenCalled();
   });
 
   it('ignores a malformed batch', () => {
     broadcast({ discounts: [['steam', '10', 35, endsAtSeconds]] });
 
     expect(stored()).toEqual([]);
-    expect(state.sent).not.toHaveBeenCalled();
+    expect(state.changed).not.toHaveBeenCalled();
   });
 });
 

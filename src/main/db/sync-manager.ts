@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import type { Game } from '../../shared/types';
+import { appEvents } from '../app-events';
 import { getLocallyInstalledGameIds } from '../installer/cache';
 import { createTimer } from '../utils/logger';
 import { getMainWindow, sendToRenderer } from '../window';
@@ -22,6 +23,7 @@ function notifyGamesRemoved(gameIds: string[]): void {
   if (gameIds.length === 0) {
     return;
   }
+  appEvents.emit('catalog-changed');
   const mainWindow = getMainWindow();
   if (!mainWindow) {
     return;
@@ -458,6 +460,7 @@ export class SyncManager {
     );
     const wasVisible = this.gamesRepo.isGameVisible(game.id);
     this.gamesRepo.upsertGame(game);
+    appEvents.emit('catalog-changed');
     // The broadcast carries hidden rows too; only the stored row knows user_unlocked
     if (this.gamesRepo.isGameVisible(game.id)) {
       // The stored row: its counters belong to game-counters.ts, not to this broadcast

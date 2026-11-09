@@ -8,7 +8,6 @@ import { sentryMainV10Baseline } from './utils/sentry-baseline';
 import {
   isCrashDiagnosticsEnabled,
   onRendererSettingsChanged,
-  onWorkshopInstallsChanged,
   setupStoreStorageHandlers,
 } from './utils/store-storage';
 
@@ -97,6 +96,7 @@ if (isLinux()) {
 }
 
 import { startAchievements } from './achievements';
+import { appEvents } from './app-events';
 import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { setupChangelogHandlers } from './changelog';
 import { closeDatabase, initDatabase } from './db/database';
@@ -125,10 +125,7 @@ import { setupInstallerHandlers } from './ipc/installer';
 import { setupLikesHandlers } from './ipc/likes';
 import { setupLinksHandlers } from './ipc/links';
 import { setupPluginHostHandlers } from './ipc/plugin-host';
-import { setupRatingsHandlers } from './ipc/ratings';
-import { setupStoreDiscountsHandlers } from './ipc/store-discounts';
 import { setupTgNewsHandlers } from './ipc/tg-news';
-import { setupWeeklyPicksHandlers } from './ipc/weekly-picks';
 import { initTray, setupWindowControls } from './ipc/window-controls';
 import { syncLikes } from './likes';
 import { startMillenniumInstall } from './millennium-install';
@@ -138,6 +135,7 @@ import {
 } from './playtime-tracker';
 import { bootstrapCefDebugging } from './plugin-host/bridge-plugin-setup';
 import { stopDeckyWatcher, watchDeckyPlugins } from './plugin-host/decky-watcher';
+import { startResources } from './resources/start-resources';
 import { createReviewEventsSubscription } from './review-events';
 import {
   deleteStaleBridgeData,
@@ -149,6 +147,7 @@ import {
   startStoreLibraryWatcher,
   stopStoreLibraryWatcher,
 } from './store-library-watcher';
+import { setSyncStatus, setupSyncStatusHandlers } from './sync-status';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
 import { stopCaptchaWindow } from './turnstile/window';
 import { startPendingEglLaunchArgs } from './utils/egl-windows-settings';
@@ -158,7 +157,6 @@ import { createMainWindow, getMainWindow, markPageReady, showMainWindow } from '
 // Global managers
 let syncManager: SyncManager | null = null;
 let realtimeManager: SupabaseRealtimeManager | null = null;
-let currentSyncStatus: 'syncing' | 'ready' | 'error' = 'syncing';
 
 // Single instance lock - prevent multiple instances of the app
 const gotTheLock = app.requestSingleInstanceLock();
@@ -235,18 +233,15 @@ if (!gotTheLock) {
   setupGamesHandlers();
   setupInstallerHandlers();
   setupTgNewsHandlers();
-  setupWeeklyPicksHandlers();
   setupLikesHandlers();
-  setupStoreDiscountsHandlers();
   setupLinksHandlers();
   setupGameReviewsHandlers();
-  setupRatingsHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
   setupPluginHostHandlers();
 
-  // IPC handler for getting current sync status
-  ipcMain.handle('get-sync-status', () => currentSyncStatus);
+  setupSyncStatusHandlers();
+  startResources();
 
   // Flush a deep link buffered before the renderer's listener was registered.
   ipcMain.on('renderer-ready', () => {
@@ -303,21 +298,12 @@ if (!gotTheLock) {
     await createMainWindow();
     initTray();
 
-    // Send sync status to the renderer
-    const sendSyncStatus = (status: 'syncing' | 'ready' | 'error') => {
-      currentSyncStatus = status;
-      const mainWindow = getMainWindow();
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('sync-status', status);
-      }
-    };
-
     // Start sync with retry and an overall timeout
     console.log('[Main] Starting sync with Supabase...');
     syncManager = SyncManager.getInstance();
 
     try {
-      sendSyncStatus('syncing');
+      setSyncStatus('syncing');
       await syncManager.sync(
         fetchAllGamesFromSupabase,
         fetchUpdatedGamesFromSupabase,
@@ -330,7 +316,7 @@ if (!gotTheLock) {
         console.error('[Main] Tag names sync failed:', error);
       }
       console.log('[Main] Initial sync completed');
-      sendSyncStatus('ready');
+      setSyncStatus('ready');
     } catch (error) {
       const code = (error as { code?: string }).code;
       const hint: Record<string, string> = {
@@ -343,7 +329,7 @@ if (!gotTheLock) {
         `[Main] Sync failed${code ? ` (${code})` : ''}:`,
         (code && hint[code]) || error
       );
-      sendSyncStatus('error');
+      setSyncStatus('error');
     }
 
     console.log('[Main] Setting up realtime subscription...');
@@ -407,7 +393,7 @@ if (!gotTheLock) {
           console.error('[Main] Failed to process pending deletions:', err);
         });
       });
-      onWorkshopInstallsChanged(() => {
+      appEvents.on('workshop-installs-changed', () => {
         syncManager?.processPendingDeletions().catch((err) => {
           console.error('[Main] Failed to process pending deletions:', err);
         });

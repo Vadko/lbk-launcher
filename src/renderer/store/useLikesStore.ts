@@ -4,7 +4,7 @@ interface LikesStore {
   likedGameIds: ReadonlySet<string>;
   // Clicks main has not answered yet, per game; pushes answering earlier clicks would undo later ones there
   pendingClicks: Record<string, number>;
-  setLikedGameIds: (gameIds: string[]) => void;
+  setLikedGameIds: (gameIds: Iterable<string>) => void;
   toggleLike: (gameId: string) => void;
 }
 

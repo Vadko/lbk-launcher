@@ -6,7 +6,7 @@ import type { Game, TagOption } from '@/shared/types';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useFacetData } from '../../hooks/useFacetData';
 import { useGames } from '../../hooks/useGames';
-import { useFacetDataStore } from '../../store/useFacetDataStore';
+import { useResource } from '../../hooks/useResource';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
@@ -149,12 +149,10 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       );
     }, [specialFilter, setSpecialFilter]);
 
-    const teams = useFacetDataStore((state) => state.teams);
-    const tagOptions = useFacetDataStore((state) => state.tags);
-    const authors = teams ?? NO_AUTHORS;
-    const authorsLoading = teams === null;
-    const tags = tagOptions ?? NO_TAGS;
-    const tagsLoading = tagOptions === null;
+    const catalogOptions = useResource('catalogOptions');
+    const authors = catalogOptions.value?.teams ?? NO_AUTHORS;
+    const tags = catalogOptions.value?.tags ?? NO_TAGS;
+    const optionsLoading = catalogOptions.status === 'loading';
 
     const {
       games: visibleGames,
@@ -388,11 +386,11 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             selectedAuthors={selectedAuthors}
             onAuthorsChange={setSelectedAuthors}
             authors={authors}
-            authorsLoading={authorsLoading}
+            authorsLoading={optionsLoading}
             selectedTagIds={selectedTagIds}
             onTagsChange={setSelectedTagIds}
             tags={tags}
-            tagsLoading={tagsLoading}
+            tagsLoading={optionsLoading}
             facetData={facetData}
             searchQuery={debouncedSearchQuery}
           />
@@ -475,11 +473,11 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
           selectedAuthors={selectedAuthors}
           onAuthorsChange={setSelectedAuthors}
           authors={authors}
-          authorsLoading={authorsLoading}
+          authorsLoading={optionsLoading}
           selectedTagIds={selectedTagIds}
           onTagsChange={setSelectedTagIds}
           tags={tags}
-          tagsLoading={tagsLoading}
+          tagsLoading={optionsLoading}
           facetData={facetData}
           searchQuery={debouncedSearchQuery}
         />
