@@ -571,6 +571,7 @@ export const be = {
     newGames: 'Навінкі',
     newTranslations: 'Новыя пераклады',
     updates: 'Абнаўленні',
+    newStars: 'Новыя зорачкі ў лаўнчары',
     popular: 'Папулярнае сярод гульцоў',
     installedGames: 'Знойдзеныя ўсталяваныя гульні',
     recommended: 'Вас можа зацікавіць',

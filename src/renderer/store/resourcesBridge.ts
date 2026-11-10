@@ -13,6 +13,8 @@ const SUBSCRIBE_AT = {
   storeDiscounts: 'start',
   homeInstalled: 'start',
   weeklyPicks: 'start',
+  popularGames: 'start',
+  newStarGames: 'start',
   facetRows: 'idle',
   catalogOptions: 'idle',
   libraries: 'idle',

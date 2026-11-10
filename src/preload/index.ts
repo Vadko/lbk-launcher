@@ -17,7 +17,6 @@ const electronAPI: ElectronAPI = {
   fetchSearchMatchIds: invoke('fetch-search-match-ids'),
   checkStoreLibraries: invoke('check-store-libraries'),
   onStoreLibraryChanged: listen('store-library-changed'),
-  fetchTrendingGames: invoke('fetch-trending-games'),
   fetchGamesByIds: invoke('fetch-games-by-ids'),
   fetchRecommendedGames: invoke('fetch-recommended-games'),
   syncKurinGames: invoke('sync-kurin-games'),

@@ -599,6 +599,7 @@ export const uk = {
     newGames: 'Новинки',
     newTranslations: 'Нові переклади',
     updates: 'Оновлення',
+    newStars: 'Нові зірочки у лаунчері',
     popular: 'Популярне у гравців',
     installedGames: 'Знайдено встановлені ігри',
     recommended: 'Вас може зацікавити',

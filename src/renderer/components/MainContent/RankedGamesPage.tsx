@@ -2,13 +2,21 @@ import { motion } from 'framer-motion';
 import { ArrowLeftIcon } from 'lucide-react';
 import { t } from '@/shared/i18n/i18n';
 import { Button } from '../ui/Button';
-import { TrendGamesSection } from './TrendsGamesSection';
+import { type RankedGamesKey, RankedGamesSection } from './RankedGamesSection';
 
-interface TrendingGamesPageProps {
+interface RankedGamesPageProps {
+  title: string;
+  resourceKey: RankedGamesKey;
+  showDownloadCounter?: boolean;
   onBack: () => void;
 }
 
-export function TrendingGamesPage({ onBack }: TrendingGamesPageProps) {
+export function RankedGamesPage({
+  title,
+  resourceKey,
+  showDownloadCounter = false,
+  onBack,
+}: RankedGamesPageProps) {
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -17,7 +25,6 @@ export function TrendingGamesPage({ onBack }: TrendingGamesPageProps) {
       transition={{ duration: 0.2 }}
       className="pt-px"
     >
-      {/* Back button */}
       <div className="mb-4">
         <Button
           variant="ghost"
@@ -31,10 +38,10 @@ export function TrendingGamesPage({ onBack }: TrendingGamesPageProps) {
         </Button>
       </div>
 
-      {/* Reuse GamesSection with higher limit */}
-      <TrendGamesSection
-        title={t('homeSections.popular')}
-        showDownloadCounter={true}
+      <RankedGamesSection
+        title={title}
+        resourceKey={resourceKey}
+        showDownloadCounter={showDownloadCounter}
         showLimit={30}
       />
     </motion.section>

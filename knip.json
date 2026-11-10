@@ -6,8 +6,7 @@
         "src/**/*.{ts,tsx,css}"
       ],
       "ignore": [
-        "src/lib/database.types.ts",
-        "src/renderer/queries/useTrendingGames.ts"
+        "src/lib/database.types.ts"
       ]
     },
     "packages/lbk-bridge-core": {

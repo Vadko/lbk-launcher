@@ -7,7 +7,6 @@ import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../../shared/types';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useImagePreload } from '../../hooks/useImagePreload';
-import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { isTranslationInstallable } from '../../utils/gameStatus';
 import { getGameImageUrl } from '../../utils/imageUrl';
@@ -18,7 +17,7 @@ import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 
 interface GameListItemProps {
-  game: Game | TrendingGameWithDetails;
+  game: Game;
   isSelected: boolean;
   onClick: () => void;
   hasUpdate?: boolean;
@@ -203,13 +202,7 @@ export const GameListItem = memo(function GameListItem({
               <DownloadIcon size={16} />
               <span>{t('gameCard.downloadedByPlayers')}</span>
               <span className="ml-auto">
-                <AppNumberFlow
-                  value={
-                    ('trendingDownloads' in game
-                      ? game.trendingDownloads
-                      : game.downloads) ?? 0
-                  }
-                />
+                <AppNumberFlow value={game.downloads ?? 0} />
               </span>
             </div>
           )}

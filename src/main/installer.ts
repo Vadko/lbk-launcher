@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import { t } from '@/shared/i18n/i18n';
 import { formatBytes, parseSizeToBytes } from '../shared/formatters';
 import { isExeInstaller } from '../shared/installer-kind';
+import { offersSteamArtwork } from '../shared/offers-steam-artwork';
 import type { AchievementsDelivery } from '../shared/plugin-host-types';
 import type {
   AchievementsComponent,
@@ -47,7 +48,7 @@ import {
   runInstaller,
 } from './installer/platform';
 import { findProtons } from './installer/proton';
-import { applySteamIntegration, offersSteamArtwork } from './installer/steam-integration';
+import { applySteamIntegration } from './installer/steam-integration';
 import { isCurrentSessionFirstLaunch } from './tracking';
 import { resolveGameBuildOs } from './utils/game-build';
 import { isLinux } from './utils/platform';
