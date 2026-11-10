@@ -1193,6 +1193,11 @@ export const en = {
   },
   settings: {
     title: 'Settings',
+    language: {
+      title: 'Language',
+      description: 'Launcher interface language',
+      names: { uk: 'Українська', en: 'English', be: 'Беларуская' },
+    },
     feedback: { title: 'Contact us', description: 'Message us on Telegram' },
     performance: {
       title: 'Performance mode',

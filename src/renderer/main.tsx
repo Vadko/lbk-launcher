@@ -6,8 +6,10 @@ import ReactDOM from 'react-dom/client';
 import { I18nextProvider } from 'react-i18next';
 import { i18n } from '@/shared/i18n/i18n';
 import { App } from './App';
+import { LanguageBoundary } from './components/LanguageBoundary';
 import { queryClient } from './queries/queryClient';
 import { initEverInstalled } from './store/everInstalledBridge';
+import { initLanguage } from './store/languageBridge';
 import { initLikes } from './store/likesBridge';
 import { initResources } from './store/resourcesBridge';
 import { initReviewEvents } from './store/reviewEventsBridge';
@@ -39,6 +41,9 @@ sentryInit(
 // Initialize global error handlers before React renders
 initGlobalErrorHandlers();
 
+// Apply the saved language to i18n before anything renders, and follow later changes — once, outside React.
+initLanguage();
+
 // Bridge review events (IPC) into the notifications and the reviews cache — once, outside React.
 initReviewEvents();
 
@@ -66,7 +71,9 @@ try {
     <StrictMode>
       <I18nextProvider i18n={i18n}>
         <QueryClientProvider client={queryClient}>
-          <App />
+          <LanguageBoundary>
+            <App />
+          </LanguageBoundary>
         </QueryClientProvider>
       </I18nextProvider>
     </StrictMode>

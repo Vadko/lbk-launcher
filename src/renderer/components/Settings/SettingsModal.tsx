@@ -35,6 +35,7 @@ import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { SelectDropdown } from '../ui/SelectDropdown';
 import { Switch } from '../ui/Switch';
+import { LanguageSetting } from './LanguageSetting';
 import { SteamBridgeStatusCard } from './SteamBridgeStatusCard';
 
 interface SettingItemProps {
@@ -453,6 +454,8 @@ export function SettingsModal() {
         title={t('settings.title')}
       >
         <div className="space-y-4">
+          <LanguageSetting />
+
           {/* Feedback link */}
           <a
             href="https://t.me/lbk_launcher_bot"

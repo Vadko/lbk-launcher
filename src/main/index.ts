@@ -127,6 +127,7 @@ import { setupLinksHandlers } from './ipc/links';
 import { setupPluginHostHandlers } from './ipc/plugin-host';
 import { setupTgNewsHandlers } from './ipc/tg-news';
 import { initTray, setupWindowControls } from './ipc/window-controls';
+import { startLanguage } from './language';
 import { syncLikes } from './likes';
 import { startMillenniumInstall } from './millennium-install';
 import {
@@ -221,6 +222,7 @@ if (!gotTheLock) {
 
   // Setup all IPC handlers
   setupStoreStorageHandlers();
+  startLanguage();
 
   // `_isEnabled()` reads this option on every send, so the toggle takes effect mid-session
   onRendererSettingsChanged(() => {

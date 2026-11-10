@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { DEFAULT_LANGUAGE, type Language } from '@/shared/i18n/languages';
 import type {
   ContentTypeFilterType,
   SortOrderType,
@@ -55,6 +56,7 @@ interface SettingsStore {
   productAnalyticsEnabled: boolean;
   localizationAnalyticsEnabled: boolean;
   crashDiagnosticsEnabled: boolean;
+  language: Language;
   isSettingsModalOpen: boolean;
   sidebarWidth: number;
   specialFilter: SpecialFilterType | null;
@@ -90,6 +92,7 @@ interface SettingsStore {
   toggleProductAnalytics: () => void;
   toggleLocalizationAnalytics: () => void;
   toggleCrashDiagnostics: () => void;
+  setLanguage: (language: Language) => void;
   setSidebarWidth: (width: number) => void;
   openSettingsModal: () => void;
   closeSettingsModal: () => void;
@@ -116,6 +119,7 @@ export const useSettingsStore = create<SettingsStore>()(
       productAnalyticsEnabled: true,
       localizationAnalyticsEnabled: true,
       crashDiagnosticsEnabled: true,
+      language: DEFAULT_LANGUAGE,
       isSettingsModalOpen: false,
       sidebarWidth: 320,
       specialFilter: null,
@@ -237,6 +241,8 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleCrashDiagnostics: () =>
         set((state) => ({ crashDiagnosticsEnabled: !state.crashDiagnosticsEnabled })),
 
+      setLanguage: (language) => set({ language }),
+
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
 
       openSettingsModal: () => set({ isSettingsModalOpen: true }),
@@ -283,6 +289,7 @@ export const useSettingsStore = create<SettingsStore>()(
         productAnalyticsEnabled: state.productAnalyticsEnabled,
         localizationAnalyticsEnabled: state.localizationAnalyticsEnabled,
         crashDiagnosticsEnabled: state.crashDiagnosticsEnabled,
+        language: state.language,
         sidebarWidth: state.sidebarWidth,
         specialFilter: state.specialFilter,
         selectedContentTypes: state.selectedContentTypes,

@@ -1540,6 +1540,11 @@ export const uk = {
   },
   settings: {
     title: 'Налаштування',
+    language: {
+      title: 'Мова',
+      description: 'Мова інтерфейсу лаунчера',
+      names: { uk: 'Українська', en: 'English', be: 'Беларуская' },
+    },
     feedback: {
       title: "Зворотний зв'язок",
       description: 'Написати нам у Telegram',

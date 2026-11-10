@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import ElectronStore from 'electron-store';
 import { appEvents } from '@/main/app-events';
+import { DEFAULT_LANGUAGE, isLanguage, type Language } from '@/shared/i18n/languages';
 
 const store = new ElectronStore({
   name: 'lbk-store',
@@ -46,6 +47,15 @@ function hideAiTranslations(raw: unknown): boolean {
 
 export function readHideAiTranslations(): boolean {
   return hideAiTranslations(readStoreFile(SETTINGS_KEY));
+}
+
+function storedLanguage(raw: unknown): Language {
+  const value = persistedStateField<unknown>(raw, 'language', DEFAULT_LANGUAGE);
+  return isLanguage(value) ? value : DEFAULT_LANGUAGE;
+}
+
+export function readLanguage(): Language {
+  return storedLanguage(readStoreFile(SETTINGS_KEY));
 }
 
 /** Opt-out from Settings. Lives here so `steam-cef.ts` reads it cycle-free. */
@@ -155,6 +165,9 @@ export function setupStoreStorageHandlers(): void {
   store.onDidChange(SETTINGS_KEY, (next, previous) => {
     if (hideAiTranslations(next) !== hideAiTranslations(previous)) {
       appEvents.emit('hide-ai-changed');
+    }
+    if (storedLanguage(next) !== storedLanguage(previous)) {
+      appEvents.emit('language-changed');
     }
   });
   store.onDidChange(WORKSHOP_INSTALLS_KEY, () =>

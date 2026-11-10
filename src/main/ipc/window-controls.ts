@@ -24,6 +24,13 @@ import { getMainWindow, sendToReadyPage, showMainWindow } from '../window';
 
 let tray: Tray | null = null;
 
+function buildTrayMenu(): Menu {
+  return Menu.buildFromTemplate([
+    { label: t('tray.open'), click: showMainWindow },
+    { label: t('tray.quit'), click: () => app.quit() },
+  ]);
+}
+
 function createTray() {
   if (tray) {
     return tray;
@@ -38,11 +45,7 @@ function createTray() {
 
   tray = new Tray(icon);
 
-  const contextMenu = Menu.buildFromTemplate([
-    { label: t('tray.open'), click: showMainWindow },
-    { label: t('tray.quit'), click: () => app.quit() },
-  ]);
-  tray.setContextMenu(contextMenu);
+  tray.setContextMenu(buildTrayMenu());
 
   // Linux (including Steam Deck) uses single click, others use double-click
   if (isLinux()) {
@@ -62,6 +65,10 @@ nativeTheme.on('updated', () => {
 
 export function initTray(): void {
   createTray();
+}
+
+export function refreshTrayMenu(): void {
+  tray?.setContextMenu(buildTrayMenu());
 }
 
 export function setupWindowControls(): void {

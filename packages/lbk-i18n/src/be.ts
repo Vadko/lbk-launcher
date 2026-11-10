@@ -1498,6 +1498,11 @@ export const be = {
   },
   settings: {
     title: 'Налады',
+    language: {
+      title: 'Мова',
+      description: 'Мова інтэрфейсу лаўнчара',
+      names: { uk: 'Українська', en: 'English', be: 'Беларуская' },
+    },
     feedback: { title: 'Зваротная сувязь', description: 'Напісаць нам у Telegram' },
     performance: {
       title: 'Рэжым прадукцыйнасці',
