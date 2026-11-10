@@ -170,6 +170,7 @@ export const GameListItem = memo(function GameListItem({
               <InfoIcons
                 likesCount={game.likes}
                 downloadsCount={game.downloads}
+                isPlanned={game.status === 'planned'}
                 floatPosition="default"
               />
             </>

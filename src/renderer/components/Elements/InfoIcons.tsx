@@ -4,12 +4,14 @@ import { formatDownloads } from '@/shared/formatters';
 interface InfoIconsProps {
   likesCount?: number;
   downloadsCount?: number | null;
+  isPlanned?: boolean;
   floatPosition?: 'default' | 'compact' | null;
 }
 
 export function InfoIcons({
   likesCount = 0,
   downloadsCount = 0,
+  isPlanned = false,
   floatPosition = null,
 }: InfoIconsProps) {
   return (
@@ -22,10 +24,12 @@ export function InfoIcons({
           <span className="text-sm">{likesCount}</span>
         </div>
       )}
-      <div className="flex items-center gap-1">
-        <DownloadIcon size={16} />
-        <span className="text-sm">{formatDownloads(downloadsCount)}</span>
-      </div>
+      {!isPlanned && (
+        <div className="flex items-center gap-1">
+          <DownloadIcon size={16} />
+          <span className="text-sm">{formatDownloads(downloadsCount)}</span>
+        </div>
+      )}
     </div>
   );
 }
