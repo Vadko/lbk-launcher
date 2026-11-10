@@ -985,7 +985,6 @@ export const en = {
       allResults: '– all results',
       noResults: 'Nothing found',
       noResultsHint: 'Check the spelling or try another name',
-      clear: 'Clear search',
     },
   },
   pagination: {

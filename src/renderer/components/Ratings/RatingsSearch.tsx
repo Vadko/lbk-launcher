@@ -1,10 +1,8 @@
 import { G } from '@mobily/ts-belt';
-import { AnimatePresence, motion } from 'framer-motion';
-import { SearchIcon, XIcon } from 'lucide-react';
-import { useId, useRef, useState } from 'react';
-import { t } from '@/shared/i18n/i18n';
-import { useCompositionSafeChange } from '../../hooks/useCompositionSafeChange';
-import { optionId } from './optionId';
+import { AnimatePresence } from 'framer-motion';
+import { SearchIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Input } from '../ui/Input';
 import { RatingsSuggestions } from './RatingsSuggestions';
 import { type RatingsFilter, suggest } from './ratingsFilter';
 
@@ -28,17 +26,26 @@ export const RatingsSearch = <T,>({
   onFilter,
   placeholder,
 }: RatingsSearchProps<T>) => {
-  const listId = useId();
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(() => filterText(filter));
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(0);
   const query = text.trim();
   const suggestions = query ? suggest(items, getName, query) : [];
-  const optionCount = suggestions.length && suggestions.length + 1;
-  // The store reloads on catalog events, so the list can shrink under the highlighted row
-  const current = Math.min(active, optionCount - 1);
-  const hasOptions = open && optionCount > 0;
+
+  // The gamepad closes a list by dispatching a mousedown on the body
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const closeOutside = (e: MouseEvent) => {
+      if (!(e.target instanceof Node) || !wrapperRef.current?.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', closeOutside);
+    return () => document.removeEventListener('mousedown', closeOutside);
+  }, [open]);
 
   const commit = (next: RatingsFilter) => {
     setText(filterText(next));
@@ -56,103 +63,75 @@ export const RatingsSearch = <T,>({
     );
   };
 
-  const change = useCompositionSafeChange((value) => {
+  const change = (value: string) => {
     setText(value);
-    setActive(0);
     setOpen(value.trim() !== '');
     if (value.trim() === '' && G.isNotNullable(filter)) {
       onFilter(null);
     }
-  });
-
-  const clear = () => {
-    // Focus first: onFocus still sees the old text and would reopen the list after it
-    inputRef.current?.focus();
-    setText('');
-    setOpen(false);
-    if (G.isNotNullable(filter)) {
-      onFilter(null);
-    }
   };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     // An IME uses Enter and the arrows to pick its candidates
     if (e.nativeEvent.isComposing) {
       return;
     }
-    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && optionCount > 0) {
+    const input = inputRef.current;
+    if (e.key === 'Escape' && open) {
+      e.preventDefault();
+      // Focus first: a focus event after the close would open the list again
+      input?.focus();
+      setOpen(false);
+    } else if (e.key === 'Enter' && e.target === input && query !== '') {
+      e.preventDefault();
+      choose(0);
+    } else if (e.key === 'ArrowDown' && !open && query !== '') {
       e.preventDefault();
       setOpen(true);
+    } else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && open) {
+      const stops = [
+        input,
+        ...e.currentTarget.querySelectorAll<HTMLElement>('[data-suggestion]'),
+      ];
       const step = e.key === 'ArrowDown' ? 1 : -1;
-      setActive((current + step + optionCount) % optionCount);
-    } else if (e.key === 'Enter' && query !== '') {
-      e.preventDefault();
-      choose(hasOptions ? current : 0);
-    } else if (e.key === 'Escape' && open) {
-      e.preventDefault();
-      setOpen(false);
+      const from = stops.indexOf(document.activeElement as HTMLElement | null);
+      const next = from === -1 ? undefined : stops[from + step];
+      if (next) {
+        e.preventDefault();
+        next.focus();
+      }
     }
   };
 
   return (
     <div
-      // Gamepad B blurs the field without a click, so leaving focus is what closes the list
+      ref={wrapperRef}
+      onKeyDown={onKeyDown}
+      // A null target is the gamepad blurring the field or a click on bare background, which the mousedown handler covers
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) {
+        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) {
           setOpen(false);
         }
       }}
       className="relative w-[400px] max-w-full"
     >
-      <div className="group flex items-center gap-4 rounded-xl border border-border bg-glass px-[17px] py-[13px] backdrop-blur-[8px] transition-colors hover:border-white/20 focus-within:border-color-main!">
-        <SearchIcon
-          size={24}
-          className={`shrink-0 transition-colors group-focus-within:text-color-main ${text ? 'text-color-main' : 'text-text-muted'}`}
-        />
-        <input
-          ref={inputRef}
-          type="search"
-          role="combobox"
-          aria-label={placeholder}
-          aria-expanded={hasOptions}
-          aria-controls={listId}
-          aria-autocomplete="list"
-          aria-activedescendant={hasOptions ? optionId(listId, current) : undefined}
-          value={text}
-          {...change}
-          onFocus={() => setOpen(query !== '')}
-          onKeyDown={onKeyDown}
-          placeholder={placeholder}
-          data-gamepad-action
-          className="min-w-0 flex-1 bg-transparent text-base [&::-webkit-search-cancel-button]:hidden text-text-main caret-color-main outline-hidden placeholder:text-text-muted"
-        />
-        <AnimatePresence>
-          {text && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              transition={{ duration: 0.12 }}
-              type="button"
-              onClick={clear}
-              aria-label={t('ratings.search.clear')}
-              data-gamepad-action
-              className="shrink-0 text-text-muted transition-colors hover:text-text-main"
-            >
-              <XIcon size={20} />
-            </motion.button>
-          )}
-        </AnimatePresence>
-      </div>
+      <Input
+        ref={inputRef}
+        type="search"
+        value={text}
+        onChange={change}
+        onFocus={() => setOpen(query !== '')}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        icon={<SearchIcon size={18} className="text-text-muted" />}
+        data-gamepad-action
+      />
       <AnimatePresence>
         {open && (
           <RatingsSuggestions
-            id={listId}
             query={query}
             suggestions={suggestions}
             getName={getName}
-            active={current}
-            onActive={setActive}
             onChoose={choose}
           />
         )}

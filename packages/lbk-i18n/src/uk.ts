@@ -1020,7 +1020,6 @@ export const uk = {
       allResults: '– усі результати',
       noResults: 'Нічого не знайдено',
       noResultsHint: 'Перевірте написання або спробуйте іншу назву',
-      clear: 'Очистити пошук',
     },
   },
   pagination: {

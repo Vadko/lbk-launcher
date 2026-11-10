@@ -989,7 +989,6 @@ export const be = {
       allResults: '– усе вынікі',
       noResults: 'Нічога не знойдзена',
       noResultsHint: 'Праверце напісанне або паспрабуйце іншую назву',
-      clear: 'Ачысціць пошук',
     },
   },
   pagination: {

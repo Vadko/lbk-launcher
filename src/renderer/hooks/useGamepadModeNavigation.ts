@@ -724,6 +724,12 @@ export function useGamepadModeNavigation(enabled = true) {
         return;
       }
 
+      const dropdown = getOpenDropdown(root);
+      if (dropdown) {
+        handleDropdown(f, dropdown);
+        return;
+      }
+
       if (f.pressed(BUTTON.B)) {
         playBackSound();
         switchArea('games');
