@@ -420,7 +420,8 @@ export const en = {
       feedback: 'Reviews',
       error: 'Errors',
     },
-    installRequired: 'You can leave a review after installing the translation.',
+    installRequired:
+      'You can leave a review or reply to one after installing the translation.',
     loadFailed: 'Could not load reviews. Try again later.',
     empty: 'No reviews yet.',
     emptyErrors: 'No error reports yet.',

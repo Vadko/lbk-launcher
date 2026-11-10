@@ -12,6 +12,7 @@ import { ReviewReveal } from './ReviewReveal';
 
 interface ReviewThreadProps {
   review: ReviewThreadView;
+  canReply: boolean;
   onReply: (
     review: ReviewThreadView,
     text: string,
@@ -30,6 +31,7 @@ const MAX_DEPTH = 3;
 
 export function ReviewThread({
   review,
+  canReply,
   onReply,
   onEdit,
   onResend,
@@ -99,6 +101,7 @@ export function ReviewThread({
         isPublicThread={review.isPublic}
         isBug={false}
         replyTo={replyTo}
+        canReply={canReply}
         images={[]}
         onReply={() => setReplyingTo(reply.id)}
         onEdit={(text) => onEdit(review, reply.id, text)}
@@ -118,6 +121,7 @@ export function ReviewThread({
         isPublicThread={review.isPublic}
         isBug={review.type === 'error'}
         replyTo={null}
+        canReply={canReply}
         images={review.screenshots}
         onReply={() => setReplyingTo(review.id)}
         onEdit={(text) => onEdit(review, review.id, text)}

@@ -168,6 +168,7 @@ export function GameReviewsTab({
               <div key={review.id} className="py-5 first:pt-0 last:pb-0">
                 <ReviewThread
                   review={review}
+                  canReply={canLeaveFeedback}
                   onReply={actions.sendReply}
                   onEdit={actions.edit}
                   onResend={actions.resend}

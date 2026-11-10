@@ -22,6 +22,7 @@ interface ReviewEntryProps {
   isPublicThread: boolean;
   isBug: boolean;
   replyTo: GameReviewAuthor | null;
+  canReply: boolean;
   images: string[];
   onReply: () => void;
   onEdit: (text: string) => void;
@@ -51,6 +52,7 @@ export function ReviewEntry({
   isPublicThread,
   isBug,
   replyTo,
+  canReply: mayReply,
   images,
   onReply,
   onEdit,
@@ -69,7 +71,7 @@ export function ReviewEntry({
   const canEdit = now < editableUntil;
   // A new reply has no deadline, while the server refuses a failed edit once its window closed
   const canResend = entry.write !== 'edit' || canEdit;
-  const canReply = entry.moderation === 'published' || isChecking;
+  const canReply = mayReply && (entry.moderation === 'published' || isChecking);
 
   return (
     <article id={`review-${entry.id}`} className="relative flex gap-4 min-w-0 rounded-xl">
