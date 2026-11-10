@@ -22,7 +22,6 @@ import {
 import { notifyCountersUpdated } from '../db/counters-updated';
 import { findDeepLinkGameId } from '../db/deep-link-game';
 import { GamesRepository } from '../db/games-repository';
-import { fetchTrendingGames } from '../db/supabase-sync-api';
 import { SyncManager } from '../db/sync-manager';
 import {
   detectGamePath,
@@ -230,12 +229,6 @@ export function setupGamesHandlers(): void {
 
   // Re-probes every store off the fingerprints; a change also emits store-library-changed
   ipcMain.handle('check-store-libraries', () => checkStoreLibraries());
-
-  handleOr(
-    'fetch-trending-games',
-    (days?: number, limit?: number) => fetchTrendingGames(days, limit),
-    orEmpty
-  );
 
   handleOr('sync-kurin-games', syncKurinGames, orEmpty);
 

@@ -14,20 +14,24 @@ import type {
 import { appEvents } from '../app-events';
 import { normalizeInstalledFolder } from '../utils/install-path';
 import type { WorkshopTarget } from '../utils/steam-workshop';
+import { catalogSelectSql } from './catalog-select';
 import { getDatabase, isSpellfixAvailable } from './database';
 import {
   deleteGameById,
+  type GameRow,
   parseTagIds,
   upsertGameSingle,
   upsertGamesTransaction,
   VISIBLE_GAMES_SQL,
 } from './db-queries';
+import { rowToGame } from './row-to-game';
 import {
   buildSearchCondition,
   hasVisibleMatch,
   prefixFirstOrder,
   type SearchCondition,
 } from './search-condition';
+import { MANUAL_FIRST_SQL, TRANSLATION_RATING_SQL } from './translation-rating-sql';
 
 /**
  * Repository for working with games in the local database
@@ -170,11 +174,16 @@ export class GamesRepository {
     sortOrder: SortOrderType,
     search: SearchCondition | null
   ): { sql: string; params: string[] } {
-    const catalogOrder = this.buildCatalogOrder(sortOrder);
     const prefixFirst = prefixFirstOrder(search);
-    return prefixFirst
-      ? { sql: `${prefixFirst.sql}, ${catalogOrder}`, params: prefixFirst.params }
-      : { sql: catalogOrder, params: [] };
+    // The default sort ranks a search: manual translations first, titles starting with the query first within each kind, then the rating
+    const ranked = search !== null && sortOrder === 'name';
+    const terms = [
+      ...(ranked ? [MANUAL_FIRST_SQL] : []),
+      ...(prefixFirst ? [prefixFirst.sql] : []),
+      ...(ranked ? [`${TRANSLATION_RATING_SQL} DESC`] : []),
+      this.buildCatalogOrder(sortOrder),
+    ];
+    return { sql: terms.join(', '), params: prefixFirst?.params ?? [] };
   }
 
   private buildCatalogOrder(sortOrder: SortOrderType): string {
@@ -198,39 +207,6 @@ export class GamesRepository {
   }
 
   /**
-   * Convert a row from SQLite into a Game
-   * Only the platforms and install_paths fields need JSON.parse
-   */
-  private rowToGame(row: Record<string, unknown>): Game {
-    const platforms =
-      typeof row.platforms === 'string' ? JSON.parse(row.platforms) : row.platforms;
-    const install_paths =
-      typeof row.install_paths === 'string' && row.install_paths !== null
-        ? JSON.parse(row.install_paths)
-        : row.install_paths;
-    const screenshots =
-      typeof row.screenshots === 'string' && row.screenshots !== null
-        ? (JSON.parse(row.screenshots) as string[])
-        : ((row.screenshots as string[] | null) ?? null);
-    const steam_tag_ids = parseTagIds(row.steam_tag_ids);
-
-    return {
-      ...row,
-      approved: Boolean(row.approved),
-      is_adult: Boolean(row.is_adult),
-      license_only: Boolean(row.license_only),
-      ai: row.ai as string | null, // ai is now a text field: 'edited' | 'non-edited' | null
-      hide: Boolean(row.hide),
-      artwork_localized: Boolean(row.artwork_localized),
-      achievements_third_party: row.achievements_third_party || null,
-      platforms,
-      install_paths,
-      screenshots,
-      steam_tag_ids,
-    } as Game;
-  }
-
-  /**
    * Get games with filtering
    * Since this is a local-first app, we return all games at once
    */
@@ -243,6 +219,7 @@ export class GamesRepository {
       sortOrder = 'name',
       hideAiTranslations = false,
       limit,
+      flat = false,
     } = params;
 
     const whereConditions: string[] = [VISIBLE_GAMES_SQL];
@@ -280,20 +257,21 @@ export class GamesRepository {
     // Author фільтр рахується у JS post-process, тому SQL LIMIT там урізав би рядки до фільтрації
     const canLimitInSql = limit !== undefined && authors.length === 0;
 
-    const gamesStmt = this.db.prepare(`
-      SELECT *
-      FROM games
-      WHERE ${whereClause}
-      ORDER BY ${order.sql}
-      ${canLimitInSql ? 'LIMIT ?' : ''}
-    `);
+    const gamesStmt = this.db.prepare<unknown[], GameRow>(
+      catalogSelectSql({
+        where: whereClause,
+        order: order.sql,
+        limited: canLimitInSql,
+        grouped: !flat,
+      })
+    );
 
     const rows = gamesStmt.all(
       ...queryParams,
       ...order.params,
       ...(canLimitInSql ? [limit] : [])
-    ) as Record<string, unknown>[];
-    let games = rows.map((row) => this.rowToGame(row));
+    );
+    let games = rows.map(rowToGame);
 
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
@@ -369,15 +347,12 @@ export class GamesRepository {
     }
 
     const order = this.buildOrderClause(sortOrder, search);
-    const stmt = this.db.prepare(`
-      SELECT *
-      FROM games
-      WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${order.sql}
-    `);
+    const stmt = this.db.prepare<unknown[], GameRow>(
+      catalogSelectSql({ where: whereConditions.join(' AND '), order: order.sql })
+    );
 
-    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    return rows.map((row) => this.rowToGame(row));
+    const rows = stmt.all(...queryParams, ...order.params);
+    return rows.map(rowToGame);
   }
 
   /**
@@ -415,15 +390,12 @@ export class GamesRepository {
     }
 
     const order = this.buildOrderClause(sortOrder, search);
-    const stmt = this.db.prepare(`
-      SELECT *
-      FROM games
-      WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${order.sql}
-    `);
+    const stmt = this.db.prepare<unknown[], GameRow>(
+      catalogSelectSql({ where: whereConditions.join(' AND '), order: order.sql })
+    );
 
-    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const allGames = rows.map((row) => this.rowToGame(row));
+    const rows = stmt.all(...queryParams, ...order.params);
+    const allGames = rows.map(rowToGame);
 
     // Normalize both sides with the shared helper so the DB folder name and the
     // detected system path reduce to the same key (kept in sync with the badge).
@@ -484,15 +456,12 @@ export class GamesRepository {
     }
 
     const order = this.buildOrderClause(sortOrder, search);
-    const stmt = this.db.prepare(`
-      SELECT *
-      FROM games
-      WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${order.sql}
-    `);
+    const stmt = this.db.prepare<unknown[], GameRow>(
+      catalogSelectSql({ where: whereConditions.join(' AND '), order: order.sql })
+    );
 
-    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const games = rows.map((row) => this.rowToGame(row));
+    const rows = stmt.all(...queryParams, ...order.params);
+    const games = rows.map(rowToGame);
 
     return { games, total: games.length };
   }
@@ -590,14 +559,10 @@ export class GamesRepository {
    * Get a game by ID
    */
   getGameById(gameId: string): Game | null {
-    const stmt = this.db.prepare(`
-      SELECT *
-      FROM games
-      WHERE id = ?
-    `);
-
-    const row = stmt.get(gameId) as Record<string, unknown> | undefined;
-    return row ? this.rowToGame(row) : null;
+    const row = this.db
+      .prepare<[string], GameRow>('SELECT * FROM games WHERE id = ?')
+      .get(gameId);
+    return row ? rowToGame(row) : null;
   }
 
   isGameVisible(gameId: string): boolean {
@@ -693,15 +658,12 @@ export class GamesRepository {
     }
 
     const order = this.buildOrderClause(sortOrder, search);
-    const stmt = this.db.prepare(`
-      SELECT *
-      FROM games
-      WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${order.sql}
-    `);
+    const stmt = this.db.prepare<unknown[], GameRow>(
+      catalogSelectSql({ where: whereConditions.join(' AND '), order: order.sql })
+    );
 
-    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const games = rows.map((row) => this.rowToGame(row));
+    const rows = stmt.all(...queryParams, ...order.params);
+    const games = rows.map(rowToGame);
     return { games, total: games.length };
   }
 
@@ -745,15 +707,12 @@ export class GamesRepository {
     }
 
     const order = this.buildOrderClause(sortOrder, search);
-    const stmt = this.db.prepare(`
-      SELECT *
-      FROM games
-      WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${order.sql}
-    `);
+    const stmt = this.db.prepare<unknown[], GameRow>(
+      catalogSelectSql({ where: whereConditions.join(' AND '), order: order.sql })
+    );
 
-    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const games = rows.map((row) => this.rowToGame(row));
+    const rows = stmt.all(...queryParams, ...order.params);
+    const games = rows.map(rowToGame);
 
     return { games, total: games.length };
   }

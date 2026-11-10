@@ -3,20 +3,20 @@ import { t } from '@/shared/i18n/i18n';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { InstalledGamesSection } from './InstalledGamesSection';
 import { NewGamesSection, type TabConfig } from './NewGamesSection';
-import { TrendingGamesPage } from './TrendingGamesPage';
-import { TrendGamesSection } from './TrendsGamesSection';
+import { RankedGamesPage } from './RankedGamesPage';
+import { type RankedGamesKey, RankedGamesSection } from './RankedGamesSection';
 import { WeeklyPicksSection } from './WeeklyPicksSection';
 
-type PageView = 'main' | 'trending';
+type PageView = 'main' | RankedGamesKey;
 
 export function MainPage() {
   const [currentView, setCurrentView] = useState<PageView>('main');
   const ContainerRef = useRef<HTMLDivElement>(null);
   const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
 
-  // Scroll to top when opening trending page
+  // Scroll to top when opening a full list
   useEffect(() => {
-    if (currentView === 'trending' && ContainerRef.current) {
+    if (currentView !== 'main' && ContainerRef.current) {
       ContainerRef.current.scrollTo({ top: 0, behavior: 'auto' });
     }
 
@@ -61,19 +61,37 @@ export function MainPage() {
             defaultTabSortOrder="newest"
             showLimit={3}
           />
-          <TrendGamesSection
+          <RankedGamesSection
+            title={t('homeSections.newStars')}
+            resourceKey="newStarGames"
+            onViewAll={() => setCurrentView('newStarGames')}
+          />
+          <RankedGamesSection
             title={t('homeSections.popular')}
+            resourceKey="popularGames"
             showDownloadCounter={true}
-            onViewAll={() => setCurrentView('trending')}
+            onViewAll={() => setCurrentView('popularGames')}
           />
         </div>
       )}
-      {/* Trending games page */}
-      {currentView === 'trending' && (
+      {currentView !== 'main' && (
         <div
           className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1564px]`}
         >
-          <TrendingGamesPage onBack={() => setCurrentView('main')} />
+          {currentView === 'popularGames' ? (
+            <RankedGamesPage
+              title={t('homeSections.popular')}
+              resourceKey="popularGames"
+              showDownloadCounter={true}
+              onBack={() => setCurrentView('main')}
+            />
+          ) : (
+            <RankedGamesPage
+              title={t('homeSections.newStars')}
+              resourceKey="newStarGames"
+              onBack={() => setCurrentView('main')}
+            />
+          )}
         </div>
       )}
     </div>

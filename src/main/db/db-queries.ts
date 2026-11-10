@@ -3,7 +3,6 @@
  * Used in games-repository.ts and db-worker.ts
  */
 import type Database from 'better-sqlite3';
-import type { Database as SupabaseDatabase } from '../../lib/database.types';
 import { IS_ADMIN_BUILD } from '../../shared/admin-mode';
 import { generateSearchableString, withStrippedVariant } from '../../shared/search-utils';
 import type { Game } from '../../shared/types';
@@ -31,45 +30,33 @@ export function parseTagIds(json: unknown): number[] | null {
 }
 
 /**
- * Fields that are not stored in the local DB
- */
-type ExcludedLocalFields =
-  | 'archive_file_list'
-  | 'voice_archive_file_list'
-  | 'achievements_archive_file_list'
-  | 'epic_archive_file_list'
-  | 'gog_archive_file_list'
-  | 'xbox_archive_file_list'
-  | 'uplay_archive_file_list'
-  | 'ea_archive_file_list'
-  | 'steam_linux_archive_file_list'
-  | 'steam_mac_archive_file_list'
-  | 'name_fts' // Generated column in Supabase for FTS
-  | 'last_download_milestone' // Admin-only milestone watermark, not synced locally
-  | 'last_subscriber_milestone';
-
-/**
  * Parameters for inserting a game into the DB (local SQLite)
  * Mapped type based on Supabase Database types, but with conversions for SQLite:
  * - boolean -> number (0/1)
  * - arrays/objects -> JSON string
- * - Excluded file_list fields
  */
 type GameInsertParams = {
-  [K in keyof Omit<
-    SupabaseDatabase['public']['Tables']['games']['Row'],
-    ExcludedLocalFields
-  >]: K extends 'approved' | 'is_adult' | 'license_only' | 'hide' | 'artwork_localized'
+  [K in keyof Game]: K extends
+    | 'approved'
+    | 'is_adult'
+    | 'license_only'
+    | 'hide'
+    | 'artwork_localized'
     ? number // boolean is converted to 0/1 for SQLite
     : K extends 'ai'
       ? string | null // ai is now a text field: 'edited' | 'non-edited' | null
-      : K extends 'platforms' | 'install_paths' | 'screenshots' | 'steam_tag_ids'
-        ? string | null // JSON.stringify for SQLite
-        : SupabaseDatabase['public']['Tables']['games']['Row'][K];
+      : K extends 'platforms'
+        ? string // JSON.stringify for SQLite
+        : K extends 'install_paths' | 'screenshots' | 'steam_tag_ids'
+          ? string | null
+          : Game[K];
 } & {
   // Local-only field for search (not in Supabase)
   name_search: string;
 };
+
+// What a SELECT * of games returns: the stored columns and the local-only user_unlocked
+export type GameRow = GameInsertParams & { user_unlocked: number };
 
 /**
  * Convert a Game into parameters for inserting into the DB

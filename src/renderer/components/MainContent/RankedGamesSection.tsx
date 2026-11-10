@@ -1,29 +1,32 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRightIcon } from 'lucide-react';
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/renderer/store/useStore';
 import { t } from '@/shared/i18n/i18n';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
-import { useTrendingGames } from '../../queries/useTrendingGames';
+import { useResource } from '../../hooks/useResource';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 
-interface GamesSectionProps {
+export type RankedGamesKey = 'popularGames' | 'newStarGames';
+
+interface RankedGamesSectionProps {
   title: string;
+  resourceKey: RankedGamesKey;
   showLimit?: number;
   showDownloadCounter?: boolean;
   onViewAll?: () => void;
 }
 
-export function TrendGamesSection({
+export function RankedGamesSection({
   title,
+  resourceKey,
   showLimit = 3,
   showDownloadCounter = false,
   onViewAll,
-}: GamesSectionProps) {
+}: RankedGamesSectionProps) {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
 
@@ -33,15 +36,15 @@ export function TrendGamesSection({
       detectedGames: state.detectedGames,
     }))
   );
-  const { data: trendingGames, isLoading } = useTrendingGames(30);
-  const visibleGames = useMemo(
-    () => (trendingGames ?? []).slice(0, showLimit),
-    [trendingGames, showLimit]
-  );
+  const games = useResource(resourceKey);
+
+  if (games.status === 'failed' || games.value?.length === 0) {
+    return null;
+  }
+  const visibleGames = games.value?.slice(0, showLimit);
 
   return (
     <section>
-      {/* Header with view all button */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
         {onViewAll && (
@@ -51,9 +54,9 @@ export function TrendGamesSection({
           </Button>
         )}
       </div>
-      <div className={`grid grid-cols-3 gap-8`}>
+      <div className="grid grid-cols-3 gap-8">
         <AnimatePresence mode="popLayout">
-          {isLoading ? (
+          {visibleGames === undefined ? (
             <motion.div
               key="loader"
               initial={{ opacity: 0 }}
@@ -64,21 +67,10 @@ export function TrendGamesSection({
             >
               <Loader size="md" />
             </motion.div>
-          ) : visibleGames.length === 0 ? (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="text-center text-text-muted py-8"
-            >
-              <p>{t('homeSections.noGames')}</p>
-            </motion.div>
           ) : (
             visibleGames.map((game, index) => (
               <motion.div
-                key={`${game.id}`}
+                key={game.id}
                 id={`game-${game.slug}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

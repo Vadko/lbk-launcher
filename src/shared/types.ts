@@ -19,7 +19,15 @@ export type Platform = Database['public']['Enums']['install_source'];
 export type BannerType = Database['public']['Enums']['banner_type'];
 export type FeedbackType = Database['public']['Enums']['feedback_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
-export type Game = Database['public']['Tables']['games']['Row'];
+type GamesRow = Database['public']['Tables']['games']['Row'];
+// Columns the launcher never loads or stores: every archive's file list, the server's FTS column and the admin milestone watermarks
+type UnloadedGameColumn =
+  | Extract<keyof GamesRow, `${string}_file_list`>
+  | keyof Pick<
+      GamesRow,
+      'name_fts' | 'last_download_milestone' | 'last_subscriber_milestone'
+    >;
+export type Game = Omit<GamesRow, UnloadedGameColumn>;
 export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated' | 'subscribers';
 
 export type SpecialFilterType =
@@ -216,6 +224,8 @@ export interface GetGamesParams {
   hideAiTranslations?: boolean;
   sortOrder?: SortOrderType;
   limit?: number;
+  // Each translation where it falls in the order, instead of a game's translations together
+  flat?: boolean;
 }
 
 export interface GetGamesResult {
@@ -271,10 +281,6 @@ export interface ElectronAPI
   fetchSearchMatchIds: (searchQuery: string) => Promise<string[] | null>;
   checkStoreLibraries: () => Promise<boolean>;
   onStoreLibraryChanged: (callback: () => void) => () => void;
-  fetchTrendingGames: (
-    days?: number,
-    limit?: number
-  ) => Promise<{ game_id: string; downloads: number }[]>;
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
