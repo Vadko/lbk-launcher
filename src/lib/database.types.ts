@@ -1188,6 +1188,7 @@ export type Database = {
           archive_hash: string | null
           archive_path: string | null
           archive_size: string | null
+          artwork_localized: boolean
           banner_path: string | null
           capsule_path: string | null
           created_at: string
@@ -1289,6 +1290,7 @@ export type Database = {
           archive_hash?: string | null
           archive_path?: string | null
           archive_size?: string | null
+          artwork_localized?: boolean
           banner_path?: string | null
           capsule_path?: string | null
           created_at?: string
@@ -1390,6 +1392,7 @@ export type Database = {
           archive_hash?: string | null
           archive_path?: string | null
           archive_size?: string | null
+          artwork_localized?: boolean
           banner_path?: string | null
           capsule_path?: string | null
           created_at?: string
@@ -1520,6 +1523,7 @@ export type Database = {
           archive_hash: string | null
           archive_path: string | null
           archive_size: string | null
+          artwork_localized: boolean
           banner_path: string | null
           capsule_path: string | null
           created_at: string
@@ -1632,6 +1636,7 @@ export type Database = {
           archive_hash?: string | null
           archive_path?: string | null
           archive_size?: string | null
+          artwork_localized?: boolean
           banner_path?: string | null
           capsule_path?: string | null
           created_at?: string
@@ -1744,6 +1749,7 @@ export type Database = {
           archive_hash?: string | null
           archive_path?: string | null
           archive_size?: string | null
+          artwork_localized?: boolean
           banner_path?: string | null
           capsule_path?: string | null
           created_at?: string
