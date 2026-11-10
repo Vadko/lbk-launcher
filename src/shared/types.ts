@@ -216,6 +216,8 @@ export interface GetGamesParams {
   hideAiTranslations?: boolean;
   sortOrder?: SortOrderType;
   limit?: number;
+  // Each translation where it falls in the order, instead of a game's translations together
+  flat?: boolean;
 }
 
 export interface GetGamesResult {

@@ -3,7 +3,6 @@ import { app } from 'electron';
 import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { runMigrations } from './migrations';
-import { registerTranslationRating } from './translation-rating-sql';
 
 /**
  * Database Manager - class for managing the local database
@@ -60,7 +59,6 @@ class DatabaseManager {
 
     // Load spellfix1 extension for fuzzy search
     this.loadSpellfixExtension();
-    registerTranslationRating(this.db);
 
     // Create tables if they don't exist
     if (!dbExists) {

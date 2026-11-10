@@ -1,17 +1,16 @@
-import type Database from 'better-sqlite3';
-import { translationRating } from '@/shared/translation-rating';
+// A negative counter would put a log10 of zero or less into the sum
+const counter = (column: string) => `MAX(COALESCE(${column}, 0), 0)`;
 
-export const TRANSLATION_RATING_SQL = 'translation_rating(likes, downloads, reviews, ai)';
+// The like rate starts at 10 % worth 70 downloads, so a few early likes do not top a list; lbk-admin's translation_rating() (migration 211) is the landing's copy, change both together
+export const TRANSLATION_RATING_SQL = `(
+  0.45 * (${counter('likes')} + 70 * 0.1) / (${counter('downloads')} + 70)
+  + 0.25 * CASE WHEN ai IS NULL THEN 1 WHEN ai = 'edited' THEN 0.8 ELSE 0.55 END
+  + 0.2 * log10(${counter('downloads')} + 1)
+  + 0.1 * log10(${counter('reviews')} + 1)
+)`;
 
 // Ascending, so manual translations come first
 export const MANUAL_FIRST_SQL = 'ai IS NOT NULL';
 
-// The renderer ranks a game's translations with the same function, so SQL calls it rather than a copy
-export function registerTranslationRating(db: Database.Database): void {
-  db.function(
-    'translation_rating',
-    { deterministic: true },
-    (likes: number, downloads: number | null, reviews: number, ai: string | null) =>
-      translationRating({ likes, downloads, reviews, ai })
-  );
-}
+// A game's translations: manual first, each kind by rating, then the more complete one
+export const TRANSLATION_RANK_SQL = `${MANUAL_FIRST_SQL}, ${TRANSLATION_RATING_SQL} DESC, translation_progress DESC`;

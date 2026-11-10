@@ -11,7 +11,6 @@ import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { getGameGroupKey } from '@/shared/game-filters';
 import { t } from '@/shared/i18n/i18n';
-import { compareTranslationRank } from '@/shared/translation-rating';
 import type { Game } from '@/shared/types';
 import { WarningFillIcon } from '../Icons/WarningFillIcon';
 import { GameListItem } from '../Sidebar/GameListItem';
@@ -58,8 +57,9 @@ export function InstalledGamesSection({
 
     const cards = [...groups.values()].map((translations) => {
       const installed = translations.find((game) => isInstalled(game.id));
+      // SQL lists each game's translations best first
       return {
-        game: installed ?? translations.toSorted(compareTranslationRank)[0],
+        game: installed ?? translations[0],
         isTranslated: Boolean(installed),
       };
     });
