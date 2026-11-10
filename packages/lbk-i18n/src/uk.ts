@@ -1543,7 +1543,7 @@ export const uk = {
     language: {
       title: 'Мова',
       description: 'Мова інтерфейсу лаунчера',
-      names: { uk: 'Українська', en: 'English', be: 'Беларуская' },
+      names: { uk: 'Українська', en: 'English', be: 'Беларуская', pl: 'Polski' },
     },
     feedback: {
       title: "Зворотний зв'язок",

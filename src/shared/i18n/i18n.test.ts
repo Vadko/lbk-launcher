@@ -1,5 +1,6 @@
 import { be } from '@lbk/i18n/be';
 import { en } from '@lbk/i18n/en';
+import { pl } from '@lbk/i18n/pl';
 import { uk } from '@lbk/i18n/uk';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setLanguage, t } from './i18n';
@@ -25,6 +26,6 @@ describe('setLanguage', () => {
 
   it.each(LANGUAGES)('makes t answer in %s at once', (language) => {
     setLanguage(language);
-    expect(t('tray.open')).toBe({ uk, en, be }[language].tray.open);
+    expect(t('tray.open')).toBe({ uk, en, be, pl }[language].tray.open);
   });
 });

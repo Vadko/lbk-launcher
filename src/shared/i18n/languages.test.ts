@@ -6,6 +6,7 @@ describe('isLanguage', () => {
     ['uk', true],
     ['en', true],
     ['be', true],
+    ['pl', true],
     ['de', false],
     ['', false],
     ['UK', false],

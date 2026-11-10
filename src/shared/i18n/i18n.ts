@@ -1,5 +1,6 @@
 import { be } from '@lbk/i18n/be';
 import { en } from '@lbk/i18n/en';
+import { pl } from '@lbk/i18n/pl';
 import { uk } from '@lbk/i18n/uk';
 import i18next from 'i18next';
 import { DEFAULT_LANGUAGE, type Language } from './languages';
@@ -21,6 +22,7 @@ void i18n.init({
     uk: { translation: uk },
     en: { translation: en },
     be: { translation: be },
+    pl: { translation: pl },
   },
   // The default HTML escaping would show &amp; in game names; React escapes on render.
   interpolation: { escapeValue: false },

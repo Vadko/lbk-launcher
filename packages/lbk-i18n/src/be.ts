@@ -1501,7 +1501,7 @@ export const be = {
     language: {
       title: 'Мова',
       description: 'Мова інтэрфейсу лаўнчара',
-      names: { uk: 'Українська', en: 'English', be: 'Беларуская' },
+      names: { uk: 'Українська', en: 'English', be: 'Беларуская', pl: 'Polski' },
     },
     feedback: { title: 'Зваротная сувязь', description: 'Напісаць нам у Telegram' },
     performance: {
