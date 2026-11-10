@@ -1138,6 +1138,29 @@ const migrations: Migration[] = [
       `);
     },
   },
+  {
+    name: 'add_artwork_localized_column',
+    up: (db) => {
+      const added = addColumnIfMissing(
+        db,
+        'artwork_localized',
+        'ALTER TABLE games ADD COLUMN artwork_localized INTEGER NOT NULL DEFAULT 0;'
+      );
+      // Until the resync lands, old rows keep offering artwork as before; a failed sync must not strip it
+      if (added) {
+        db.exec('UPDATE games SET artwork_localized = 1');
+      }
+    },
+  },
+  {
+    name: 'resync_for_artwork_localized',
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_artwork_localized',
+        'migration_resync_artwork_localized_done'
+      ),
+  },
 ];
 
 /**
