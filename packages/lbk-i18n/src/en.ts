@@ -352,7 +352,7 @@ export const en = {
   gameAuthors: { many: 'Localization creators', one: 'Localization creator' },
   gameCard: {
     unknownAuthor: 'Unknown creator',
-    downloadedByPlayers: 'in the last 14 days',
+    downloadedByPlayers: 'in the last month',
   },
   gameHero: { share: 'Share' },
   gameLike: {
