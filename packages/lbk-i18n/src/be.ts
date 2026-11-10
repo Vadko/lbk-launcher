@@ -358,7 +358,7 @@ export const be = {
   gameAuthors: { many: 'Аўтары лакалізацыі', one: 'Аўтар лакалізацыі' },
   gameCard: {
     unknownAuthor: 'Невядомы аўтар',
-    downloadedByPlayers: 'Спампавана гульцамі',
+    downloadedByPlayers: 'за апошнія 14 дзён',
   },
   gameHero: { share: 'Падзяліцца' },
   gameLike: {

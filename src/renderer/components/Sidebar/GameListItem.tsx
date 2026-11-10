@@ -12,7 +12,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { isTranslationInstallable } from '../../utils/gameStatus';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
-import { PopularIcon } from '../Icons/PopularIcon';
+import { DownloadIcon } from '../Icons/DownloadIcon';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
@@ -199,7 +199,7 @@ export const GameListItem = memo(function GameListItem({
           </div>
           {showDownloadCounter && (
             <div className="flex items-center gap-2">
-              <PopularIcon />
+              <DownloadIcon size={16} />
               <span>{t('gameCard.downloadedByPlayers')}</span>
               <span className="ml-auto">
                 <AppNumberFlow

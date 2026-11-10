@@ -376,7 +376,7 @@ export const uk = {
   },
   gameCard: {
     unknownAuthor: 'Невідомий автор',
-    downloadedByPlayers: 'Завантажено гравцями',
+    downloadedByPlayers: 'за останні 14 днів',
   },
   gameHero: {
     share: 'Поділитися',
