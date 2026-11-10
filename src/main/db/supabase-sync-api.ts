@@ -38,6 +38,7 @@ const GAME_SELECT_COLUMNS = [
   'logo_path',
   'thumbnail_path',
   'capsule_path',
+  'artwork_localized',
   'archive_path',
   'archive_size',
   'archive_hash',

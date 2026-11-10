@@ -12,6 +12,7 @@ export function rowToGame(row: GameRow): Game {
     is_adult: Boolean(row.is_adult),
     license_only: Boolean(row.license_only),
     hide: Boolean(row.hide),
+    artwork_localized: Boolean(row.artwork_localized),
     achievements_third_party: row.achievements_third_party || null,
     platforms: JSON.parse(row.platforms),
     install_paths: parseJsonOrNull(row.install_paths),

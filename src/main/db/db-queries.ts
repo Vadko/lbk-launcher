@@ -36,7 +36,12 @@ export function parseTagIds(json: unknown): number[] | null {
  * - arrays/objects -> JSON string
  */
 type GameInsertParams = {
-  [K in keyof Game]: K extends 'approved' | 'is_adult' | 'license_only' | 'hide'
+  [K in keyof Game]: K extends
+    | 'approved'
+    | 'is_adult'
+    | 'license_only'
+    | 'hide'
+    | 'artwork_localized'
     ? number // boolean is converted to 0/1 for SQLite
     : K extends 'ai'
       ? string | null // ai is now a text field: 'edited' | 'non-edited' | null
@@ -69,6 +74,7 @@ function gameToInsertParams(game: Game): GameInsertParams {
     archive_size: game.archive_size ?? null,
     banner_path: game.banner_path ?? null,
     capsule_path: game.capsule_path ?? null,
+    artwork_localized: game.artwork_localized ? 1 : 0,
     created_at: game.created_at ?? null,
     created_by: game.created_by ?? null,
     description: game.description ?? null,
@@ -173,6 +179,7 @@ const SYNCED_COLUMNS = [
   'archive_size',
   'banner_path',
   'capsule_path',
+  'artwork_localized',
   'created_at',
   'created_by',
   'description',
