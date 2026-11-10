@@ -236,35 +236,6 @@ export async function fetchDeletedGamesFromSupabase(
   return rows;
 }
 
-/** Result row of the get_trending_games RPC */
-type TrendingGame =
-  Database['public']['Functions']['get_trending_games']['Returns'][number];
-
-/**
- * Fetch the most popular games over the last N days
- * @param days - number of days to analyze
- * @param limit - maximum number of games
- * @returns array of {game_id, downloads}
- */
-export async function fetchTrendingGames(days = 30, limit = 10): Promise<TrendingGame[]> {
-  const supabase = getSupabaseClient();
-
-  console.log(`[SupabaseSync] Fetching trending games for last ${days} days`);
-
-  const { data, error } = await supabase.rpc('get_trending_games', {
-    p_days: days,
-    p_limit: limit,
-  });
-
-  if (error) {
-    console.error('[SupabaseSync] Failed to fetch trending games:', error);
-    return [];
-  }
-
-  console.log(`[SupabaseSync] Fetched ${data?.length ?? 0} trending games`);
-  return data ?? [];
-}
-
 export async function fetchTagNamesFromSupabase(since?: string): Promise<TagNameRow[]> {
   const supabase = getSupabaseClient();
   const pages = keysetPages(async (last: TagNameRow | undefined) => {

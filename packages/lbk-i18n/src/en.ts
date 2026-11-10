@@ -569,6 +569,7 @@ export const en = {
     newGames: 'New arrivals',
     newTranslations: 'New translations',
     updates: 'Updates',
+    newStars: 'New stars in the launcher',
     popular: 'Popular with players',
     installedGames: 'Installed games found',
     recommended: 'You might like',

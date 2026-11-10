@@ -271,10 +271,6 @@ export interface ElectronAPI
   fetchSearchMatchIds: (searchQuery: string) => Promise<string[] | null>;
   checkStoreLibraries: () => Promise<boolean>;
   onStoreLibraryChanged: (callback: () => void) => () => void;
-  fetchTrendingGames: (
-    days?: number,
-    limit?: number
-  ) => Promise<{ game_id: string; downloads: number }[]>;
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,

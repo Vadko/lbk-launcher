@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { getGameGroupKey } from '@/shared/game-filters';
+import { compareTranslationRank } from '@/shared/translation-rating';
 import type { Game, TagOption } from '@/shared/types';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useFacetData } from '../../hooks/useFacetData';
@@ -209,9 +210,7 @@ export function Sidebar({ onOpenHistory, isHorizontal = false }: SidebarProps) {
   const gameGroups = Array.from(groupMap.values());
 
   for (const group of gameGroups) {
-    group.translations.sort(
-      (a, b) => (b.translation_progress ?? 0) - (a.translation_progress ?? 0)
-    );
+    group.translations.sort(compareTranslationRank);
     // Derive a clean shared title and per-translation variant suffix
     // (e.g. "Stray (no voice acting)" → name="Stray", variant="(no voice acting)").
     const naming = deriveGroupNaming(group.translations);

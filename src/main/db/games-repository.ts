@@ -22,12 +22,14 @@ import {
   upsertGamesTransaction,
   VISIBLE_GAMES_SQL,
 } from './db-queries';
+import { rowToGame } from './row-to-game';
 import {
   buildSearchCondition,
   hasVisibleMatch,
   prefixFirstOrder,
   type SearchCondition,
 } from './search-condition';
+import { MANUAL_FIRST_SQL, TRANSLATION_RATING_SQL } from './translation-rating-sql';
 
 /**
  * Repository for working with games in the local database
@@ -170,11 +172,16 @@ export class GamesRepository {
     sortOrder: SortOrderType,
     search: SearchCondition | null
   ): { sql: string; params: string[] } {
-    const catalogOrder = this.buildCatalogOrder(sortOrder);
     const prefixFirst = prefixFirstOrder(search);
-    return prefixFirst
-      ? { sql: `${prefixFirst.sql}, ${catalogOrder}`, params: prefixFirst.params }
-      : { sql: catalogOrder, params: [] };
+    // The default sort ranks a search: manual translations first, titles starting with the query first within each kind, then the rating
+    const ranked = search !== null && sortOrder === 'name';
+    const terms = [
+      ...(ranked ? [MANUAL_FIRST_SQL] : []),
+      ...(prefixFirst ? [prefixFirst.sql] : []),
+      ...(ranked ? [`${TRANSLATION_RATING_SQL} DESC`] : []),
+      this.buildCatalogOrder(sortOrder),
+    ];
+    return { sql: terms.join(', '), params: prefixFirst?.params ?? [] };
   }
 
   private buildCatalogOrder(sortOrder: SortOrderType): string {
@@ -195,38 +202,6 @@ export class GamesRepository {
       return `approved_at DESC NULLS LAST, ${nameSortExpr} ASC`;
     }
     return `${nameSortExpr} ASC`;
-  }
-
-  /**
-   * Convert a row from SQLite into a Game
-   * Only the platforms and install_paths fields need JSON.parse
-   */
-  private rowToGame(row: Record<string, unknown>): Game {
-    const platforms =
-      typeof row.platforms === 'string' ? JSON.parse(row.platforms) : row.platforms;
-    const install_paths =
-      typeof row.install_paths === 'string' && row.install_paths !== null
-        ? JSON.parse(row.install_paths)
-        : row.install_paths;
-    const screenshots =
-      typeof row.screenshots === 'string' && row.screenshots !== null
-        ? (JSON.parse(row.screenshots) as string[])
-        : ((row.screenshots as string[] | null) ?? null);
-    const steam_tag_ids = parseTagIds(row.steam_tag_ids);
-
-    return {
-      ...row,
-      approved: Boolean(row.approved),
-      is_adult: Boolean(row.is_adult),
-      license_only: Boolean(row.license_only),
-      ai: row.ai as string | null, // ai is now a text field: 'edited' | 'non-edited' | null
-      hide: Boolean(row.hide),
-      achievements_third_party: row.achievements_third_party || null,
-      platforms,
-      install_paths,
-      screenshots,
-      steam_tag_ids,
-    } as Game;
   }
 
   /**
@@ -292,7 +267,7 @@ export class GamesRepository {
       ...order.params,
       ...(canLimitInSql ? [limit] : [])
     ) as Record<string, unknown>[];
-    let games = rows.map((row) => this.rowToGame(row));
+    let games = rows.map((row) => rowToGame(row));
 
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
@@ -376,7 +351,7 @@ export class GamesRepository {
     `);
 
     const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    return rows.map((row) => this.rowToGame(row));
+    return rows.map((row) => rowToGame(row));
   }
 
   /**
@@ -422,7 +397,7 @@ export class GamesRepository {
     `);
 
     const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const allGames = rows.map((row) => this.rowToGame(row));
+    const allGames = rows.map((row) => rowToGame(row));
 
     // Normalize both sides with the shared helper so the DB folder name and the
     // detected system path reduce to the same key (kept in sync with the badge).
@@ -491,7 +466,7 @@ export class GamesRepository {
     `);
 
     const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const games = rows.map((row) => this.rowToGame(row));
+    const games = rows.map((row) => rowToGame(row));
 
     return { games, total: games.length };
   }
@@ -596,7 +571,7 @@ export class GamesRepository {
     `);
 
     const row = stmt.get(gameId) as Record<string, unknown> | undefined;
-    return row ? this.rowToGame(row) : null;
+    return row ? rowToGame(row) : null;
   }
 
   isGameVisible(gameId: string): boolean {
@@ -700,7 +675,7 @@ export class GamesRepository {
     `);
 
     const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const games = rows.map((row) => this.rowToGame(row));
+    const games = rows.map((row) => rowToGame(row));
     return { games, total: games.length };
   }
 
@@ -752,7 +727,7 @@ export class GamesRepository {
     `);
 
     const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const games = rows.map((row) => this.rowToGame(row));
+    const games = rows.map((row) => rowToGame(row));
 
     return { games, total: games.length };
   }
