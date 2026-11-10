@@ -1620,6 +1620,8 @@ export type Database = {
           xbox_archive_size: string | null
           xbox_store_url: string | null
           youtube: string | null
+          is_manual: boolean | null
+          rating: number | null
         }
         Insert: {
           achievements_archive_file_list?: Json | null
@@ -3223,11 +3225,13 @@ export type Database = {
           capsule_path: string | null
           created_at: string | null
           downloads: number | null
+          has_manual: boolean | null
           has_voice: boolean | null
           is_adult: boolean | null
           latest_updated_at: string | null
           name: string | null
           name_fts: unknown
+          rating: number | null
           slug: string | null
           translations: Json | null
           translations_count: number | null
@@ -3373,11 +3377,13 @@ export type Database = {
           capsule_path: string
           created_at: string
           downloads: number
+          has_manual: boolean
           has_voice: boolean
           is_adult: boolean
           latest_updated_at: string
           name: string
           name_fts: unknown
+          rating: number
           slug: string
           translations: Json
           translations_count: number
@@ -3637,6 +3643,12 @@ export type Database = {
       is_admin_or_moderator: { Args: never; Returns: boolean }
       is_game_owner: { Args: { gid: string }; Returns: boolean }
       is_kuli_game: { Args: { p_game_id: string }; Returns: boolean }
+      is_manual: {
+        Args: { "": Database["public"]["Tables"]["games"]["Row"] }
+        Returns: {
+          error: true
+        } & "the function public.is_manual with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
+      }
       is_moderator: { Args: never; Returns: boolean }
       is_verified_user: { Args: never; Returns: boolean }
       list_watched_games: {
@@ -3691,6 +3703,12 @@ export type Database = {
       prune_scan_slots: {
         Args: { p_slots: string[]; p_version_id: string }
         Returns: undefined
+      }
+      rating: {
+        Args: { "": Database["public"]["Tables"]["games"]["Row"] }
+        Returns: {
+          error: true
+        } & "the function public.rating with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
       recount_game_reviews: {
         Args: { p_game_ids: string[] }
@@ -3814,6 +3832,15 @@ export type Database = {
       sync_kuli_games_cron: { Args: never; Returns: undefined }
       sync_news_broadcasts: { Args: { p_entries: Json }; Returns: Json }
       take_store_discount_batch: { Args: { p_limit: number }; Returns: Json }
+      translation_rating: {
+        Args: {
+          p_ai: string
+          p_downloads: number
+          p_likes: number
+          p_reviews: number
+        }
+        Returns: number
+      }
       validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
     Enums: {
