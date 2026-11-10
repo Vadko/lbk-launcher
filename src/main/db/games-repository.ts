@@ -221,6 +221,7 @@ export class GamesRepository {
       license_only: Boolean(row.license_only),
       ai: row.ai as string | null, // ai is now a text field: 'edited' | 'non-edited' | null
       hide: Boolean(row.hide),
+      artwork_localized: Boolean(row.artwork_localized),
       achievements_third_party: row.achievements_third_party || null,
       platforms,
       install_paths,
