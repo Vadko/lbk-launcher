@@ -2217,6 +2217,31 @@ export type Database = {
           },
         ]
       }
+      mfa_backup_codes: {
+        Row: {
+          code_hash: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mfa_backup_codes_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news_broadcasts: {
         Row: {
           created_at: string
@@ -3636,6 +3661,7 @@ export type Database = {
           unsubscribe_token: string
         }[]
       }
+      mfa_satisfied: { Args: never; Returns: boolean }
       post_review: {
         Args: {
           p_app_version?: string
