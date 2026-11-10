@@ -1,6 +1,6 @@
 import type { Game } from '@/shared/types';
 import { getDatabase } from './database';
-import { VISIBLE_GAMES_SQL } from './db-queries';
+import { type GameRow, VISIBLE_GAMES_SQL } from './db-queries';
 import { rowToGame } from './row-to-game';
 import { TRANSLATION_RATING_SQL } from './translation-rating-sql';
 
@@ -11,7 +11,7 @@ const RANKED_LIMIT = 30;
 
 function readRanked(hideAi: boolean, where: string, params: (string | number)[]): Game[] {
   const rows = getDatabase()
-    .prepare<(string | number)[], Record<string, unknown>>(
+    .prepare<(string | number)[], GameRow>(
       `SELECT * FROM games
        WHERE ${VISIBLE_GAMES_SQL}${hideAi ? ' AND ai IS NULL' : ''} AND ${where}
        ORDER BY ${TRANSLATION_RATING_SQL} DESC, id

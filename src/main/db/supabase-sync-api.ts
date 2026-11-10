@@ -10,26 +10,8 @@ import { afterCursor, collectPages, keysetPages } from './sync-cursor';
 
 export type TagNameRow = Database['public']['Tables']['steam_tag_names']['Row'];
 
-/**
- * Fields that should NOT be loaded (large file_list and FTS fields)
- */
-type ExcludedFields =
-  | 'archive_file_list'
-  | 'voice_archive_file_list'
-  | 'achievements_archive_file_list'
-  | 'epic_archive_file_list'
-  | 'gog_archive_file_list'
-  | 'xbox_archive_file_list'
-  | 'uplay_archive_file_list'
-  | 'ea_archive_file_list'
-  | 'steam_linux_archive_file_list'
-  | 'steam_mac_archive_file_list'
-  | 'name_fts'
-  | 'name_search'
-  // Milestone counters live locally only: the server doesn't send them back, and the
-  // guard below would otherwise treat them as forgotten.
-  | 'last_download_milestone'
-  | 'last_subscriber_milestone';
+// name_search is derived locally at upsert time
+type ExcludedFields = 'name_search';
 
 /**
  * Columns for selection (type-safe)

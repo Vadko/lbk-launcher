@@ -18,6 +18,7 @@ import { catalogSelectSql } from './catalog-select';
 import { getDatabase, isSpellfixAvailable } from './database';
 import {
   deleteGameById,
+  type GameRow,
   parseTagIds,
   upsertGameSingle,
   upsertGamesTransaction,
@@ -256,7 +257,7 @@ export class GamesRepository {
     // Author фільтр рахується у JS post-process, тому SQL LIMIT там урізав би рядки до фільтрації
     const canLimitInSql = limit !== undefined && authors.length === 0;
 
-    const gamesStmt = this.db.prepare(
+    const gamesStmt = this.db.prepare<unknown[], GameRow>(
       catalogSelectSql({
         where: whereClause,
         order: order.sql,
@@ -269,8 +270,8 @@ export class GamesRepository {
       ...queryParams,
       ...order.params,
       ...(canLimitInSql ? [limit] : [])
-    ) as Record<string, unknown>[];
-    let games = rows.map((row) => rowToGame(row));
+    );
+    let games = rows.map(rowToGame);
 
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
@@ -346,12 +347,12 @@ export class GamesRepository {
     }
 
     const order = this.buildOrderClause(sortOrder, search);
-    const stmt = this.db.prepare(
+    const stmt = this.db.prepare<unknown[], GameRow>(
       catalogSelectSql({ where: whereConditions.join(' AND '), order: order.sql })
     );
 
-    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    return rows.map((row) => rowToGame(row));
+    const rows = stmt.all(...queryParams, ...order.params);
+    return rows.map(rowToGame);
   }
 
   /**
@@ -389,12 +390,12 @@ export class GamesRepository {
     }
 
     const order = this.buildOrderClause(sortOrder, search);
-    const stmt = this.db.prepare(
+    const stmt = this.db.prepare<unknown[], GameRow>(
       catalogSelectSql({ where: whereConditions.join(' AND '), order: order.sql })
     );
 
-    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const allGames = rows.map((row) => rowToGame(row));
+    const rows = stmt.all(...queryParams, ...order.params);
+    const allGames = rows.map(rowToGame);
 
     // Normalize both sides with the shared helper so the DB folder name and the
     // detected system path reduce to the same key (kept in sync with the badge).
@@ -455,12 +456,12 @@ export class GamesRepository {
     }
 
     const order = this.buildOrderClause(sortOrder, search);
-    const stmt = this.db.prepare(
+    const stmt = this.db.prepare<unknown[], GameRow>(
       catalogSelectSql({ where: whereConditions.join(' AND '), order: order.sql })
     );
 
-    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const games = rows.map((row) => rowToGame(row));
+    const rows = stmt.all(...queryParams, ...order.params);
+    const games = rows.map(rowToGame);
 
     return { games, total: games.length };
   }
@@ -558,13 +559,9 @@ export class GamesRepository {
    * Get a game by ID
    */
   getGameById(gameId: string): Game | null {
-    const stmt = this.db.prepare(`
-      SELECT *
-      FROM games
-      WHERE id = ?
-    `);
-
-    const row = stmt.get(gameId) as Record<string, unknown> | undefined;
+    const row = this.db
+      .prepare<[string], GameRow>('SELECT * FROM games WHERE id = ?')
+      .get(gameId);
     return row ? rowToGame(row) : null;
   }
 
@@ -661,12 +658,12 @@ export class GamesRepository {
     }
 
     const order = this.buildOrderClause(sortOrder, search);
-    const stmt = this.db.prepare(
+    const stmt = this.db.prepare<unknown[], GameRow>(
       catalogSelectSql({ where: whereConditions.join(' AND '), order: order.sql })
     );
 
-    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const games = rows.map((row) => rowToGame(row));
+    const rows = stmt.all(...queryParams, ...order.params);
+    const games = rows.map(rowToGame);
     return { games, total: games.length };
   }
 
@@ -710,12 +707,12 @@ export class GamesRepository {
     }
 
     const order = this.buildOrderClause(sortOrder, search);
-    const stmt = this.db.prepare(
+    const stmt = this.db.prepare<unknown[], GameRow>(
       catalogSelectSql({ where: whereConditions.join(' AND '), order: order.sql })
     );
 
-    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
-    const games = rows.map((row) => rowToGame(row));
+    const rows = stmt.all(...queryParams, ...order.params);
+    const games = rows.map(rowToGame);
 
     return { games, total: games.length };
   }
