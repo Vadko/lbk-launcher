@@ -2,6 +2,7 @@ import { LanguagesIcon } from 'lucide-react';
 import { t } from '@/shared/i18n/i18n';
 import { isLanguage, LANGUAGES } from '@/shared/i18n/languages';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { trackEvent } from '../../utils/analytics';
 import { SelectDropdown } from '../ui/SelectDropdown';
 
 export function LanguageSetting() {
@@ -27,7 +28,8 @@ export function LanguageSetting() {
         }))}
         selectedValue={language}
         onSelectionChange={(value) => {
-          if (isLanguage(value)) {
+          if (isLanguage(value) && value !== language) {
+            trackEvent('Change language', { From: language, To: value });
             setLanguage(value);
           }
         }}
