@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { saveAchievementStrings } from '@/main/achievements/strings-store';
-import { getFirstAvailableGamePath } from '@/main/game-detector';
+import { detectGamePaths } from '@/main/game-detector';
 import type { Game } from '@/shared/types';
 import { checkInstallation } from './cache';
 
@@ -12,7 +12,10 @@ const state = vi.hoisted(() => ({ root: '' }));
 vi.mock('electron', () => ({
   app: { getPath: () => path.join(state.root, 'userData') },
 }));
-vi.mock('@/main/game-detector', () => ({ getFirstAvailableGamePath: vi.fn() }));
+vi.mock('@/main/game-detector', () => ({
+  detectGamePaths: vi.fn(),
+  getFirstAvailableGamePath: vi.fn(),
+}));
 vi.mock('@/main/db/games-repository', () => ({ GamesRepository: {} }));
 vi.mock('@/main/utils/store-storage', () => ({ getWorkshopInstalledGameIds: () => [] }));
 
@@ -49,11 +52,9 @@ describe('a record re-cached from the game folder', () => {
   beforeEach(() => {
     fs.mkdirSync(gamePath(), { recursive: true });
     fs.writeFileSync(gameCopy(), JSON.stringify({ ...record, gamePath: gamePath() }));
-    vi.mocked(getFirstAvailableGamePath).mockReturnValue({
-      platform: 'steam',
-      path: gamePath(),
-      exists: true,
-    });
+    vi.mocked(detectGamePaths).mockReturnValue([
+      { platform: 'steam', path: gamePath(), exists: true },
+    ]);
   });
 
   it.each<[string, boolean, boolean]>([

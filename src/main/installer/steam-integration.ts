@@ -1,9 +1,11 @@
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
+import type { SteamRoot } from '@/main/game-detector/steam-roots';
 import { checkInstallation } from '@/main/installer/cache';
 import { rewriteInstallationRecord } from '@/main/installer/installation-info';
 import { queueSteamAction } from '@/main/steam-pending-actions';
 import {
   type ApplyMode,
+  type ArtworkTarget,
   applySteamArtwork,
   type RevertMode,
   removeSteamArtwork,
@@ -12,6 +14,12 @@ import {
   launchOptionsParamsFor,
   writeSteamLaunchOptions,
 } from '@/main/utils/steam-launch-options';
+import {
+  artworkTargetForGame,
+  bottleSteamRootOf,
+  writeBottleLaunchOptions,
+} from '@/main/wine/bottle-steam';
+import { errorMessage } from '@/shared/errors';
 import { t } from '@/shared/i18n/i18n';
 import type { SteamArtworkChangeResult } from '@/shared/installer-api-types';
 import { offersSteamArtwork } from '@/shared/offers-steam-artwork';
@@ -44,6 +52,17 @@ export async function applySteamIntegration(
 ): Promise<SteamIntegrationResult> {
   if (target.platform !== 'steam' || !game.steam_app_id) {
     return {};
+  }
+
+  const bottle = bottleSteamRootOf(target.path);
+  if (bottle) {
+    return applyBottleSteamIntegration(
+      game,
+      bottle,
+      target,
+      installSteamArtwork,
+      onStatus
+    );
   }
 
   let launchOptionsQueued = false;
@@ -99,6 +118,38 @@ export async function applySteamIntegration(
   return { launchOptionsQueued, launchOptionsError };
 }
 
+// The bottle's Steam has no bridge, so its files are written while it is closed, or once it exits
+async function applyBottleSteamIntegration(
+  game: Game,
+  bottle: SteamRoot,
+  target: SteamIntegrationTarget,
+  installSteamArtwork: boolean,
+  onStatus?: (status: InstallationStatus) => void
+): Promise<SteamIntegrationResult> {
+  if (!game.steam_app_id) {
+    return {};
+  }
+  if (game.steam_launch_options_windows?.trim()) {
+    onStatus?.({ message: t('installSteamIntegration.launchOptions'), phase: 'install' });
+  }
+  const launchOptions = await writeBottleLaunchOptions(game, bottle, target.path).catch(
+    (error: unknown) => ({ mode: 'failed' as const, reason: errorMessage(error) })
+  );
+  console.log(`[Installer] Bottle Steam LaunchOptions mode=${launchOptions.mode}`);
+  await applySteamArtworkChoice(
+    game,
+    game.steam_app_id,
+    installSteamArtwork && offersSteamArtwork(game, target.platform),
+    onStatus,
+    artworkTargetForGame(target.path)
+  );
+  return {
+    launchOptionsQueued: launchOptions.mode === 'queued',
+    launchOptionsError:
+      launchOptions.mode === 'failed' ? launchOptions.reason : undefined,
+  };
+}
+
 type ArtworkOutcome = 'live' | 'after-steam-start' | 'failed';
 
 const APPLY_OUTCOME: Record<ApplyMode, ArtworkOutcome> = {
@@ -119,23 +170,27 @@ async function applySteamArtworkChoice(
   game: Game,
   appId: number,
   enabled: boolean,
-  onStatus?: (status: InstallationStatus) => void
+  onStatus?: (status: InstallationStatus) => void,
+  target?: ArtworkTarget
 ): Promise<ArtworkOutcome> {
   try {
     if (!enabled) {
-      return REVERT_OUTCOME[await removeSteamArtwork(appId)];
+      return REVERT_OUTCOME[await removeSteamArtwork(appId, target)];
     }
     onStatus?.({
       message: t('installSteamIntegration.artwork'),
       phase: 'install',
     });
-    const artwork = await applySteamArtwork({
-      appId,
-      capsulePath: game.capsule_path,
-      bannerPath: game.banner_path,
-      logoPath: game.logo_path,
-      updatedAt: game.updated_at,
-    });
+    const artwork = await applySteamArtwork(
+      {
+        appId,
+        capsulePath: game.capsule_path,
+        bannerPath: game.banner_path,
+        logoPath: game.logo_path,
+        updatedAt: game.updated_at,
+      },
+      target
+    );
     console.log(
       `[Installer] Steam artwork mode=${artwork.mode}${artwork.installed.length ? ` — ${artwork.installed.join(', ')}` : ''}${artwork.reason ? ` — ${artwork.reason}` : ''}`
     );
@@ -166,7 +221,8 @@ export async function setInstalledSteamArtwork(
     game,
     game.steam_app_id,
     enabled,
-    onStatus
+    onStatus,
+    artworkTargetForGame(info.gamePath)
   );
   if (outcome === 'failed') {
     return { success: false, error: t('installSteamIntegration.artworkFailed') };

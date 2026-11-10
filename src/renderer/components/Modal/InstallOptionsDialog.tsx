@@ -17,7 +17,6 @@ import type {
   GamePath,
   InstallationInfo,
   InstallOptions,
-  Platform,
 } from '../../../shared/types';
 import { getReadablePlatform } from '../../helpers/getReadablePlatform';
 import { useSteamBridgeStatus } from '../../hooks/useSteamBridgeStatus';
@@ -27,11 +26,13 @@ import {
   type InstallComponentChanges,
   steamArtworkStartsChecked,
 } from '../../utils/installOptions';
+import { copyKey, defaultCopyKey, installTarget } from '../../utils/installTarget';
 import { Button } from '../ui/Button';
 import { SelectDropdown, type SelectOption } from '../ui/SelectDropdown';
 import { AchievementsOption } from './InstallOptions/AchievementsOption';
 import { OptionCheckbox } from './InstallOptions/OptionCheckbox';
 import { SteamArtworkOption } from './InstallOptions/SteamArtworkOption';
+import { WineTargetNote } from './InstallOptions/WineTargetNote';
 import { Modal } from './Modal';
 
 interface InstallOptionsDialogProps {
@@ -64,12 +65,6 @@ export function InstallOptionsDialog({
 }: InstallOptionsDialogProps) {
   // CheckIcon what's available and what's already installed
   const isSteamGame = game.platforms?.includes('steam');
-  // Achievements only available for Steam games installed in Steam folder (not custom path)
-  const hasAchievementsArchive = !!(
-    isSteamGame &&
-    game.achievements_archive_path &&
-    !isCustomPath
-  );
   const hasVoiceArchive = !!game.voice_archive_path;
   // Voice is integrated in main archive if there's no separate voice archive but voice_progress > 0
   const isVoiceIntegrated = !hasVoiceArchive && (game.voice_progress ?? 0) > 0;
@@ -93,16 +88,7 @@ export function InstallOptionsDialog({
     return availablePlatforms.filter((p) => game.platforms?.includes(p.platform));
   }, [availablePlatforms, game.platforms]);
 
-  // Determine default platform
-  const defaultPlatform = useMemo((): Platform | 'auto' => {
-    // If there's an installation, use its platform
-    if (installationInfo) {
-      // Try to find platform from install path
-      const firstAvailable = supportedPlatforms.find((p) => p.exists);
-      return firstAvailable?.platform || 'auto';
-    }
-    return 'auto';
-  }, [installationInfo, supportedPlatforms]);
+  const defaultPlatform = defaultCopyKey(supportedPlatforms, installationInfo);
 
   // State for checkboxes - initialize based on what's installed or defaults
   const [createBackup, setCreateBackup] = useState(defaultCreateBackup);
@@ -110,8 +96,15 @@ export function InstallOptionsDialog({
   const [installVoice, setInstallVoice] = useState(true);
   const [installAchievements, setInstallAchievements] = useState(true);
   const [installSteamArtwork, setInstallSteamArtwork] = useState(initialSteamArtwork);
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'auto'>(
-    defaultPlatform
+  const [selectedPlatform, setSelectedPlatform] = useState(defaultPlatform);
+  const target = installTarget(selectedPlatform, supportedPlatforms);
+  const targetWine = installsIntoChosenFolder ? undefined : target.copy?.wine;
+  // Achievements reach only the native Steam, and only a game in its Steam folder (not custom path)
+  const hasAchievementsArchive = !!(
+    isSteamGame &&
+    game.achievements_archive_path &&
+    !isCustomPath &&
+    !targetWine
   );
 
   const defaultsRef = useRef({
@@ -171,11 +164,11 @@ export function InstallOptionsDialog({
   const steamLaunchOptionsLinux = game.steam_launch_options_linux?.trim() || null;
   // Main resolves 'auto' to Steam for a chosen folder, otherwise to the first detected store, and to a Steam folder pick when none is found.
   const targetPlatform =
-    selectedPlatform !== 'auto'
-      ? selectedPlatform
+    target.platform !== 'auto'
+      ? target.platform
       : installsIntoChosenFolder
         ? 'steam'
-        : (supportedPlatforms.find((p) => p.exists)?.platform ?? 'steam');
+        : (target.copy?.platform ?? 'steam');
   const targetsSteam = !!isSteamGame && !!game.steam_app_id && targetPlatform === 'steam';
   const willApplyLaunchOptions =
     targetsSteam &&
@@ -200,7 +193,8 @@ export function InstallOptionsDialog({
         installVoice: hasVoiceArchive ? installVoice : false,
         installAchievements: achievements.install,
         installSteamArtwork: hasSteamArtwork ? installSteamArtwork : initialSteamArtwork,
-        platform: selectedPlatform,
+        platform: target.platform,
+        winePrefix: target.winePrefix,
       },
       {
         removeVoice: willRemoveVoice,
@@ -258,13 +252,18 @@ export function InstallOptionsDialog({
 
   // Prepare platform options for dropdown
   const platformOptions = useMemo(() => {
+    const copyName = (copy: GamePath) =>
+      copy.wine
+        ? t('installOptions.platformInBottle', {
+            platform: getReadablePlatform(copy.platform),
+            bottle: copy.wine.label,
+          })
+        : getReadablePlatform(copy.platform);
     const firstExisting = supportedPlatforms.find((p) => p.exists);
     const options: SelectOption[] = [
       {
         name: firstExisting
-          ? t('installOptions.platformAuto', {
-              platform: getReadablePlatform(firstExisting.platform),
-            })
+          ? t('installOptions.platformAuto', { platform: copyName(firstExisting) })
           : t('installOptions.platformManual', {
               platform: getReadablePlatform(supportedPlatforms[0]?.platform),
             }),
@@ -273,7 +272,7 @@ export function InstallOptionsDialog({
     ];
 
     supportedPlatforms.forEach((platform) => {
-      const platformName = getReadablePlatform(platform.platform);
+      const platformName = copyName(platform);
       options.push({
         name: platformName,
         children: (
@@ -288,7 +287,7 @@ export function InstallOptionsDialog({
             </span>
           </>
         ),
-        value: platform.platform,
+        value: copyKey(platform),
       });
     });
 
@@ -336,12 +335,11 @@ export function InstallOptionsDialog({
             <SelectDropdown
               options={platformOptions}
               selectedValue={selectedPlatform}
-              onSelectionChange={(value) =>
-                setSelectedPlatform(value as Platform | 'auto')
-              }
+              onSelectionChange={setSelectedPlatform}
               placeholder={t('installOptions.platformPlaceholder')}
               maxHeight={500}
             />
+            {targetWine && <WineTargetNote bottle={targetWine.label} />}
           </div>
         )}
 

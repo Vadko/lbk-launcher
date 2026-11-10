@@ -10,6 +10,9 @@ import {
   onRendererSettingsChanged,
   setupStoreStorageHandlers,
 } from './utils/store-storage';
+import { isRunningUnderWine } from './utils/wine';
+import { startPendingWineLaunchOptions } from './wine/bottle-steam';
+import { startWinePrefixes } from './wine/prefixes';
 
 // E2E: enable remote debugging for packaged apps.
 // Electron 30+ ignores --remote-debugging-port CLI arg for packaged binaries,
@@ -95,6 +98,16 @@ if (isLinux()) {
   }
 }
 
+// Under Wine (CrossOver on a Mac) the GPU process paints a black window; SwiftShader in-process is the set that renders
+if (isRunningUnderWine()) {
+  console.log('[Main] Detected Wine, using software rendering');
+  app.commandLine.appendSwitch('use-gl', 'angle');
+  app.commandLine.appendSwitch('use-angle', 'swiftshader');
+  app.commandLine.appendSwitch('in-process-gpu');
+  app.commandLine.appendSwitch('no-sandbox');
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+}
+
 import { startAchievements } from './achievements';
 import { appEvents } from './app-events';
 import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
@@ -127,6 +140,7 @@ import { setupLinksHandlers } from './ipc/links';
 import { setupPluginHostHandlers } from './ipc/plugin-host';
 import { setupTgNewsHandlers } from './ipc/tg-news';
 import { initTray, setupWindowControls } from './ipc/window-controls';
+import { setupWineHandlers } from './ipc/wine';
 import { syncLikes } from './likes';
 import { startMillenniumInstall } from './millennium-install';
 import {
@@ -239,6 +253,7 @@ if (!gotTheLock) {
   setupAutoUpdater();
   setupChangelogHandlers();
   setupPluginHostHandlers();
+  setupWineHandlers();
 
   setupSyncStatusHandlers();
   startResources();
@@ -401,6 +416,10 @@ if (!gotTheLock) {
       startSteamBridge();
       startPendingSteamActions();
       startPendingEglLaunchArgs();
+      startPendingWineLaunchOptions();
+      startWinePrefixes().catch((err) => {
+        console.error('[Main] Wine prefix scan failed:', err);
+      });
       bootstrapCefDebugging().catch((err) => {
         console.error('[Main] CEF bootstrap failed:', err);
       });

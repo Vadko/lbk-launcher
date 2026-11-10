@@ -3,15 +3,16 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { appEvents } from './app-events';
 import {
+  getAllSteamLibraryFolders,
   getLastKnownLicensecacheSize,
   getLicensecachePath,
   getLicensecacheSize,
-  getSteamPath,
+  getSteamRoots,
   invalidateSteamInstalledCaches,
   invalidateSteamLibraryAppIdsCache,
   updateLastKnownLicensecacheSize,
 } from './game-detector/steam';
-import { parseLibraryFolders } from './utils/vdf-parser';
+import { readSteamLibraryFolders } from './game-detector/steam-roots';
 import { sendToRenderer } from './window';
 
 function notifyLibraryChanged(): void {
@@ -50,10 +51,8 @@ const ownedGamesChanged = F.makeControlledDebounce(() => {
 
 // libraryfolders.vdf also stores per-library app lists and sizes, so most rewrites leave the folder list as is
 const libraryFoldersChanged = F.makeControlledDebounce(() => {
-  const steamPath = getSteamPath();
   if (
-    !steamPath ||
-    getSteamLibraryFolders(steamPath).join('|') === watchedLibraryFolders
+    getSteamRoots().flatMap(readSteamLibraryFolders).join('|') === watchedLibraryFolders
   ) {
     return;
   }
@@ -63,32 +62,12 @@ const libraryFoldersChanged = F.makeControlledDebounce(() => {
   notifyLibraryChanged();
 }, DEBOUNCE);
 
-/**
- * Get all Steam library folders from libraryfolders.vdf
- */
-function getSteamLibraryFolders(steamPath: string): string[] {
-  const folders: string[] = [path.join(steamPath, 'steamapps')];
-
-  try {
-    const libraryFoldersPath = path.join(steamPath, 'steamapps', LIBRARY_FOLDERS_FILE);
-    if (fs.existsSync(libraryFoldersPath)) {
-      const content = fs.readFileSync(libraryFoldersPath, 'utf8');
-      const libraryPaths = parseLibraryFolders(content);
-
-      for (const libraryPath of libraryPaths) {
-        const normalizedPath = libraryPath.replace(/\\\\/g, '\\');
-        const steamappsPath = path.join(normalizedPath, 'steamapps');
-        if (fs.existsSync(steamappsPath) && !folders.includes(steamappsPath)) {
-          folders.push(steamappsPath);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('[SteamWatcher] Error parsing library folders:', error);
-  }
-
-  return folders;
-}
+appEvents.on('wine-prefixes-changed', () => {
+  console.log('[SteamWatcher] Wine prefixes changed, restarting watchers');
+  invalidateSteamInstalledCaches();
+  startSteamWatcher();
+  notifyLibraryChanged();
+});
 
 /**
  * Start watching a steamapps folder for appmanifest changes
@@ -161,14 +140,12 @@ export function startSteamWatcher(): void {
   // Close any existing watchers first to prevent EMFILE errors
   stopSteamWatcher();
 
-  const steamPath = getSteamPath();
-  if (!steamPath) {
+  // The native Steam and the Steam of every Wine prefix
+  const libraryFolders = getAllSteamLibraryFolders();
+  if (libraryFolders.length === 0) {
     console.log('[SteamWatcher] Steam not found, watcher not started');
     return;
   }
-
-  // Watch all steamapps folders for appmanifest changes
-  const libraryFolders = getSteamLibraryFolders(steamPath);
   watchedLibraryFolders = libraryFolders.join('|');
 
   for (const steamappsPath of libraryFolders) {

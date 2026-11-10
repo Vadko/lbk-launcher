@@ -44,6 +44,7 @@ import {
 } from '../game-detector/store-cache';
 import { getUplayGameId } from '../game-detector/uplay';
 import { refreshXboxRootsForGame, whenXboxRootsScanned } from '../game-detector/xbox';
+import { findSteamAppId } from '../game-launcher';
 import { checkInstallation } from '../installer/cache';
 import { findProtons } from '../installer/proton';
 import { checkStoreLibraries } from '../store-library-watcher';
@@ -71,6 +72,8 @@ import {
   setWorkshopSubscription,
 } from '../utils/steam-workshop';
 import { launchUplayGame } from '../utils/uplay-launcher';
+import { launchInBottleSteam } from '../wine/bottle-steam';
+import { winePrefixOf } from '../wine/dos-path';
 import { createHandleOr, orEmpty, orNull } from './handle-or';
 
 const handleOr = createHandleOr('Games');
@@ -378,7 +381,12 @@ export function setupGamesHandlers(): void {
         const selectedInstallPath = (game.install_paths || []).find(
           (p) => p.type === installInfo.installedPlatform
         );
-        gamePath = detectGamePath(selectedInstallPath, game.steam_app_id);
+        // The copy the translation went into, when the game is also in a Wine prefix or the native Steam
+        gamePath = detectGamePath(
+          selectedInstallPath,
+          game.steam_app_id,
+          winePrefixOf(installInfo.gamePath)
+        );
       }
 
       // Fallback: use first available game path if platform not found
@@ -404,13 +412,19 @@ export function setupGamesHandlers(): void {
         gamePath.platform
       );
 
+      if (gamePath.platform === 'steam' && gamePath.wine) {
+        const appId = game.steam_app_id ?? (await findSteamAppId(gamePath.path));
+        return appId && launchInBottleSteam(gamePath.wine, gamePath.path, Number(appId))
+          ? { success: true }
+          : { success: false, error: t('launch.failed') };
+      }
+
       // For Steam games, try to launch via Steam protocol
       if (gamePath.platform === 'steam') {
         // Use game.steam_app_id if available, otherwise find by path
         let appId = game.steam_app_id?.toString() || null;
 
         if (!appId) {
-          const { findSteamAppId } = await import('../game-launcher');
           appId = await findSteamAppId(gamePath.path);
         }
 

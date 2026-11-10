@@ -36,6 +36,7 @@ import { Button } from '../ui/Button';
 import { SelectDropdown } from '../ui/SelectDropdown';
 import { Switch } from '../ui/Switch';
 import { SteamBridgeStatusCard } from './SteamBridgeStatusCard';
+import { WineBottlesCard } from './WineBottlesCard';
 
 interface SettingItemProps {
   id: string;
@@ -675,6 +676,8 @@ export function SettingsModal() {
               <p className="text-xs text-text-muted">{t('settings.kurin.description')}</p>
             </div>
           </button>
+
+          {window.electronAPI?.getPlatform() === 'macos' && <WineBottlesCard />}
 
           {/* Add LBK Launcher itself as a non-Steam shortcut */}
           <button

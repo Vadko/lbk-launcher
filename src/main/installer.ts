@@ -52,6 +52,8 @@ import { applySteamIntegration } from './installer/steam-integration';
 import { isCurrentSessionFirstLaunch } from './tracking';
 import { resolveGameBuildOs } from './utils/game-build';
 import { isLinux } from './utils/platform';
+import { winePrefixRefOf } from './wine/prefixes';
+import { hasWineRunner } from './wine/run';
 
 const mkdir = promisify(fs.mkdir);
 
@@ -127,13 +129,6 @@ export async function installTranslation(
     console.log(`[Installer] Installing translation for: ${game.name} (${game.id})`);
     console.log(`[Installer] Options:`, JSON.stringify(options));
 
-    // 1. Check platform compatibility for installer-based translations
-    const platformError = checkPlatformCompatibility(game);
-    if (platformError) {
-      console.error(`[Installer] Platform incompatible: ${platformError}`);
-      throw new Error(platformError);
-    }
-
     // 2. Detect game installation path
     // If license_only is enabled, don't allow custom path selection
     if (game.license_only && customGamePath) {
@@ -149,14 +144,24 @@ export async function installTranslation(
     }
     if (customGamePath) {
       const customPlatform = platform === 'auto' ? 'steam' : platform;
-      gamePath = { platform: customPlatform, path: customGamePath, exists: true };
+      const wine = winePrefixRefOf(customGamePath);
+      gamePath = {
+        platform: customPlatform,
+        path: customGamePath,
+        exists: true,
+        ...(wine ? { wine } : {}),
+      };
     } else if (platform === 'auto') {
       gamePath = getFirstAvailableGamePath(game.install_paths || [], game.steam_app_id);
     } else {
       const selectedInstallPath = (game.install_paths || []).find(
         (p) => p.type === platform
       );
-      gamePath = detectGamePath(selectedInstallPath, game.steam_app_id);
+      gamePath = detectGamePath(
+        selectedInstallPath,
+        game.steam_app_id,
+        options.winePrefix
+      );
     }
 
     if (!gamePath || !gamePath.exists || !gamePath.path) {
@@ -177,7 +182,16 @@ export async function installTranslation(
       );
     }
 
-    console.log(`[Installer] ✓ Game found at: ${gamePath.path} (${gamePath.platform})`);
+    console.log(
+      `[Installer] ✓ Game found at: ${gamePath.path} (${gamePath.platform}${gamePath.wine ? `, Wine prefix ${gamePath.wine.prefix}` : ''})`
+    );
+
+    // Checked once the copy is known: a game in a Wine prefix takes the Windows installer
+    const platformError = checkPlatformCompatibility(game, !!gamePath.wine);
+    if (platformError) {
+      console.error(`[Installer] Platform incompatible: ${platformError}`);
+      throw new Error(platformError);
+    }
 
     // Not the host OS: Linux Steam titles are mostly the Windows build under Proton.
     const buildOs = await resolveGameBuildOs(gamePath.path, game.steam_app_id, [
@@ -187,12 +201,20 @@ export async function installTranslation(
     console.log(`[Installer] Installed game build: ${buildOs}`);
 
     // Checked before the download: a Windows installer on Linux is dead without Proton.
-    const installerFileName = getInstallerFileName(game, buildOs);
+    const installerFileName = getInstallerFileName(game, buildOs, !!gamePath.wine);
     const needsProton =
       !!installerFileName && isLinux() && isWindowsInstallerFile(installerFileName);
     const protons = needsProton ? findProtons() : [];
     if (needsProton && protons.length === 0) {
       throw new Error(t('installSteps.protonMissing'));
+    }
+    if (
+      gamePath.wine &&
+      installerFileName &&
+      isWindowsInstallerFile(installerFileName) &&
+      !hasWineRunner(gamePath.wine)
+    ) {
+      throw new Error(t('installPlatform.wineMissing', { bottle: gamePath.wine.label }));
     }
 
     // 3. Create temp directory on the same disk as the game (for correct disk space check and faster file operations)
@@ -359,7 +381,8 @@ export async function installTranslation(
     const achievements = await prepareAchievements({
       game,
       platform: gamePath.platform,
-      wanted: installAchievements,
+      // The LBK Bridge plugin reaches only the native Steam
+      wanted: installAchievements && !gamePath.wine,
       existing:
         existingInfo?.gameId === game.id
           ? existingInfo.components?.achievements
@@ -438,6 +461,7 @@ export async function installTranslation(
             installerPath,
             isExe: isExeFile,
             protons: needsProton ? protons : undefined,
+            wineBottle: gamePath.wine?.label,
             protonPath: needsProton
               ? (protons.find((p) => p.path === lastProtonPath) ?? protons[0])?.path
               : undefined,

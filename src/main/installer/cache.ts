@@ -4,11 +4,16 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import { t } from '@/shared/i18n/i18n';
-import type { ConflictingTranslation, Game, InstallationInfo } from '../../shared/types';
+import type {
+  ConflictingTranslation,
+  Game,
+  GamePath,
+  InstallationInfo,
+} from '../../shared/types';
 import { hasAchievementStrings } from '../achievements/strings-store';
 import { appEvents } from '../app-events';
 import { GamesRepository } from '../db/games-repository';
-import { getFirstAvailableGamePath } from '../game-detector';
+import { detectGamePaths, getFirstAvailableGamePath } from '../game-detector';
 import { getWorkshopInstalledGameIds } from '../utils/store-storage';
 import {
   findInstallationInfoFile,
@@ -119,6 +124,18 @@ async function withoutLostAchievements(
   return fixed;
 }
 
+// The copy holding this translation's record wins, so one installed into a Wine prefix is found next to a native copy
+function findCopyWithRecord(game: Game): GamePath | null {
+  const copies = detectGamePaths(game.install_paths || [], game.steam_app_id).filter(
+    (copy) => copy.exists
+  );
+  return (
+    copies.find((copy) => readInstallationInfo(copy.path)?.gameId === game.id) ??
+    copies[0] ??
+    null
+  );
+}
+
 /**
  * Check if translation is installed and get installation info
  * Priority: Library paths (Steam, GOG, etc.) > Manual/cached paths
@@ -130,10 +147,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
     // PRIORITY 1: Check standard library paths first (Steam, GOG, Epic, etc.)
     // This ensures that if user installed game via Steam after manual installation,
     // the library path takes priority
-    const gamePath = getFirstAvailableGamePath(
-      game.install_paths || [],
-      game.steam_app_id
-    );
+    const gamePath = findCopyWithRecord(game);
 
     if (gamePath && gamePath.exists) {
       // Check for installation info file in library path

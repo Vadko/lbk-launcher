@@ -7,13 +7,15 @@ import { G } from '@mobily/ts-belt';
 import type { DetectedGame, InstallPath } from '../../shared/types';
 import { fetchGames } from '../api';
 import { normalizeInstalledFolder } from '../utils/install-path';
+import { winePrefixOf } from '../wine/dos-path';
+import { winePrefixRefOf } from '../wine/prefixes';
 import { findEAGame } from './ea';
 import { findEpicGame, getHeroicEpicAppName } from './epic';
 import { findGOGGame, getHeroicGOGId } from './gog';
 import { logIfChanged } from './log-if-changed';
 import { findRockstarGame } from './rockstar';
 import {
-  findSteamGame,
+  findSteamGameCopies,
   getInstalledSteamGamePaths,
   getInstalledSteamGames,
 } from './steam';
@@ -31,108 +33,92 @@ import { findXboxGame } from './xbox';
 // Main Detection Logic
 // ============================================================================
 
-export function detectGamePath(
+function toGamePath(platform: GamePath['platform'], foundPath: string | null): GamePath {
+  const wine = foundPath ? winePrefixRefOf(foundPath) : null;
+  return {
+    platform,
+    path: foundPath || '',
+    exists: !!foundPath,
+    ...(wine ? { wine } : {}),
+  };
+}
+
+function findStoreGame(
+  type: NonNullable<InstallPath['type']>,
+  folder: string
+): string | null {
+  switch (type) {
+    case 'gog':
+      return findGOGGame(folder);
+    case 'epic':
+      return findEpicGame(folder);
+    case 'rockstar':
+      return findRockstarGame(folder);
+    case 'xbox':
+      return findXboxGame(folder);
+    case 'uplay':
+      return findUplayGame(folder);
+    case 'ea':
+      return findEAGame(folder);
+    case 'steam':
+    case 'emulator':
+    case 'other':
+      return null;
+  }
+}
+
+/** Every copy of the game one install path finds: Steam's in each Steam root, native first. */
+function detectGameCopies(
   installPath: InstallPath | null | undefined,
-  steamAppId?: number | null
-): GamePath | null {
+  steamAppId?: number | null,
+  winePrefix?: string | null
+): GamePath[] {
   if (!installPath || !installPath.type) {
-    return null;
+    return [];
   }
 
-  let foundPath: string | null = null;
-
   switch (installPath.type) {
-    case 'steam':
+    case 'steam': {
       if (!installPath.path && G.isNullable(steamAppId)) {
-        return null;
+        return [];
       }
-      foundPath = findSteamGame(installPath.path, steamAppId);
-      return {
-        platform: 'steam',
-        path: foundPath || '',
-        exists: !!foundPath,
-      };
-
-    case 'gog':
-      if (!installPath.path) {
-        return null;
-      }
-      foundPath = findGOGGame(installPath.path);
-      return {
-        platform: 'gog',
-        path: foundPath || '',
-        exists: !!foundPath,
-      };
-
-    case 'epic':
-      if (!installPath.path) {
-        return null;
-      }
-      foundPath = findEpicGame(installPath.path);
-      return {
-        platform: 'epic',
-        path: foundPath || '',
-        exists: !!foundPath,
-      };
-
-    case 'rockstar':
-      if (!installPath.path) {
-        return null;
-      }
-      foundPath = findRockstarGame(installPath.path);
-      return {
-        platform: 'rockstar',
-        path: foundPath || '',
-        exists: !!foundPath,
-      };
-
-    case 'xbox':
-      if (!installPath.path) {
-        return null;
-      }
-      foundPath = findXboxGame(installPath.path);
-      return {
-        platform: 'xbox',
-        path: foundPath || '',
-        exists: !!foundPath,
-      };
-
-    case 'uplay':
-      if (!installPath.path) {
-        return null;
-      }
-      foundPath = findUplayGame(installPath.path);
-      return {
-        platform: 'uplay',
-        path: foundPath || '',
-        exists: !!foundPath,
-      };
-
-    case 'ea':
-      if (!installPath.path) {
-        return null;
-      }
-      foundPath = findEAGame(installPath.path);
-      return {
-        platform: 'ea',
-        path: foundPath || '',
-        exists: !!foundPath,
-      };
+      const copies = findSteamGameCopies(installPath.path, steamAppId, winePrefix);
+      return copies.length > 0
+        ? copies.map((copy) => toGamePath('steam', copy.path))
+        : [toGamePath('steam', null)];
+    }
 
     case 'emulator':
     case 'other':
-      if (!installPath.path) {
-        return null;
-      }
       // These platforms require manual path selection
-      return {
-        platform: installPath.type,
-        path: '',
-        exists: false,
-      };
+      return installPath.path ? [toGamePath(installPath.type, null)] : [];
+
+    case 'gog':
+    case 'epic':
+    case 'rockstar':
+    case 'xbox':
+    case 'uplay':
+    case 'ea': {
+      if (!installPath.path) {
+        return [];
+      }
+      const found = findStoreGame(installPath.type, installPath.path);
+      const wanted =
+        winePrefix === undefined ||
+        (found !== null && winePrefixOf(found) === winePrefix);
+      return [toGamePath(installPath.type, wanted ? found : null)];
+    }
   }
 
-  return null;
+  return [];
+}
+
+export function detectGamePath(
+  installPath: InstallPath | null | undefined,
+  steamAppId?: number | null,
+  winePrefix?: string | null
+): GamePath | null {
+  return detectGameCopies(installPath, steamAppId, winePrefix)[0] ?? null;
 }
 
 /**
@@ -142,16 +128,7 @@ export function detectGamePaths(
   installPaths: InstallPath[],
   steamAppId?: number | null
 ): GamePath[] {
-  const results: GamePath[] = [];
-
-  for (const installPath of installPaths) {
-    const gamePath = detectGamePath(installPath, steamAppId);
-    if (gamePath) {
-      results.push(gamePath);
-    }
-  }
-
-  return results;
+  return installPaths.flatMap((installPath) => detectGameCopies(installPath, steamAppId));
 }
 
 /**

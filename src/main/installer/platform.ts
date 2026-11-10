@@ -2,18 +2,19 @@ import { type ChildProcess, type StdioOptions, spawn } from 'child_process';
 import { clipboard } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import { enumerateKeysSafe, HKEY } from 'registry-js';
 import { t } from '@/shared/i18n/i18n';
 import type { Game, InstallationStatus } from '../../shared/types';
 import { getTransliteratedPath } from '../utils/files';
 import type { GameBuildOs } from '../utils/game-build';
 import { getCleanEnv } from '../utils/host-exec';
 import { forCurrentOS, getPlatform, isLinux, isWindows } from '../utils/platform';
-import { getRegistryString } from '../utils/registry';
 import { isCmdSafePath } from '../utils/shell-safety';
+import { winePrefixRefOf } from '../wine/prefixes';
 import { readInstallationInfo, saveInstallationInfo } from './cache';
 import { WINDOWS_INSTALLER_EXTENSIONS } from './executable';
 import { runProton } from './proton';
+import { checkNewUninstallRegistryKeys, listUninstallKeys } from './uninstall-registry';
+import { runInstallerInWine, runUninstallerInWine } from './wine-installer';
 
 const toPosix = (p: string): string => p.replace(/\\/g, '/');
 
@@ -28,60 +29,21 @@ async function makeExecutable(filePath: string): Promise<void> {
   await fs.promises.chmod(filePath, (mode & 0o7777) | 0o111);
 }
 
-const UNINSTALL_ROOTS = [
-  [
-    HKEY.HKEY_LOCAL_MACHINE,
-    'SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
-  ],
-  [HKEY.HKEY_CURRENT_USER, 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall'],
-] as const;
-
-function listUninstallKeys() {
-  return UNINSTALL_ROOTS.flatMap(([hive, root]) =>
-    enumerateKeysSafe(hive, root).map((name) => {
-      const key = `${root}\\${name}`;
-      return { hive, key, id: `${hive}\\${key}` };
-    })
-  );
-}
-
-/**
- * Check for new Uninstall registry keys in HKLM and HKCU after installer run (Windows only).
- * If new key's DisplayName contains target words, print UninstallString.
- */
-function checkNewUninstallRegistryKeys(before: Set<string>): void {
-  for (const entry of listUninstallKeys()) {
-    if (before.has(entry.id)) {
-      continue;
-    }
-    const displayName = getRegistryString(entry.hive, entry.key, 'DisplayName');
-    const uninstallString = getRegistryString(entry.hive, entry.key, 'UninstallString');
-    const name = displayName?.toLowerCase() ?? '';
-    /* eslint-disable no-restricted-syntax -- words matched in installers' DisplayName, not UI text */
-    if (
-      name.includes('українізатор') ||
-      name.includes('українською') ||
-      name.includes('localization') ||
-      name.includes('ukrainizator')
-    ) {
-      /* eslint-enable no-restricted-syntax */
-      console.log('[Installer] New Uninstall registry key detected:', entry.id);
-      console.log('[Installer]   DisplayName:', displayName ?? '(not found)');
-      console.log('[Installer]   UninstallString:', uninstallString ?? '(not found)');
-    }
-  }
-}
-
 /**
  * Check if game requires a platform-specific installer and if current platform is supported
  * Returns null if compatible, or an error message if not
  */
-export function checkPlatformCompatibility(game: Game): string | null {
+export function checkPlatformCompatibility(game: Game, inWine = false): string | null {
   const hasWindowsInstaller = !!game.installation_file_windows_path;
   const hasLinuxInstaller = !!game.installation_file_linux_path;
 
   // If no installers required, compatible with all platforms
   if (!hasWindowsInstaller && !hasLinuxInstaller) {
+    return null;
+  }
+
+  // A game in a Wine prefix is the Windows build, and its prefix runs the Windows installer
+  if (inWine && hasWindowsInstaller) {
     return null;
   }
 
@@ -109,7 +71,11 @@ export function checkPlatformCompatibility(game: Game): string | null {
 /**
  * Get installer file name based on platform
  */
-export function getInstallerFileName(game: Game, buildOs?: GameBuildOs): string | null {
+export function getInstallerFileName(
+  game: Game,
+  buildOs?: GameBuildOs,
+  inWine = false
+): string | null {
   const windowsFile = game.installation_file_windows_path
     ? isWindows()
       ? game.installation_file_windows_path
@@ -122,7 +88,7 @@ export function getInstallerFileName(game: Game, buildOs?: GameBuildOs): string 
   // Windows build with split-off variants: the shared archive has no Linux script.
   const hasBuildVariants =
     !!game.steam_linux_archive_path || !!game.steam_mac_archive_path;
-  if (buildOs === 'windows' && hasBuildVariants && windowsFile) {
+  if (buildOs === 'windows' && (hasBuildVariants || inWine) && windowsFile) {
     return windowsFile;
   }
 
@@ -214,14 +180,19 @@ export async function runInstaller(
         ? new Set(listUninstallKeys().map((entry) => entry.id))
         : null;
 
-    if (platform === 'macos' || platform === 'linux') {
-      // macOS or Linux - make executable first
+    if (
+      (platform === 'macos' || platform === 'linux') &&
+      !isWindowsInstallerFile(installerPath)
+    ) {
       await makeExecutable(installerPath);
     }
 
     onStatus?.({ message: t('installPlatform.launching'), phase: 'install' });
 
-    if (platform === 'linux' && protonPath) {
+    const wine = isWindows() ? null : winePrefixRefOf(installerPath);
+    if (wine) {
+      await runInstallerInWine(wine, installerPath, onStatus);
+    } else if (platform === 'linux' && protonPath) {
       // Use Proton on Linux - Wine registry tracking is handled inside runProton
       console.log(`[Installer] Launching installer via Proton: ${protonPath}`);
 
@@ -401,8 +372,11 @@ export async function runUninstaller(
     console.log(`[Uninstaller] Running uninstaller: ${installerPath}`);
 
     const platform = getPlatform();
+    const wine = isWindows() ? null : winePrefixRefOf(installerPath);
 
-    if (platform === 'linux' && protonPath) {
+    if (wine) {
+      await runUninstallerInWine(wine, installerPath);
+    } else if (platform === 'linux' && protonPath) {
       // Use Proton on Linux if protonPath is provided
       console.log(`[Uninstaller] Launching uninstaller via Proton: ${protonPath}`);
       const args = ['/uninstall', '/SILENT', '/silent'];

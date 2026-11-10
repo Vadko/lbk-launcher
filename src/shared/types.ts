@@ -14,6 +14,7 @@ import type {
 } from './plugin-host-types';
 import type { ResourcesAPI } from './resources';
 import type { UpdaterAPI } from './updater-api-types';
+import type { WineAPI, WinePrefixRef } from './wine-types';
 
 export type Platform = Database['public']['Enums']['install_source'];
 export type BannerType = Database['public']['Enums']['banner_type'];
@@ -96,6 +97,8 @@ export interface GamePath {
   platform: Platform;
   path: string;
   exists: boolean;
+  // Set when the copy lives in a Wine prefix (a CrossOver bottle on a Mac)
+  wine?: WinePrefixRef;
 }
 
 interface InstallationComponent {
@@ -155,6 +158,8 @@ export interface RunInstallerRequest {
   installerPath: string;
   isExe: boolean;
   protons?: Array<{ name: string; path: string }>;
+  // The Wine bottle the installer runs in, by the name its launcher shows
+  wineBottle?: string;
   // Preselected: the Proton this game's installer last ran with, else the first one.
   protonPath?: string;
 }
@@ -201,6 +206,8 @@ export interface InstallOptions {
   installAchievements: boolean;
   installSteamArtwork: boolean;
   platform: Platform | 'auto';
+  // The prefix of the chosen copy, null for the native one; absent lets main pick the first found
+  winePrefix?: string | null;
 }
 
 export interface PausedDownloadState {
@@ -276,7 +283,8 @@ export interface ElectronAPI
     GameReviewsAPI,
     InstallerAPI,
     UpdaterAPI,
-    ResourcesAPI {
+    ResourcesAPI,
+    WineAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchSearchMatchIds: (searchQuery: string) => Promise<string[] | null>;
   checkStoreLibraries: () => Promise<boolean>;

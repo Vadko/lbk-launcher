@@ -2,7 +2,17 @@ import { t } from '@/shared/i18n/i18n';
 import type { RunInstallerRequest } from '@/shared/types';
 import { useModalStore } from './useModalStore';
 
-function promptMessage({ gameName: name, isExe, protons }: RunInstallerRequest): string {
+function promptMessage({
+  gameName: name,
+  isExe,
+  protons,
+  wineBottle: bottle,
+}: RunInstallerRequest): string {
+  if (bottle) {
+    return isExe
+      ? t('runInstaller.exeWineMessage', { name, bottle })
+      : t('runInstaller.scriptWineMessage', { name, bottle });
+  }
   if (protons) {
     return isExe
       ? t('runInstaller.exeProtonMessage', { name })
