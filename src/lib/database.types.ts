@@ -1620,8 +1620,6 @@ export type Database = {
           xbox_archive_size: string | null
           xbox_store_url: string | null
           youtube: string | null
-          is_manual: boolean | null
-          rating: number | null
         }
         Insert: {
           achievements_archive_file_list?: Json | null
@@ -3485,6 +3483,128 @@ export type Database = {
         }
         Returns: Json
       }
+      get_game_translations: {
+        Args: { p_slug: string }
+        Returns: {
+          achievements_archive_file_list: Json | null
+          achievements_archive_hash: string | null
+          achievements_archive_path: string | null
+          achievements_archive_size: string | null
+          achievements_third_party: string | null
+          additional_path: string | null
+          ai: string | null
+          approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          archive_file_list: Json | null
+          archive_hash: string | null
+          archive_path: string | null
+          archive_size: string | null
+          artwork_localized: boolean
+          banner_path: string | null
+          capsule_path: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          discord: string | null
+          downloads: number | null
+          ea_archive_file_list: Json | null
+          ea_archive_hash: string | null
+          ea_archive_path: string | null
+          ea_archive_size: string | null
+          ea_store_url: string | null
+          editing_progress: number
+          epic_archive_file_list: Json | null
+          epic_archive_hash: string | null
+          epic_archive_path: string | null
+          epic_archive_size: string | null
+          epic_store_url: string | null
+          error_reviews: number
+          fonts_progress: number | null
+          fundraising_current: number | null
+          fundraising_goal: number | null
+          game_description: string | null
+          gog_archive_file_list: Json | null
+          gog_archive_hash: string | null
+          gog_archive_path: string | null
+          gog_archive_size: string | null
+          gog_store_url: string | null
+          hide: boolean
+          id: string
+          install_paths:
+            | Database["public"]["CompositeTypes"]["install_path_entry"][]
+            | null
+          installation_file_linux_path: string | null
+          installation_file_windows_path: string | null
+          is_adult: boolean
+          kind: Database["public"]["Enums"]["translation_kind"]
+          last_download_milestone: number
+          last_subscriber_milestone: number
+          license_only: boolean
+          likes: number
+          logo_path: string | null
+          name: string
+          name_fts: unknown
+          name_search: string | null
+          platforms: string[]
+          project_id: string | null
+          reviews: number
+          screenshots: string[] | null
+          search_keywords: string | null
+          slug: string
+          source_language: string | null
+          status: Database["public"]["Enums"]["game_status"]
+          steam_app_id: number | null
+          steam_launch_options_linux: string | null
+          steam_launch_options_macos: string | null
+          steam_launch_options_windows: string | null
+          steam_linux_archive_file_list: Json | null
+          steam_linux_archive_hash: string | null
+          steam_linux_archive_path: string | null
+          steam_linux_archive_size: string | null
+          steam_mac_archive_file_list: Json | null
+          steam_mac_archive_hash: string | null
+          steam_mac_archive_path: string | null
+          steam_mac_archive_size: string | null
+          steam_tag_ids: number[] | null
+          subscriptions: number | null
+          support_url: string | null
+          team: string
+          telegram: string | null
+          textures_progress: number | null
+          thumbnail_path: string | null
+          translation_progress: number
+          translation_updated_at: string
+          twitter: string | null
+          updated_at: string
+          uplay_archive_file_list: Json | null
+          uplay_archive_hash: string | null
+          uplay_archive_path: string | null
+          uplay_archive_size: string | null
+          uplay_store_url: string | null
+          version: string | null
+          video_url: string | null
+          voice_archive_file_list: Json | null
+          voice_archive_hash: string | null
+          voice_archive_path: string | null
+          voice_archive_size: string | null
+          voice_progress: number | null
+          website: string | null
+          workshop_id: string | null
+          xbox_archive_file_list: Json | null
+          xbox_archive_hash: string | null
+          xbox_archive_path: string | null
+          xbox_archive_size: string | null
+          xbox_store_url: string | null
+          youtube: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "games"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_home_picks: {
         Args: never
         Returns: {
@@ -3643,12 +3763,6 @@ export type Database = {
       is_admin_or_moderator: { Args: never; Returns: boolean }
       is_game_owner: { Args: { gid: string }; Returns: boolean }
       is_kuli_game: { Args: { p_game_id: string }; Returns: boolean }
-      is_manual: {
-        Args: { "": Database["public"]["Tables"]["games"]["Row"] }
-        Returns: {
-          error: true
-        } & "the function public.is_manual with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
-      }
       is_moderator: { Args: never; Returns: boolean }
       is_verified_user: { Args: never; Returns: boolean }
       list_watched_games: {
@@ -3703,12 +3817,6 @@ export type Database = {
       prune_scan_slots: {
         Args: { p_slots: string[]; p_version_id: string }
         Returns: undefined
-      }
-      rating: {
-        Args: { "": Database["public"]["Tables"]["games"]["Row"] }
-        Returns: {
-          error: true
-        } & "the function public.rating with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
       recount_game_reviews: {
         Args: { p_game_ids: string[] }
