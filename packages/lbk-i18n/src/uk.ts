@@ -509,7 +509,7 @@ export const uk = {
     },
   },
   gameSearch: {
-    placeholder: 'Пошук гри...',
+    placeholder: 'Пошук ігор...',
   },
   gameSections: {
     aboutTranslation: 'Про українізатор',
@@ -548,7 +548,7 @@ export const uk = {
       press: 'Натиснути / відкрити',
       back: 'Назад або закрити вікно',
       scroll: 'Плавна прокрутка',
-      search: 'Пошук гри',
+      search: 'Пошук ігор',
       home: 'Головна сторінка',
       settings: 'Налаштування',
       help: 'Ця довідка',

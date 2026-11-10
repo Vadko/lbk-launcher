@@ -485,7 +485,7 @@ export const be = {
       generic: 'Не ўдалося адправіць запіс.',
     },
   },
-  gameSearch: { placeholder: 'Пошук гульні...' },
+  gameSearch: { placeholder: 'Пошук гульняў...' },
   gameSections: { aboutTranslation: 'Пра ўкраінізатар', aboutGame: 'Пра гульню' },
   gameStatus: {
     planned: 'Запланаваны',
@@ -520,7 +520,7 @@ export const be = {
       press: 'Націснуць / адкрыць',
       back: 'Назад або закрыць акно',
       scroll: 'Плаўная пракрутка',
-      search: 'Пошук гульні',
+      search: 'Пошук гульняў',
       home: 'Галоўная старонка',
       settings: 'Налады',
       help: 'Гэтая даведка',
