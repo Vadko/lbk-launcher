@@ -198,6 +198,27 @@
   padding: 24px;
 }
 
+.stuck-host {
+  container-type: scroll-state;
+}
+
+.stuck-spacer {
+  display: none;
+}
+
+@container scroll-state(stuck: top) {
+  .hide-when-stuck {
+    display: none;
+  }
+
+  .stuck-spacer:not(:empty) {
+    display: flex;
+    visibility: hidden;
+    padding-top: 24px;
+    margin-inline: 25px;
+  }
+}
+
 .placement {
   padding: 0;
 }
