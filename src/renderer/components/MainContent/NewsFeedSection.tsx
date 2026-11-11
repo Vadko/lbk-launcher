@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Fragment, useState } from 'react';
 import { useNewsFeed } from '@/renderer/queries/useNewsFeed';
 import { t } from '@/shared/i18n/i18n';
+import { perLocale } from '@/shared/i18n/locale';
 import type { NewsFeedFilter } from '@/shared/types';
 import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
 import { trackEvent } from '../../utils/analytics';
@@ -10,6 +11,10 @@ import { Loader } from '../ui/Loader';
 import { SlidingTabs } from '../ui/SlidingTabs';
 
 const FEED_FILTERS: readonly NewsFeedFilter[] = ['sales', 'games-80', 'news'];
+
+const dayMonth = perLocale(
+  (locale) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' })
+);
 
 const formatDate = (date?: string) => {
   if (!date) {
@@ -21,10 +26,7 @@ const formatDate = (date?: string) => {
     return null;
   }
 
-  return new Intl.DateTimeFormat('uk-UA', {
-    day: 'numeric',
-    month: 'long',
-  }).format(parsedDate);
+  return dayMonth().format(parsedDate);
 };
 
 export function NewsFeedSection() {

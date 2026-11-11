@@ -166,9 +166,9 @@ export default tseslint.config(
     },
   },
   {
-    // These sources match Ukrainian catalog data rather than show it.
+    // The Cyrillic dictionaries are where the text goes, and the other two match Ukrainian catalog data.
     files: [
-      'packages/lbk-i18n/src/{uk,en,be,pl}.ts',
+      'packages/lbk-i18n/src/{uk,be}.ts',
       'src/main/game-detector/game-titles.ts',
       'src/renderer/constants/specialTranslators.ts',
     ],

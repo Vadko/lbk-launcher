@@ -1,10 +1,10 @@
 import { ReplyIcon, RotateCcwIcon, XIcon } from 'lucide-react';
-import { useState } from 'react';
 import type { ReviewFailure } from '@/shared/game-reviews-api-types';
 import type { GameReviewAuthor } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
 import { useNow } from '../../hooks/useNow';
 import type { ReviewReplyView, ReviewThreadView } from '../../queries/reviewViewTypes';
+import { editDraftKey, useReviewDraftsStore } from '../../store/useReviewDraftsStore';
 import { editDeadline, editMinutesLeft } from '../../utils/editDeadline';
 import { Button } from '../ui/Button';
 import { ReviewAvatar } from './ReviewAvatar';
@@ -58,8 +58,10 @@ export function ReviewEntry({
   onDiscard,
   children,
 }: ReviewEntryProps) {
-  const [isEditing, setIsEditing] = useState(false);
+  const editText = useReviewDraftsStore((state) => state.edits[entry.id]);
+  const isEditing = editText !== undefined;
   const text = entry.pendingText ?? entry.text;
+  const closeEdit = () => useReviewDraftsStore.getState().closeEdit(entry.id);
   const isChecking = entry.isChecking === true;
   const failure = entry.failure ?? null;
   const isOwnPlayerEntry = entry.author.isMine && entry.author.role === 'player';
@@ -97,18 +99,23 @@ export function ReviewEntry({
           isRolledBack={entry.isRolledBack === true}
           badgeHint={badgeHint(entry, failure)}
         />
-        {isEditing ? (
+        {editText !== undefined ? (
           <ReviewComposer
             initialText={text}
+            draftKey={editDraftKey(entry.id)}
+            text={editText}
+            onTextChange={(next) =>
+              useReviewDraftsStore.getState().setEditText(entry.id, next)
+            }
             submitLabel={t('gameReviews.save')}
             captchaAction="edit"
             isPublic={isPublicThread}
             isExpired={!canEdit}
             onSubmit={(text) => {
               onEdit(text);
-              setIsEditing(false);
+              closeEdit();
             }}
-            onClose={() => setIsEditing(false)}
+            onClose={closeEdit}
           />
         ) : (
           <p className="text-sm text-text-main whitespace-pre-line wrap-break-word">
@@ -166,7 +173,9 @@ export function ReviewEntry({
                   <ReviewEditButton
                     minutesLeft={editMinutesLeft(deadline, now)}
                     disabled={isChecking}
-                    onClick={() => setIsEditing(true)}
+                    onClick={() =>
+                      useReviewDraftsStore.getState().openEdit(entry.id, text)
+                    }
                   />
                 )}
               </>

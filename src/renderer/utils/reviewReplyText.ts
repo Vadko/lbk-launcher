@@ -6,7 +6,7 @@ export function reviewReplyText({
   authorRole,
   authorName,
   message,
-}: ReviewEvent): string {
+}: Pick<ReviewEvent, 'authorRole' | 'authorName' | 'message'>): string {
   const text = message ?? t('notificationMessage.feedbackReply');
   const name = reviewAuthorName(authorRole, authorName);
   return name ? t('notifications.replyBy', { name, message: text }) : text;

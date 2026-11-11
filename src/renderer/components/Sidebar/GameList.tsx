@@ -17,7 +17,7 @@ interface GameListProps {
   totalGames: number;
   isLoading: boolean;
   animationsEnabled: boolean;
-  expandedGroups: Set<string>;
+  expandedGroups: ReadonlySet<string>;
   selectedGameId: string | undefined;
   gamesWithUpdates: Set<string>;
   scrollRef: React.RefObject<HTMLDivElement | null>;

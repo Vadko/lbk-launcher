@@ -222,7 +222,7 @@ if (!gotTheLock) {
 
   // Setup all IPC handlers
   setupStoreStorageHandlers();
-  startLanguage();
+  void startLanguage();
 
   // `_isEnabled()` reads this option on every send, so the toggle takes effect mid-session
   onRendererSettingsChanged(() => {

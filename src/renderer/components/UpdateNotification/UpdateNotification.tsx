@@ -1,102 +1,27 @@
 import { Download } from 'lucide';
-import { useEffect, useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
+import { useAppUpdateStore } from '../../store/useAppUpdateStore';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import {
-  APP_UPDATE_GAME_ID,
-  useSubscriptionsStore,
-} from '../../store/useSubscriptionsStore';
+import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { Modal } from '../Modal/Modal';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 
-interface UpdateInfo {
-  version?: string;
-  downloadUrl?: string;
-}
-
-export const UpdateNotification = () => {
-  const { appUpdateNotificationsEnabled } = useSettingsStore();
+export function UpdateNotification() {
+  const appUpdateNotificationsEnabled = useSettingsStore(
+    (s) => s.appUpdateNotificationsEnabled
+  );
   const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
   const changelogEntries = useChangelogStore((s) => s.entries);
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [updateDownloaded, setUpdateDownloaded] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const notifiedVersionRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!window.electronAPI) {
-      return;
-    }
-
-    // Listen for update events
-    const unsubAvailable = window.electronAPI.onUpdateAvailable(async (info) => {
-      console.log('Update available:', info);
-      const update = info as UpdateInfo;
-      const newVersion = update?.version;
-
-      if (newVersion) {
-        void useChangelogStore.getState().loadForVersion(newVersion);
-      }
-
-      if (appUpdateNotificationsEnabled) {
-        setUpdateAvailable(true);
-        setUpdateInfo(update);
-
-        // Add to notification history (only once per version)
-        if (newVersion && notifiedVersionRef.current !== newVersion) {
-          notifiedVersionRef.current = newVersion;
-
-          const currentVersion = await window.electronAPI.getVersion();
-          const { addAppUpdateNotification, hasNotifiedVersion } =
-            useSubscriptionsStore.getState();
-
-          if (!hasNotifiedVersion(APP_UPDATE_GAME_ID, newVersion)) {
-            addAppUpdateNotification(currentVersion, newVersion);
-          }
-        }
-      }
-    });
-
-    const unsubDownloaded = window.electronAPI.onUpdateDownloaded((info) => {
-      console.log('Update downloaded:', info);
-      setUpdateDownloaded(true);
-      setDownloading(false);
-    });
-
-    const unsubProgress = window.electronAPI.onUpdateProgress((progressInfo) => {
-      setProgress(Math.round(progressInfo.percent || 0));
-    });
-
-    const unsubError = window.electronAPI.onUpdateError((error) => {
-      console.error('Update error:', error);
-      setDownloading(false);
-    });
-
-    return () => {
-      unsubAvailable?.();
-      unsubDownloaded?.();
-      unsubProgress?.();
-      unsubError?.();
-    };
-  }, []);
-
-  const handleDownload = async () => {
-    if (downloading) {
-      return;
-    }
-    setDownloading(true);
-    try {
-      await window.electronAPI.downloadUpdate();
-    } catch (error) {
-      console.error('Update download failed:', error);
-      setDownloading(false);
-    }
-  };
+  const updateAvailable = useAppUpdateStore((s) => s.isAvailable);
+  const updateDownloaded = useAppUpdateStore((s) => s.isDownloaded);
+  const downloading = useAppUpdateStore((s) => s.isDownloading);
+  const progress = useAppUpdateStore((s) => s.progress);
+  const updateInfo = useAppUpdateStore((s) => s.info);
+  const handleDownload = useAppUpdateStore((s) => s.download);
+  const dismiss = useAppUpdateStore((s) => s.dismiss);
 
   const handleInstall = () => {
     useSubscriptionsStore.getState().markAppUpdateNotificationsAsRead();
@@ -113,7 +38,7 @@ export const UpdateNotification = () => {
     }
     useSubscriptionsStore.getState().markAppUpdateNotificationsAsRead();
     window.electronAPI.openExternal(externalDownloadUrl);
-    setUpdateAvailable(false);
+    dismiss();
   };
 
   if (!appUpdateNotificationsEnabled || (!updateAvailable && !updateDownloaded)) {
@@ -189,7 +114,7 @@ export const UpdateNotification = () => {
         </button>
       ) : (
         <button
-          onClick={handleDownload}
+          onClick={() => void handleDownload()}
           aria-busy={downloading}
           data-gamepad-confirm
           className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 text-white rounded-lg transition-colors aria-busy:opacity-60 aria-busy:cursor-wait"
@@ -199,7 +124,7 @@ export const UpdateNotification = () => {
       )}
       {!updateDownloaded && (
         <button
-          onClick={() => setUpdateAvailable(false)}
+          onClick={dismiss}
           data-gamepad-cancel
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
         >
@@ -214,7 +139,7 @@ export const UpdateNotification = () => {
     return (
       <Modal
         isOpen={true}
-        onClose={() => setUpdateAvailable(false)}
+        onClose={dismiss}
         title={
           updateDownloaded
             ? t('updateNotice.readyTitle')
@@ -253,4 +178,4 @@ export const UpdateNotification = () => {
       </div>
     </div>
   );
-};
+}

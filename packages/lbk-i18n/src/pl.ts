@@ -30,7 +30,7 @@ export const pl = {
     title: 'Osiągnięcia Steam',
     checking: 'Sprawdzanie…',
     description: 'Tłumaczenia osiągnięć Steam.',
-    thirdPartyAuthor: 'Tłumaczenie osiągnięć:',
+    thirdPartyAuthor: 'Autor tłumaczenia osiągnięć:',
   },
   adultWarning: {
     title: 'Treści dla dorosłych',
@@ -38,7 +38,7 @@ export const pl = {
       'Ta gra zawiera treści dla dorosłych (18+). Włącz treści dla dorosłych w ustawieniach, aby ją zobaczyć.',
     openSettings: 'Otwórz ustawienia',
   },
-  aiTranslationBadge: { edited: 'AI + edycja człowieka', ai: 'Tłumaczenie AI' },
+  aiTranslationBadge: { edited: 'AI + redakcja przez człowieka', ai: 'Tłumaczenie AI' },
   appLoader: {
     tagline: 'Ukraińskie lokalizacje gier',
     restartApp: 'Uruchom aplikację ponownie',
@@ -51,7 +51,7 @@ export const pl = {
   },
   archiveDownload: {
     archiveNotFound: 'Nie znaleziono archiwum: {{type}}',
-    fetchingUrl: 'Pobieranie linku do pliku...',
+    fetchingUrl: 'Uzyskiwanie linku do pobrania...',
     urlFailed: 'Nie udało się uzyskać linku do pobrania: {{error}}',
     refreshingUrl: 'Odświeżanie linku do pobrania...',
     verifying: 'Sprawdzanie integralności pliku...',
@@ -61,15 +61,15 @@ export const pl = {
   authorSubscription: {
     title: 'Obserwuj twórców',
     singleAuthor: 'Twórca lokalizacji',
-    authorsCount_one: 'Twórcy lokalizacji: {{count}}',
-    authorsCount_few: 'Twórcy lokalizacji: {{count}}',
-    authorsCount_many: 'Twórcy lokalizacji: {{count}}',
-    authorsCount_other: 'Twórcy lokalizacji: {{count}}',
+    authorsCount_one: '{{count}} twórca lokalizacji',
+    authorsCount_few: '{{count}} twórcy lokalizacji',
+    authorsCount_many: '{{count}} twórców lokalizacji',
+    authorsCount_other: '{{count}} twórcy lokalizacji',
     description_single:
       'Chcesz otrzymywać powiadomienia o nowych lokalizacjach tego twórcy? Subskrypcje możesz zmienić w dowolnej chwili.',
     description_multiple:
       'Chcesz otrzymywać powiadomienia o nowych lokalizacjach tych twórców? Subskrypcje możesz zmienić w dowolnej chwili.',
-    subscribed: 'obserwowani',
+    subscribed: 'obserwujesz',
     skip: 'Pomiń',
     subscribe: 'Obserwuj',
     subscribeSelected: 'Obserwuj ({{selected}})',
@@ -135,7 +135,7 @@ export const pl = {
     messagePlaceholder: 'Opisz, co się stało (opcjonalnie)...',
     send: 'Wyślij',
     sending: 'Wysyłanie...',
-    sent: '✅ Raport wysłany. Dziękujemy!',
+    sent: 'Raport wysłany. Dziękujemy!',
     rateLimited: 'Poczekaj kilka minut',
     sendFailed: 'Nie udało się wysłać raportu. Spróbuj ponownie później',
     networkError: 'Błąd sieci',
@@ -150,9 +150,9 @@ export const pl = {
   },
   deckyLoader: {
     offerIntro:
-      'Decky Loader to darmowy, niezależny program do ładowania wtyczek na Steam Deck, nie pochodzi od Valve. Launcher może zainstalować go razem z LBK Bridge.',
+      'Decky Loader to darmowy, niezależny program do ładowania wtyczek na Steam Deck, nie pochodzi od Valve. Launcher może go zainstalować, a następnie dodać LBK Bridge.',
     offerBenefits:
-      'Co zyskujesz:\n• Przetłumaczone osiągnięcia w bibliotece Steam, powiadomieniach i nakładce.',
+      'Co zyskujesz:\n• LBK Bridge będzie wyświetlać przetłumaczone nazwy osiągnięć w bibliotece Steam, powiadomieniach i nakładce.',
     offerWithout:
       'Co działa bez Decky Loader: opcje uruchamiania, subskrypcje warsztatu, kolekcja „Z ukraińskimi lokalizacjami”, skrót launchera i grafiki Steam.',
     offerInstaller:
@@ -184,21 +184,21 @@ export const pl = {
   deckyPlugin: {
     waiting: 'Oczekiwanie na LBK Launcher',
     connected: 'Połączono z LBK Launcher',
-    viaMillennium: 'Działa przez Millennium',
+    viaMillennium: 'Połączono przez Millennium',
   },
   deckySetup: {
     title: 'LBK Bridge dla Decky Loader',
     waiting:
       'Potwierdź instalację LBK Bridge w oknie Decky Loader. Jeśli nie widzisz okna, naciśnij przycisk Steam.',
     fallback:
-      'Nie udało się otworzyć okna Decky Loader. Zapisz wtyczkę i zainstaluj ją ręcznie: Decky → Ustawienia → Programista → Zainstaluj wtyczkę z ZIP.',
-    done: 'LBK Bridge jest zainstalowany. Tłumaczenia osiągnięć pojawią się w Steam.',
+      'Nie udało się otworzyć prośby o instalację w Decky Loader. Zapisz plik ZIP i dodaj go ręcznie: Decky → Settings (Ustawienia) → Developer (Programista) → Install Plugin from ZIP.',
+    done: 'LBK Bridge jest zainstalowany. Przetłumaczone nazwy osiągnięć pojawią się w Steam po połączeniu wtyczki.',
     saveZip: 'Zapisz ZIP',
     saved: 'Plik zapisany: {{path}}',
     saveFailed: 'Nie udało się zapisać pliku.',
     saveFailedWithError: 'Nie udało się zapisać pliku: {{error}}',
     intro:
-      'Wtyczka wyświetla przetłumaczone osiągnięcia w bibliotece Steam, powiadomieniach i nakładce. Wszystkie pozostałe funkcje launchera działają bez niej. Decky Loader poprosi o potwierdzenie instalacji w Steam.',
+      'Wtyczka wyświetla przetłumaczone nazwy osiągnięć w bibliotece Steam, powiadomieniach i nakładce. Pozostałe funkcje integracji działają bez niej. Decky Loader poprosi o potwierdzenie instalacji w Steam.',
     noDecky:
       'Nie znaleziono Decky Loader. Najpierw go zainstaluj, aby launcher mógł dodać LBK Bridge.',
     loaderDone: 'Decky Loader jest zainstalowany.',
@@ -234,7 +234,7 @@ export const pl = {
   },
   downloadLimit: {
     message:
-      'Przekroczono limit pobrań.\n\n{{used}}\n{{max}}\n\nSpróbuj ponownie za {{time}}.',
+      'Przekroczono limit pobrań.\n\n{{used}}\n{{max}}\n\nNastępne pobranie będzie dostępne za {{time}}.',
     used_one: 'W ciągu ostatnich 24 godzin ta gra została pobrana {{count}} raz.',
     used_few: 'W ciągu ostatnich 24 godzin ta gra została pobrana {{count}} razy.',
     used_many: 'W ciągu ostatnich 24 godzin ta gra została pobrana {{count}} razy.',
@@ -310,7 +310,7 @@ export const pl = {
       planned: 'Planowane',
       'in-progress': 'Wczesny dostęp',
       completed: 'Ukończone',
-      'tech-improvement': 'W toku prace techniczne',
+      'tech-improvement': 'Dopracowanie techniczne',
     },
     library: {
       'favorite-translations': 'Ulubione ukraińskie lokalizacje',
@@ -327,9 +327,9 @@ export const pl = {
       'from-workshop': 'Z warsztatu Steam',
     },
     translationType: {
-      manual: 'Tłumaczenie człowieka',
+      manual: 'Tłumaczenie ręczne',
       ai: 'Tłumaczenie AI',
-      'ai-edited': 'AI + edycja człowieka',
+      'ai-edited': 'AI + redakcja przez człowieka',
     },
     sort: {
       name: 'Nazwa',
@@ -377,21 +377,21 @@ export const pl = {
     updated: 'Zaktualizowano',
   },
   gameLanguage: {
-    EN: 'Angielski',
-    GB: 'Brytyjski angielski',
-    FR: 'Francuski',
-    IT: 'Włoski',
-    DE: 'Niemiecki',
-    ES: 'Hiszpański',
-    JA: 'Japoński',
-    KO: 'Koreański',
-    PL: 'Polski',
-    CS: 'Czeski',
-    ZH_CN: 'Chiński uproszczony',
-    ZH_TW: 'Chiński tradycyjny',
-    ZH: 'Chiński',
-    PT: 'Portugalski',
-    UK: 'Ukraiński',
+    EN: 'angielski',
+    GB: 'brytyjski angielski',
+    FR: 'francuski',
+    IT: 'włoski',
+    DE: 'niemiecki',
+    ES: 'hiszpański',
+    JA: 'japoński',
+    KO: 'koreański',
+    PL: 'polski',
+    CS: 'czeski',
+    ZH_CN: 'chiński uproszczony',
+    ZH_TW: 'chiński tradycyjny',
+    ZH: 'chiński',
+    PT: 'portugalski',
+    UK: 'ukraiński',
   },
   gameLaunch: { executableNotFound: 'Nie znaleziono pliku wykonywalnego gry' },
   gameLinks: {
@@ -446,7 +446,7 @@ export const pl = {
     },
     reply: 'Odpowiedz',
     edit: 'Edytuj',
-    editTimeLeft: 'Pozostało {{minutes}} min',
+    editTimeLeft: 'jeszcze {{minutes}} min',
     replyPlaceholder: 'Twoja odpowiedź…',
     send: 'Wyślij',
     resend: 'Wyślij ponownie',
@@ -490,7 +490,7 @@ export const pl = {
     planned: 'Planowane',
     'in-progress': 'Wczesny dostęp',
     completed: 'Ukończone',
-    'tech-improvement': 'W toku prace techniczne',
+    'tech-improvement': 'Dopracowanie techniczne',
   },
   gameTabs: {
     info: 'Informacje',
@@ -570,6 +570,7 @@ export const pl = {
     newGames: 'Nowości',
     newTranslations: 'Nowe lokalizacje',
     updates: 'Aktualizacje',
+    newStars: 'Nowe gwiazdki w launcherze',
     popular: 'Popularne wśród graczy',
     installedGames: 'Znalezione zainstalowane gry',
     recommended: 'Może Ci się spodobać',
@@ -591,7 +592,7 @@ export const pl = {
   installButton: {
     offline: 'Brak połączenia z internetem',
     planned: 'Planowane',
-    techImprovement: 'W toku prace techniczne',
+    techImprovement: 'Dopracowanie techniczne',
     reload: 'Pobierz ponownie (v{{version}})',
     update: 'Zaktualizuj do v{{version}}',
     install: 'Zainstaluj ukraińską lokalizację',
@@ -665,8 +666,7 @@ export const pl = {
     platformLabel: 'Platforma gry',
     platformPlaceholder: 'Wybierz platformę',
     backupTitle: 'Utwórz kopię zapasową',
-    backupDescription:
-      'Zapisuje oryginalne pliki gry. Zalecane, aby móc je później przywrócić.',
+    backupDescription: 'Zapisuje oryginalne pliki gry, aby można je było przywrócić.',
     backupSize: 'Szacowany rozmiar: {{size}}',
     steamArtworkTitle: 'Ukraińskie grafiki w Steam',
     steamArtworkDescription:
@@ -756,8 +756,8 @@ export const pl = {
   },
   installSuccess: {
     updatedMessage:
-      'Ukraińska lokalizacja {{name}} została zaktualizowana do wersji {{version}}!',
-    installedMessage: 'Ukraińska lokalizacja {{name}} została zainstalowana!',
+      'Ukraińska lokalizacja {{name}} została zaktualizowana do wersji {{version}}.',
+    installedMessage: 'Ukraińska lokalizacja {{name}} została zainstalowana.',
     updatedTitle: 'Ukraińska lokalizacja zaktualizowana',
     installedTitle: 'Ukraińska lokalizacja zainstalowana',
     pluginNextStart:
@@ -792,14 +792,14 @@ export const pl = {
   installedGamesBanner: {
     noTranslationsTitle: 'Nie znaleziono lokalizacji dla Twoich gier',
     noTranslationsText:
-      'Znaleźliśmy Twoje gry, ale nie ma dla nich jeszcze dostępnych lokalizacji.<br/>Zainstaluj grę z naszego katalogu. Otwórz menu filtrów, aby przeglądać dostępne lokalizacje.',
+      'Ojej… Znaleźliśmy Twoje gry, ale nie ma dla nich jeszcze lokalizacji.<br/>Otwórz menu filtrów, aby przejrzeć inne dostępne lokalizacje.',
     noGamesTitle: 'Nie możemy znaleźć Twoich gier',
     noGamesText:
-      'Nie znaleźliśmy żadnych zainstalowanych gier z dostępnymi lokalizacjami.<br/>Upewnij się, że masz zainstalowaną co najmniej jedną grę z naszego katalogu przez Steam, GOG, EGS, Ubisoft Connect lub EA App. Możesz też otworzyć menu filtrów, aby przeglądać gry, których jeszcze nie zainstalowano.',
+      'Ojej… Nie znaleźliśmy żadnych zainstalowanych gier z dostępnymi lokalizacjami.<br/>Upewnij się, że masz co najmniej jedną grę z naszego katalogu w Steam, GOG, Epic Games Store, Ubisoft Connect lub EA App. Możesz też otworzyć menu filtrów, aby przeglądać gry, których jeszcze nie zainstalowano.',
   },
   kuliPlacement: {
     supported: 'Lokalizacja dostępna dzięki wsparciu KULI',
-    beFirst: 'Zagraj <b>jako jeden z pierwszych</b> po ukraińsku!',
+    beFirst: 'Zagraj z lokalizacją <b>jako pierwszy</b>!',
     goToKuli: 'Odwiedź KULI →',
   },
   launch: {
@@ -826,7 +826,7 @@ export const pl = {
   },
   millennium: {
     deckyHost:
-      'Millennium jest niezgodne z Decky Loader, dlatego tłumaczenia osiągnięć są tu wyświetlane przez LBK Bridge dla Decky Loader.',
+      'W systemach z Decky Loader launcher korzysta z LBK Bridge dla Decky Loader, dlatego instalacja Millennium nie jest tu dostępna.',
     unsupported: {
       'flatpak-steam': 'Millennium nie obsługuje Steam zainstalowanego przez Flatpak.',
       'snap-steam': 'Millennium nie obsługuje Steam zainstalowanego przez Snap.',
@@ -889,7 +889,7 @@ export const pl = {
     enabled:
       'LBK Bridge dla Millennium jest włączony, ale Steam jeszcze go nie załadował. Wtyczka zacznie działać przy następnym uruchomieniu Steam.',
     disabled:
-      'Wykryto Millennium. Zamyka ono połączenie, którego launcher używa do komunikacji ze Steam, dlatego launcher zainstalował LBK Bridge dla Millennium. Wtyczka zostanie włączona automatycznie po zamknięciu Steam. Aby włączyć ją teraz, wejdź w ustawienia Millennium → Wtyczki → LBK Bridge.',
+      'Wykryto Millennium. Zamyka ono połączenie, którego launcher używa do komunikacji ze Steam, dlatego launcher zainstalował LBK Bridge dla Millennium. Wtyczka zostanie włączona automatycznie po zamknięciu Steam. Aby włączyć ją teraz, wejdź w ustawienia Millennium → Plugins → LBK Bridge.',
   },
   millenniumSetup: {
     title: 'Millennium i LBK Bridge',
@@ -924,9 +924,9 @@ export const pl = {
       intro:
         'Millennium to darmowy, niezależny mod do klienta Steam, nie pochodzi od Valve. Launcher może zainstalować go razem z LBK Bridge.',
       benefitsMac:
-        'Co zyskujesz:\n• Przetłumaczone osiągnięcia w bibliotece Steam, powiadomieniach i nakładce.',
+        'Co zyskujesz:\n• LBK Bridge będzie wyświetlać przetłumaczone nazwy osiągnięć w bibliotece Steam, powiadomieniach i nakładce.',
       benefits:
-        'Co zyskujesz:\n• Przetłumaczone osiągnięcia w bibliotece Steam, powiadomieniach i nakładce;\n• Launcher łączy się ze Steam bez otwartego portu debugowania i próśb o ponowne uruchomienie Steam.',
+        'Co zyskujesz:\n• LBK Bridge będzie wyświetlać przetłumaczone nazwy osiągnięć w bibliotece Steam, powiadomieniach i nakładce;\n• launcher będzie mógł współpracować ze Steam bez otwartego portu debugowania i powtarzanych próśb o ponowne uruchomienie Steam.',
       withoutMillennium:
         'Co działa bez Millennium: opcje uruchamiania, subskrypcje warsztatu, kolekcja „Z ukraińskimi lokalizacjami”, skrót launchera i grafiki Steam, przez port debugowania Steam (po jednym ponownym uruchomieniu Steam).',
       sourceMac: 'Pliki są pobierane z naszej wersji Millennium na GitHub.',
@@ -1018,9 +1018,9 @@ export const pl = {
     appUpdate: 'Dostępna jest nowa wersja aplikacji: {{version}}',
     teamNewGame: 'Nowa lokalizacja zespołu <team/>',
     teamStatusChange: '<team/>: status zmienił się na „<status/>”',
+    progressChange: '{{kind}}: {{to}}%',
     feedbackReply: 'Nowa odpowiedź:',
     reviewRejected: 'Wpis nie został przyjęty:',
-    fallback: 'Nowe powiadomienie',
     appUpdatesTitle: 'Aktualizacje aplikacji',
     appUpdatesDescription: 'Powiadomienia o nowych wersjach LBK Launcher',
     gameUpdatesTitle: 'Aktualizacje ukraińskich lokalizacji',
@@ -1043,7 +1043,6 @@ export const pl = {
     feedbackReply: 'Nowa odpowiedź',
     reviewPublished:
       'Twój wpis przeszedł moderację i jest teraz widoczny dla wszystkich.',
-    fallback: 'Nowe powiadomienie',
   },
   notificationToast: {
     'status-change': 'Status zmieniony',
@@ -1063,6 +1062,7 @@ export const pl = {
     teamStatusChange: '{{team}}: status zmienił się na „{{status}}”',
     feedbackReplyTitle: 'Nowa odpowiedź: {{game}}',
     replyBy: '{{name}}: {{message}}',
+    progressChange: '{{kind}}: {{from}}% → {{to}}%',
   },
   pendingLaunchOptions: {
     queued_one: 'Oczekiwanie na zamknięcie Steam: opcje uruchamiania dla {{count}} gry.',
@@ -1070,10 +1070,10 @@ export const pl = {
     queued_many:
       'Oczekiwanie na zamknięcie Steam: opcje uruchamiania dla {{count}} gier.',
     queued_other:
-      'Oczekiwanie na zamknięcie Steam: opcje uruchamiania dla {{count}} gier.',
+      'Oczekiwanie na zamknięcie Steam: opcje uruchamiania dla {{count}} gry.',
     gameName: '„{{name}}”',
-    games_one: '{{count}} gra',
-    games_few: '{{count}} gry',
+    games_one: '{{count}} gry',
+    games_few: '{{count}} gier',
     games_many: '{{count}} gier',
     games_other: '{{count}} gry',
     bridgeReady: 'Steam połączył się z launcherem',
@@ -1191,7 +1191,7 @@ export const pl = {
       'Po pobraniu i rozpakowaniu ukraińskiej lokalizacji zostanie uruchomiony jej instalator lub skrypt.\n\nKontynuować instalację?',
     confirm: 'Kontynuuj',
     finishedTitle: 'Instalator zakończył działanie',
-    finishedMessage: 'Instalator zakończył działanie pomyślnie',
+    finishedMessage: 'Instalator zakończył pracę',
     failed: 'Nie udało się uruchomić instalatora',
   },
   selectDropdown: { placeholder: 'Wybierz opcję', empty: 'Brak opcji' },
@@ -1212,7 +1212,6 @@ export const pl = {
     language: {
       title: 'Język',
       description: 'Język interfejsu launchera',
-      names: { uk: 'Українська', en: 'English', be: 'Беларуская', pl: 'Polski' },
     },
     feedback: { title: 'Kontakt', description: 'Napisz do nas na Telegramie' },
     performance: {
@@ -1407,7 +1406,7 @@ export const pl = {
     cefBlocked:
       'Steam nie otworzył połączenia dla launchera, nawet po ponownym uruchomieniu. Aby launcher mógł {{purpose}}, sprawdź, czy połączenia nie blokuje inny mod do Steam, a następnie wybierz „Sprawdź ponownie” w ustawieniach.',
     millenniumPluginPending:
-      'Millennium zamyka połączenie, którego launcher używa do komunikacji ze Steam. LBK Bridge zostanie włączony przy następnym zamknięciu Steam, dzięki czemu launcher będzie mógł {{purpose}}. Możesz też włączyć go teraz w ustawieniach Millennium (Wtyczki).',
+      'Millennium zamyka połączenie, którego launcher używa do komunikacji ze Steam. LBK Bridge zostanie włączony przy następnym zamknięciu Steam, dzięki czemu launcher będzie mógł {{purpose}}. Możesz też włączyć go teraz w ustawieniach Millennium (Plugins).',
     millenniumOutdated:
       'Twoja wersja Millennium jest przestarzała. Zaktualizuj do Millennium 3, aby launcher mógł {{purpose}}.',
     libraryUnavailable:
@@ -1472,7 +1471,7 @@ export const pl = {
     restartAction: 'Uruchom Steam ponownie',
   },
   storeSale: {
-    discount: '−{{percent}}% w {{store}}',
+    discount: 'Zniżka {{percent}}% w {{store}}',
   },
   teamSubscribe: {
     subscribedTitle: 'Obserwujesz aktualizacje od „{{team}}”',
@@ -1543,7 +1542,7 @@ export const pl = {
     updateAvailable: 'Dostępna aktualizacja lokalizacji',
     upToDate: 'Lokalizacja jest aktualna',
     availableToInstall: 'Lokalizacja dostępna do instalacji',
-    aiEdited: 'AI + edycja człowieka',
+    aiEdited: 'AI + redakcja przez człowieka',
     aiOnly: 'Tłumaczenie AI',
     favorite: 'W ulubionych',
   },
@@ -1551,13 +1550,13 @@ export const pl = {
   uninstall: {
     title: 'Odinstaluj ukraińską lokalizację',
     message:
-      'Na pewno odinstalować ukraińską lokalizację „{{name}}”?\n\n{{backupWarning}}',
+      'Czy na pewno chcesz odinstalować ukraińską lokalizację „{{name}}”?\n\n{{backupWarning}}',
     noBackupWarning:
       'UWAGA: podczas instalacji nie utworzono kopii zapasowej. Oryginalne pliki NIE zostaną przywrócone!',
     backupWarning: 'Oryginalne pliki gry zostaną przywrócone z kopii zapasowej.',
     confirm: 'Odinstaluj',
     doneTitle: 'Ukraińska lokalizacja odinstalowana',
-    doneMessage: 'Ukraińska lokalizacja „{{name}}” została odinstalowana!',
+    doneMessage: 'Ukraińska lokalizacja „{{name}}” została odinstalowana',
     notInstalled: 'Ukraińska lokalizacja nie jest zainstalowana',
     failed: 'Nie udało się odinstalować: {{error}}',
     removeComponentsFailed: 'Nie udało się usunąć komponentów: {{error}}',
@@ -1755,7 +1754,7 @@ export const pl = {
         intro:
           'Do instalowania lokalizacji nie potrzebujesz konta. Tłumacze, zespoły i moderatorzy korzystają z kont w panelu pod adresem https://admin.lbklauncher.com/',
         dataIntro: 'Podczas tworzenia i używania konta mogą być przetwarzane:',
-        data1: 'imię i nazwisko;',
+        data1: 'imię;',
         data2: 'adres e-mail;',
         data3: 'dane profilu Google, jeśli zdecydujesz się zalogować przez Google;',
         data4: 'dane serwisowe potrzebne do uwierzytelniania i ról dostępu.',

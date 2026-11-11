@@ -140,6 +140,19 @@ describe('the settings events', () => {
     }
   );
 
+  it('emits workshop-installs-changed for every write that changes the Workshop installs', () => {
+    const changed = vi.fn();
+    appEvents.on('workshop-installs-changed', changed);
+
+    write('workshop-installs-storage', { installedAt: { a: 1 } });
+    write('workshop-installs-storage', { installedAt: { a: 1 } });
+    write('workshop-installs-storage', { installedAt: {} });
+
+    expect(changed).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('readLanguage', () => {
   it.each<[string, object | null, string]>([
     ['nothing stored as uk', null, 'uk'],
     ['a stored be as be', { language: 'be' }, 'be'],
@@ -153,16 +166,5 @@ describe('the settings events', () => {
     }
 
     expect(readLanguage()).toBe(expected);
-  });
-
-  it('emits workshop-installs-changed for every write that changes the Workshop installs', () => {
-    const changed = vi.fn();
-    appEvents.on('workshop-installs-changed', changed);
-
-    write('workshop-installs-storage', { installedAt: { a: 1 } });
-    write('workshop-installs-storage', { installedAt: { a: 1 } });
-    write('workshop-installs-storage', { installedAt: {} });
-
-    expect(changed).toHaveBeenCalledTimes(2);
   });
 });

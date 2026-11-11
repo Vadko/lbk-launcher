@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { DEFAULT_LANGUAGE, type Language } from '@/shared/i18n/languages';
+import { DEFAULT_LANGUAGE, isLanguage, type Language } from '@/shared/i18n/languages';
 import type {
   ContentTypeFilterType,
   SortOrderType,
@@ -268,6 +268,9 @@ export const useSettingsStore = create<SettingsStore>()(
         if (isHardwareWeak && state) {
           state.animationsEnabled = false;
           state.liquidGlassEnabled = false;
+        }
+        if (state && !isLanguage(state.language)) {
+          state.language = DEFAULT_LANGUAGE;
         }
       },
       partialize: (state) => ({

@@ -1,6 +1,7 @@
 import { LanguagesIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { t } from '@/shared/i18n/i18n';
-import { isLanguage, LANGUAGES } from '@/shared/i18n/languages';
+import { isLanguage, LANGUAGE_NAMES, LANGUAGES } from '@/shared/i18n/languages';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { trackEvent } from '../../utils/analytics';
 import { SelectDropdown } from '../ui/SelectDropdown';
@@ -8,6 +9,7 @@ import { SelectDropdown } from '../ui/SelectDropdown';
 export function LanguageSetting() {
   const language = useSettingsStore((state) => state.language);
   const setLanguage = useSettingsStore((state) => state.setLanguage);
+  const switching = language !== useTranslation().i18n.language;
 
   return (
     <div className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border">
@@ -23,12 +25,13 @@ export function LanguageSetting() {
       <SelectDropdown
         className="w-44 shrink-0"
         options={LANGUAGES.map((value) => ({
-          name: t(`settings.language.names.${value}`),
+          name: LANGUAGE_NAMES[value],
           value,
+          isDisabled: switching,
         }))}
         selectedValue={language}
         onSelectionChange={(value) => {
-          if (isLanguage(value) && value !== language) {
+          if (!switching && isLanguage(value) && value !== language) {
             trackEvent('Change language', { From: language, To: value });
             setLanguage(value);
           }

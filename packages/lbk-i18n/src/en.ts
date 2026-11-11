@@ -134,7 +134,7 @@ export const en = {
     messagePlaceholder: 'Describe what happened (optional)...',
     send: 'Send',
     sending: 'Sending...',
-    sent: '✅ Report sent. Thank you!',
+    sent: 'Report sent. Thank you!',
     rateLimited: 'Please wait a few minutes',
     sendFailed: 'Could not send the report. Try again later',
     networkError: 'Network error',
@@ -149,9 +149,9 @@ export const en = {
   },
   deckyLoader: {
     offerIntro:
-      'Decky Loader is a free third-party plugin loader for Steam Deck, not made by Valve. The launcher can install it together with LBK Bridge.',
+      'Decky Loader is a free third-party plugin loader for Steam Deck, not made by Valve. The launcher can install it and then add LBK Bridge.',
     offerBenefits:
-      'What it adds:\n• Translated achievements in the Steam library, notifications and overlay.',
+      'What it adds:\n• LBK Bridge will display translated achievement names in the Steam library, notifications and overlay.',
     offerWithout:
       'What works without Decky Loader: launch options, workshop subscriptions, the “With Ukrainian patches” collection, the launcher shortcut and Steam artwork.',
     offerInstaller:
@@ -183,21 +183,21 @@ export const en = {
   deckyPlugin: {
     waiting: 'Waiting for LBK Launcher',
     connected: 'Connected to LBK Launcher',
-    viaMillennium: 'Working through Millennium',
+    viaMillennium: 'Connected through Millennium',
   },
   deckySetup: {
     title: 'LBK Bridge for Decky Loader',
     waiting:
       'Confirm the installation of LBK Bridge in the Decky Loader window. If you cannot see the window, press the Steam button.',
     fallback:
-      'Could not open the Decky Loader prompt. Save the plugin and install it manually: Decky → Settings → Developer → Install Plugin from ZIP.',
-    done: 'LBK Bridge is installed. Achievement translations will appear in Steam.',
+      'Could not open the installation prompt in Decky Loader. Save the ZIP file and add it manually: Decky → Settings → Developer → Install Plugin from ZIP.',
+    done: 'LBK Bridge is installed. Translated achievement names will appear in Steam once the plugin connects.',
     saveZip: 'Save ZIP',
     saved: 'File saved: {{path}}',
     saveFailed: 'Could not save the file.',
     saveFailedWithError: 'Could not save the file: {{error}}',
     intro:
-      'The plugin displays translated achievements in the Steam library, notifications and overlay. All other launcher features work without it. Decky Loader will ask you to confirm installation in Steam.',
+      'The plugin displays translated achievement names in the Steam library, notifications and overlay. The other integration features work without it. Decky Loader will ask you to confirm installation in Steam.',
     noDecky:
       'Decky Loader was not found. Install it first so the launcher can add LBK Bridge.',
     loaderDone: 'Decky Loader is installed.',
@@ -232,7 +232,8 @@ export const en = {
     failedWithError: 'Download failed: {{error}}',
   },
   downloadLimit: {
-    message: 'Download limit exceeded.\n\n{{used}}\n{{max}}\n\nTry again after {{time}}.',
+    message:
+      'Download limit exceeded.\n\n{{used}}\n{{max}}\n\nThe next download will be available in {{time}}.',
     used_one: 'You have downloaded this game {{count}} time in the last 24 hours.',
     used_few: 'You have downloaded this game {{count}} times in the last 24 hours.',
     used_many: 'You have downloaded this game {{count}} times in the last 24 hours.',
@@ -663,8 +664,7 @@ export const en = {
     platformLabel: 'Game platform',
     platformPlaceholder: 'Select a platform',
     backupTitle: 'Create a backup',
-    backupDescription:
-      'Save the original game files. Recommended so you can restore them later.',
+    backupDescription: 'Saves the original game files so they can be restored.',
     backupSize: 'Estimated size: {{size}}',
     steamArtworkTitle: 'Ukrainian artwork in Steam',
     steamArtworkDescription:
@@ -753,8 +753,8 @@ export const en = {
   },
   installSuccess: {
     updatedMessage:
-      'The {{name}} Ukrainian patch has been updated to version {{version}}!',
-    installedMessage: 'The {{name}} Ukrainian patch has been installed!',
+      'The {{name}} Ukrainian patch has been updated to version {{version}}.',
+    installedMessage: 'The {{name}} Ukrainian patch has been installed.',
     updatedTitle: 'Ukrainian patch updated',
     installedTitle: 'Ukrainian patch installed',
     pluginNextStart: 'Achievement translations will appear the next time Steam starts.',
@@ -788,14 +788,14 @@ export const en = {
   installedGamesBanner: {
     noTranslationsTitle: 'No translations found for your games',
     noTranslationsText:
-      'We found your games, but no translations are available for them yet.<br/>Install a game from our catalog. Open the filter menu to browse available translations.',
+      'Oh no… We found your games, but there are no translations for them yet.<br/>Open the filter menu to browse other available translations.',
     noGamesTitle: 'We cannot find your games',
     noGamesText:
-      'We could not find any installed games with available translations.<br/>Make sure you have at least one game from our catalog installed through Steam, GOG, EGS, Ubisoft Connect or EA App. You can also open the filter menu to browse games you have not installed yet.',
+      'Oh no… We could not find any installed games with available translations.<br/>Make sure you have at least one game from our catalog in Steam, GOG, Epic Games Store, Ubisoft Connect or EA App. You can also open the filter menu to browse games you have not installed yet.',
   },
   kuliPlacement: {
     supported: 'Translation available with support from KULI',
-    beFirst: 'Be <b>among the first</b> to play in Ukrainian!',
+    beFirst: 'Be <b>the first</b> to play with the translation!',
     goToKuli: 'Visit KULI →',
   },
   launch: {
@@ -822,7 +822,7 @@ export const en = {
   },
   millennium: {
     deckyHost:
-      'Millennium is incompatible with Decky Loader, so achievement translations are displayed through LBK Bridge for Decky Loader here.',
+      'On systems with Decky Loader, the launcher uses LBK Bridge for Decky Loader, so Millennium cannot be installed here.',
     unsupported: {
       'flatpak-steam': 'Millennium does not support Steam installed via Flatpak.',
       'snap-steam': 'Millennium does not support Steam installed via Snap.',
@@ -918,9 +918,9 @@ export const en = {
       intro:
         'Millennium is a free third-party mod for the Steam client, not made by Valve. The launcher can install it together with LBK Bridge.',
       benefitsMac:
-        'What it adds:\n• Translated achievements in the Steam library, notifications and overlay.',
+        'What it adds:\n• LBK Bridge will display translated achievement names in the Steam library, notifications and overlay.',
       benefits:
-        'What it adds:\n• Translated achievements in the Steam library, notifications and overlay;\n• The launcher connects to Steam without an open debugging port or requests to restart Steam.',
+        'What it adds:\n• LBK Bridge will display translated achievement names in the Steam library, notifications and overlay;\n• The launcher can work with Steam without an open debugging port or repeated requests to restart Steam.',
       withoutMillennium:
         'What works without Millennium: launch options, workshop subscriptions, the “With Ukrainian patches” collection, the launcher shortcut and Steam artwork, through Steam’s debugging port (after one Steam restart).',
       sourceMac: 'Files are downloaded from our Millennium build on GitHub.',
@@ -1010,9 +1010,9 @@ export const en = {
     appUpdate: 'A new app version is available: {{version}}',
     teamNewGame: 'New localization by <team/>',
     teamStatusChange: '<team/>: status changed to “<status/>”',
+    progressChange: '{{kind}}: {{to}}%',
     feedbackReply: 'New reply:',
     reviewRejected: 'Entry not accepted:',
-    fallback: 'New notification',
     appUpdatesTitle: 'App updates',
     appUpdatesDescription: 'Notifications about new versions of LBK Launcher',
     gameUpdatesTitle: 'Ukrainian patch updates',
@@ -1034,7 +1034,6 @@ export const en = {
     firstFavorite: 'Click to filter the list by favorites',
     feedbackReply: 'New reply',
     reviewPublished: 'Your post passed moderation and is now visible to everyone.',
-    fallback: 'New notification',
   },
   notificationToast: {
     'status-change': 'Status changed',
@@ -1054,6 +1053,7 @@ export const en = {
     teamStatusChange: '{{team}}: status changed to “{{status}}”',
     feedbackReplyTitle: 'New reply: {{game}}',
     replyBy: '{{name}}: {{message}}',
+    progressChange: '{{kind}}: {{from}}% → {{to}}%',
   },
   pendingLaunchOptions: {
     queued_one: 'Waiting for Steam to close: launch options for {{count}} game.',
@@ -1176,7 +1176,7 @@ export const en = {
       'Once the Ukrainian patch is downloaded and extracted, its installer or script will run.\n\nContinue installation?',
     confirm: 'Continue',
     finishedTitle: 'Installer finished',
-    finishedMessage: 'The installer finished successfully',
+    finishedMessage: 'The installer has finished',
     failed: 'Could not start the installer',
   },
   selectDropdown: { placeholder: 'Select an option', empty: 'No options' },
@@ -1197,7 +1197,6 @@ export const en = {
     language: {
       title: 'Language',
       description: 'Launcher interface language',
-      names: { uk: 'Українська', en: 'English', be: 'Беларуская', pl: 'Polski' },
     },
     feedback: { title: 'Contact us', description: 'Message us on Telegram' },
     performance: {
@@ -1538,7 +1537,7 @@ export const en = {
     backupWarning: 'Original game files will be restored from the backup.',
     confirm: 'Uninstall',
     doneTitle: 'Ukrainian patch uninstalled',
-    doneMessage: 'The “{{name}}” Ukrainian patch has been uninstalled!',
+    doneMessage: 'The “{{name}}” Ukrainian patch has been uninstalled',
     notInstalled: 'Ukrainian patch is not installed',
     failed: 'Uninstallation failed: {{error}}',
     removeComponentsFailed: 'Could not remove components: {{error}}',
