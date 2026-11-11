@@ -24,6 +24,7 @@ export function useNewGames(hideAiTranslations = false) {
         sortOrder: 'newest',
         hideAiTranslations,
         limit: HOME_SECTION_FETCH_LIMIT,
+        flat: true,
       });
       return result.games;
     },
@@ -43,6 +44,7 @@ export function useUpdatedGames(hideAiTranslations = false) {
         sortOrder: 'updated',
         hideAiTranslations,
         limit: HOME_SECTION_FETCH_LIMIT,
+        flat: true,
       });
       return result.games;
     },

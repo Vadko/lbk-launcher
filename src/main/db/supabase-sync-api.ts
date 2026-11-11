@@ -10,26 +10,8 @@ import { afterCursor, collectPages, keysetPages } from './sync-cursor';
 
 export type TagNameRow = Database['public']['Tables']['steam_tag_names']['Row'];
 
-/**
- * Fields that should NOT be loaded (large file_list and FTS fields)
- */
-type ExcludedFields =
-  | 'archive_file_list'
-  | 'voice_archive_file_list'
-  | 'achievements_archive_file_list'
-  | 'epic_archive_file_list'
-  | 'gog_archive_file_list'
-  | 'xbox_archive_file_list'
-  | 'uplay_archive_file_list'
-  | 'ea_archive_file_list'
-  | 'steam_linux_archive_file_list'
-  | 'steam_mac_archive_file_list'
-  | 'name_fts'
-  | 'name_search'
-  // Milestone counters live locally only: the server doesn't send them back, and the
-  // guard below would otherwise treat them as forgotten.
-  | 'last_download_milestone'
-  | 'last_subscriber_milestone';
+// name_search is derived locally at upsert time
+type ExcludedFields = 'name_search';
 
 /**
  * Columns for selection (type-safe)
@@ -56,6 +38,7 @@ const GAME_SELECT_COLUMNS = [
   'logo_path',
   'thumbnail_path',
   'capsule_path',
+  'artwork_localized',
   'archive_path',
   'archive_size',
   'archive_hash',
@@ -234,35 +217,6 @@ export async function fetchDeletedGamesFromSupabase(
   const rows = await collectPages(pages);
   console.log(`[SupabaseSync] Fetched ${rows.length} deleted games`);
   return rows;
-}
-
-/** Result row of the get_trending_games RPC */
-type TrendingGame =
-  Database['public']['Functions']['get_trending_games']['Returns'][number];
-
-/**
- * Fetch the most popular games over the last N days
- * @param days - number of days to analyze
- * @param limit - maximum number of games
- * @returns array of {game_id, downloads}
- */
-export async function fetchTrendingGames(days = 30, limit = 10): Promise<TrendingGame[]> {
-  const supabase = getSupabaseClient();
-
-  console.log(`[SupabaseSync] Fetching trending games for last ${days} days`);
-
-  const { data, error } = await supabase.rpc('get_trending_games', {
-    p_days: days,
-    p_limit: limit,
-  });
-
-  if (error) {
-    console.error('[SupabaseSync] Failed to fetch trending games:', error);
-    return [];
-  }
-
-  console.log(`[SupabaseSync] Fetched ${data?.length ?? 0} trending games`);
-  return data ?? [];
 }
 
 export async function fetchTagNamesFromSupabase(since?: string): Promise<TagNameRow[]> {

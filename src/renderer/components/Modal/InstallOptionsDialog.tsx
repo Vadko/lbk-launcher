@@ -11,6 +11,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Trans } from 'react-i18next';
 import { t } from '@/shared/i18n/i18n';
+import { offersSteamArtwork } from '@/shared/offers-steam-artwork';
 import type {
   Game,
   GamePath,
@@ -179,8 +180,7 @@ export function InstallOptionsDialog({
   const willApplyLaunchOptions =
     targetsSteam &&
     (steamLaunchOptionsWindows !== null || steamLaunchOptionsLinux !== null);
-  const hasSteamArtwork =
-    targetsSteam && !!(game.capsule_path || game.banner_path || game.logo_path);
+  const hasSteamArtwork = !!isSteamGame && offersSteamArtwork(game, targetPlatform);
   // Alone it is applied to the installed Steam record; next to anything else the install applies it.
   const changesArtworkAlone =
     isReinstall &&

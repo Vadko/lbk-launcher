@@ -14,19 +14,12 @@ import {
 } from '@/main/utils/steam-launch-options';
 import { t } from '@/shared/i18n/i18n';
 import type { SteamArtworkChangeResult } from '@/shared/installer-api-types';
+import { offersSteamArtwork } from '@/shared/offers-steam-artwork';
 import type { Game, InstallationStatus, Platform } from '@/shared/types';
 
 interface SteamIntegrationTarget {
   platform: Platform;
   path: string;
-}
-
-const hasArtworkImages = (game: Game) =>
-  !!(game.capsule_path || game.banner_path || game.logo_path);
-
-// The install dialog's condition for its artwork box: a player's choice exists only where it was offered.
-export function offersSteamArtwork(game: Game, platform: Platform): boolean {
-  return platform === 'steam' && !!game.steam_app_id && hasArtworkImages(game);
 }
 
 interface SteamIntegrationResult {
@@ -95,7 +88,13 @@ export async function applySteamIntegration(
     }
   }
 
-  await applySteamArtworkChoice(game, game.steam_app_id, installSteamArtwork, onStatus);
+  // A game that stopped offering artwork loses what was applied; its record keeps the player's choice.
+  await applySteamArtworkChoice(
+    game,
+    game.steam_app_id,
+    installSteamArtwork && offersSteamArtwork(game, target.platform),
+    onStatus
+  );
 
   return { launchOptionsQueued, launchOptionsError };
 }
@@ -125,9 +124,6 @@ async function applySteamArtworkChoice(
   try {
     if (!enabled) {
       return REVERT_OUTCOME[await removeSteamArtwork(appId)];
-    }
-    if (!hasArtworkImages(game)) {
-      return 'failed';
     }
     onStatus?.({
       message: t('installSteamIntegration.artwork'),
@@ -162,6 +158,9 @@ export async function setInstalledSteamArtwork(
   // Uninstall reverts artwork only for a Steam record, so none is applied for another.
   if (!game.steam_app_id || info.installedPlatform !== 'steam') {
     return { success: false, error: t('installSteamIntegration.artworkNotSteam') };
+  }
+  if (enabled && !offersSteamArtwork(game, info.installedPlatform)) {
+    return { success: false, error: t('installSteamIntegration.artworkFailed') };
   }
   const outcome = await applySteamArtworkChoice(
     game,

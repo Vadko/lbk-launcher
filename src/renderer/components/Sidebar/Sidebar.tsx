@@ -185,7 +185,7 @@ export function Sidebar({ onOpenHistory, isHorizontal = false }: SidebarProps) {
     }
   }, [debouncedSearchQuery, isLoading, totalGames]);
 
-  // Group games by steam_app_id first; fallback to slug/id (games already sorted by SQL)
+  // Group games by steam_app_id first; fallback to slug/id (SQL lists each game's translations together, best first)
   const groupMap = new Map<string, GameGroup>();
 
   for (const game of visibleGames) {
@@ -209,9 +209,6 @@ export function Sidebar({ onOpenHistory, isHorizontal = false }: SidebarProps) {
   const gameGroups = Array.from(groupMap.values());
 
   for (const group of gameGroups) {
-    group.translations.sort(
-      (a, b) => (b.translation_progress ?? 0) - (a.translation_progress ?? 0)
-    );
     // Derive a clean shared title and per-translation variant suffix
     // (e.g. "Stray (no voice acting)" → name="Stray", variant="(no voice acting)").
     const naming = deriveGroupNaming(group.translations);

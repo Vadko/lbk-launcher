@@ -57,7 +57,11 @@ export function InstalledGamesSection({
 
     const cards = [...groups.values()].map((translations) => {
       const installed = translations.find((game) => isInstalled(game.id));
-      return { game: installed ?? translations[0], isTranslated: Boolean(installed) };
+      // SQL lists each game's translations best first
+      return {
+        game: installed ?? translations[0],
+        isTranslated: Boolean(installed),
+      };
     });
 
     // If no games without translations, show all installed games
