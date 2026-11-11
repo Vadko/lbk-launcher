@@ -247,7 +247,7 @@ jobs:
 
       - name: Report E2E results
         if: always()
-        uses: daun/playwright-report-summary@v3
+        uses: daun/playwright-report-summary@v4
         with:
           report-file: e2e/results.json
           report-tag: release-${{ matrix.os }}
