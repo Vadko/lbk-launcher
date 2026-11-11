@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readRegString } from './wine-registry';
+import { parseRegKeys, regString, regSubkeys } from './wine-registry';
 
 const IHOR = String.fromCharCode(0x406, 0x433, 0x43e, 0x440);
 
@@ -27,7 +27,7 @@ const USER_REG = [
 
 // Each case is the value of one line, read back as Wine's parse_strW reads it
 function decoded(raw: string): string | null {
-  return readRegString(`[K] 1\n"V"="${raw}"`, 'K', 'V');
+  return regString(parseRegKeys(`[K] 1\n"V"="${raw}"`), 'K', 'V');
 }
 
 describe('a string value', () => {
@@ -49,7 +49,7 @@ describe('a string value', () => {
   });
 });
 
-describe('readRegString', () => {
+describe('regString', () => {
   it.each([
     [
       'the value of the key itself',
@@ -76,6 +76,38 @@ describe('readRegString', () => {
     ['a missing name', 'Software\\Valve\\Steam', 'Missing', null],
     ['a missing key', 'Software\\Valve\\Other', 'SteamPath', null],
   ])('reads %s', (_label, key, name, value) => {
-    expect(readRegString(USER_REG, key, name)).toBe(value);
+    expect(regString(parseRegKeys(USER_REG), key, name)).toBe(value);
+  });
+});
+
+const SYSTEM_REG = [
+  '[Software\\\\GOG.com\\\\Games] 1',
+  '"own"="parent value"',
+  '[Software\\\\GOG.com\\\\Games\\\\1207658924] 1',
+  '"path"="C:\\\\GOG Games\\\\Game"',
+  '"gameID"="1207658924"',
+  '"buildId"=dword:00000001',
+  '[Software\\\\GOG.com\\\\Games\\\\1207658924\\\\Nested] 1',
+  '"path"="nested"',
+  '[software\\\\gog.com\\\\games\\\\2] 1',
+  '"PATH"="C:\\\\Two"',
+  '[Software\\\\GOG.com\\\\GamesElsewhere\\\\3] 1',
+  '"path"="other key"',
+].join('\n');
+
+describe('regSubkeys', () => {
+  it('reads the string values of each direct subkey, names lowercased', () => {
+    expect(regSubkeys(parseRegKeys(SYSTEM_REG), 'Software\\GOG.com\\Games')).toEqual(
+      new Map([
+        [
+          '1207658924',
+          new Map([
+            ['path', 'C:\\GOG Games\\Game'],
+            ['gameid', '1207658924'],
+          ]),
+        ],
+        ['2', new Map([['path', 'C:\\Two']])],
+      ])
+    );
   });
 });

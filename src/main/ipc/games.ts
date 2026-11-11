@@ -73,7 +73,7 @@ import {
 } from '../utils/steam-workshop';
 import { launchUplayGame } from '../utils/uplay-launcher';
 import { findBottleGameCopy } from '../wine/bottle-game-copies';
-import { launchInBottleSteam } from '../wine/bottle-steam';
+import { launchBottleCopy } from '../wine/bottle-launch';
 import { winePrefixRefOf } from '../wine/prefixes';
 import { createHandleOr, orEmpty, orNull } from './handle-or';
 
@@ -412,9 +412,13 @@ export function setupGamesHandlers(): void {
         gamePath.platform
       );
 
-      if (gamePath.platform === 'steam' && gamePath.wine) {
-        const appId = game.steam_app_id ?? (await findSteamAppId(gamePath.path));
-        return appId && launchInBottleSteam(gamePath.path, Number(appId))
+      if (gamePath.wine) {
+        const copy = { ...gamePath, wine: gamePath.wine };
+        const launched = await launchBottleCopy(copy, async () => {
+          const appId = game.steam_app_id ?? (await findSteamAppId(copy.path));
+          return appId ? Number(appId) : null;
+        });
+        return launched
           ? { success: true }
           : { success: false, error: t('launch.failed') };
       }

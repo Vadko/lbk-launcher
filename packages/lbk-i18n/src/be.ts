@@ -663,6 +663,8 @@ export const be = {
     platformFound: 'Знойдзена',
     platformInBottle: '{{platform}} у бутэльцы «{{bottle}}»',
     wineTarget:
+      'Гульню знойдзена ў бутэльцы CrossOver «{{bottle}}». Украінізатар усталюецца ў яе, а «Гуляць» запусціць гульню праз лаўнчар гэтай бутэлькі.',
+    wineTarget_steam:
       'Гульню знойдзена ў бутэльцы CrossOver «{{bottle}}». Украінізатар усталюецца ў яе, а параметры запуску і вокладкі — у Steam гэтай бутэлькі. Дасягненні тут недаступныя: LBK Bridge працуе толькі са Steam для macOS.',
     platformNotFound: 'Не знойдзена (выбар уручную)',
     platformLabel: 'Платформа гульні',
@@ -819,6 +821,8 @@ export const be = {
     writeFailed: 'Не ўдалося запісаць параметры запуску',
     eglWriteFailed: 'не ўдалося змяніць налады гульні ў Epic Games Launcher',
     eglGameNotFound: 'гульня не знойдзена сярод усталяваных праз Epic Games Launcher',
+    eglInWine:
+      'LBK Launcher не запісвае іх у Epic Games Launcher у бутэльцы Wine, таму дадайце іх у наладах гульні там',
     eglNeedsShell:
       'яны працуюць толькі праз абалонку, праз якую іх запускае Steam, а Epic Games Launcher так не ўмее',
     eglQueued:

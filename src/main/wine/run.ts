@@ -66,6 +66,9 @@ export function wineCommand(
             prefix.prefix,
             '--no-gui',
             mode === 'wait' ? '--wait-children' : '--no-wait',
+            // CrossOver ignores the folder it is spawned in; a game launcher that starts its game by a relative path needs it
+            '--workdir',
+            path.dirname(hostFile),
             ...programArgs(winPath, args),
           ],
           env: { ...process.env },

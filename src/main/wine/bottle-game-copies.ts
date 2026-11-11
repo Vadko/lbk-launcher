@@ -1,34 +1,53 @@
 import { G } from '@mobily/ts-belt';
-import type { InstallPath } from '../../shared/types';
+import type { InstallPath, Platform } from '../../shared/types';
+import type { WinePrefixRef } from '../../shared/wine-types';
 import type { GamePath } from '../game-detector/types';
-import {
-  type BottleSteam,
-  bottleSteams,
-  findBottleSteamGame,
-} from './bottle-steam-roots';
+import { findBottleEpicGame } from './bottle-epic';
+import { findBottleGogGame } from './bottle-gog';
+import { bottleSteams, findBottleSteamGame } from './bottle-steam-roots';
+import { listWinePrefixes } from './prefixes';
 
-// Only the Steam inside a bottle is read: no other store's client is looked for there
+type CopyFinder = (
+  prefix: WinePrefixRef,
+  installPath: InstallPath,
+  steamAppId?: number | null
+) => string | null;
+
+// The stores whose Windows client LBK reads inside a prefix
+const FINDERS: Partial<Record<Platform, CopyFinder>> = {
+  steam: (prefix, installPath, steamAppId) => {
+    const bottle = bottleSteams().find((steam) => steam.prefix.prefix === prefix.prefix);
+    return bottle && (installPath.path || !G.isNullable(steamAppId))
+      ? findBottleSteamGame(bottle, installPath.path, steamAppId)
+      : null;
+  },
+  gog: (prefix, installPath) =>
+    installPath.path ? findBottleGogGame(prefix.prefix, installPath.path) : null,
+  epic: (prefix, installPath) =>
+    installPath.path ? findBottleEpicGame(prefix.prefix, installPath.path) : null,
+};
+
 function copyIn(
-  bottle: BottleSteam,
+  prefix: WinePrefixRef,
   installPath: InstallPath,
   steamAppId?: number | null
 ): GamePath | null {
-  if (installPath.type !== 'steam' || (!installPath.path && G.isNullable(steamAppId))) {
-    return null;
-  }
-  const found = findBottleSteamGame(bottle, installPath.path, steamAppId);
-  return found === null
-    ? null
-    : { platform: 'steam', path: found, exists: true, wine: bottle.prefix };
+  const platform = installPath.type;
+  const found = platform
+    ? (FINDERS[platform]?.(prefix, installPath, steamAppId) ?? null)
+    : null;
+  return platform && found !== null
+    ? { platform, path: found, exists: true, wine: prefix }
+    : null;
 }
 
-/** The copies of a game in the Steam of every Wine prefix, which the native copies come before. */
+/** The copies of a game in every Wine prefix, which the native copies come before. */
 export function bottleGameCopies(
   installPaths: InstallPath[],
   steamAppId?: number | null
 ): GamePath[] {
-  return bottleSteams().flatMap((bottle) =>
-    installPaths.flatMap((installPath) => copyIn(bottle, installPath, steamAppId) ?? [])
+  return listWinePrefixes().flatMap((prefix) =>
+    installPaths.flatMap((installPath) => copyIn(prefix, installPath, steamAppId) ?? [])
   );
 }
 
@@ -38,6 +57,6 @@ export function findBottleGameCopy(
   steamAppId: number | null | undefined,
   prefix: string
 ): GamePath | null {
-  const bottle = bottleSteams().find((steam) => steam.prefix.prefix === prefix);
-  return bottle && installPath ? copyIn(bottle, installPath, steamAppId) : null;
+  const ref = listWinePrefixes().find((entry) => entry.prefix === prefix);
+  return ref && installPath ? copyIn(ref, installPath, steamAppId) : null;
 }

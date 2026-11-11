@@ -72,6 +72,8 @@ describe('wineCommand', () => {
       prefix,
       '--no-gui',
       '--wait-children',
+      '--workdir',
+      gameDir,
       ...program,
     ]);
   });
@@ -88,6 +90,8 @@ describe('wineCommand', () => {
       prefix,
       '--no-gui',
       '--no-wait',
+      '--workdir',
+      gameDir,
       'C:\\Games\\Ihor\\steam.exe',
     ]);
   });

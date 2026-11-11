@@ -11,7 +11,7 @@ import {
 } from '../game-detector/steam-library';
 import { wineToHostPath } from './dos-path';
 import { listWinePrefixes } from './prefixes';
-import { readUserRegString } from './wine-registry';
+import { readWineRegistry, regString } from './wine-registry';
 
 /** The Windows Steam client inside one Wine prefix. */
 export interface BottleSteam {
@@ -22,7 +22,11 @@ export interface BottleSteam {
 const BOTTLE_STEAM_DIRS = ['Program Files (x86)/Steam', 'Program Files/Steam'];
 
 function bottleSteamPath(prefix: string): string | null {
-  const registered = readUserRegString(prefix, 'Software\\Valve\\Steam', 'SteamPath');
+  const registered = regString(
+    readWineRegistry(prefix, 'user.reg'),
+    'Software\\Valve\\Steam',
+    'SteamPath'
+  );
   const fromRegistry = registered === null ? null : wineToHostPath(prefix, registered);
   const candidates = [
     ...(fromRegistry ? [fromRegistry] : []),

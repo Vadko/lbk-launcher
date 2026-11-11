@@ -4,6 +4,10 @@ import { findSteamGame } from './steam';
 
 vi.mock('../api', () => ({ fetchGames: vi.fn(), fetchGamesByIds: vi.fn() }));
 vi.mock('../wine/bottle-game-copies', () => ({ bottleGameCopies: () => [] }));
+vi.mock('../wine/bottle-store-games', () => ({
+  bottleStoreSources: () => ({ registries: [], epicDirs: [] }),
+  bottleStoreGamePaths: () => [],
+}));
 
 vi.mock('./steam', () => ({
   findSteamGame: vi.fn(),

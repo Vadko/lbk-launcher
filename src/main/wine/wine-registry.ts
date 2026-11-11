@@ -88,31 +88,50 @@ function parseLine(raw: string): RegLine | null {
   return line.startsWith('"') || line.startsWith('@') ? parseValue(line) : null;
 }
 
-/** One string value of a key in a Wine registry file, key and name compared without case as Wine does. */
-export function readRegString(content: string, key: string, name: string): string | null {
-  const wantedKey = key.toLowerCase();
-  const wantedName = name.toLowerCase();
-  let inKey = false;
+/** Every key of a Wine registry file with its string values, key and value names lowercased, as Wine compares them. */
+export type RegKeys = ReadonlyMap<string, ReadonlyMap<string, string>>;
+
+export function parseRegKeys(content: string): RegKeys {
+  const keys = new Map<string, Map<string, string>>();
+  let values: Map<string, string> | null = null;
   for (const raw of content.split(/\r?\n/)) {
     const line = parseLine(raw);
     if (line?.kind === 'key') {
-      inKey = line.name.toLowerCase() === wantedKey;
-    } else if (
-      inKey &&
-      line?.kind === 'value' &&
-      line.name.toLowerCase() === wantedName
-    ) {
-      return line.text;
+      const key = line.name.toLowerCase();
+      values = keys.get(key) ?? new Map<string, string>();
+      keys.set(key, values);
+    } else if (line?.kind === 'value' && values !== null && line.text !== null) {
+      values.set(line.name.toLowerCase(), line.text);
     }
   }
-  return null;
+  return keys;
 }
 
-export function readUserRegString(
+export function regString(keys: RegKeys, key: string, name: string): string | null {
+  return keys.get(key.toLowerCase())?.get(name.toLowerCase()) ?? null;
+}
+
+/** The values of each direct subkey of `parent`, by lowercased subkey name. */
+export function regSubkeys(
+  keys: RegKeys,
+  parent: string
+): Map<string, ReadonlyMap<string, string>> {
+  const prefix = `${parent.toLowerCase()}\\`;
+  const subkeys = new Map<string, ReadonlyMap<string, string>>();
+  for (const [key, values] of keys) {
+    const sub = key.startsWith(prefix) ? key.slice(prefix.length) : '';
+    if (sub !== '' && !sub.includes('\\')) {
+      subkeys.set(sub, values);
+    }
+  }
+  return subkeys;
+}
+
+/** A prefix's HKEY_CURRENT_USER (user.reg) or HKEY_LOCAL_MACHINE (system.reg, HKEY_CLASSES_ROOT as Software\\Classes), empty when the file is missing. */
+export function readWineRegistry(
   prefix: string,
-  key: string,
-  name: string
-): string | null {
-  const content = readTextOrNull(path.join(prefix, 'user.reg'));
-  return content === null ? null : readRegString(content, key, name);
+  file: 'user.reg' | 'system.reg'
+): RegKeys {
+  const content = readTextOrNull(path.join(prefix, file));
+  return content === null ? new Map() : parseRegKeys(content);
 }

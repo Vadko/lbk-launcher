@@ -339,7 +339,12 @@ export function InstallOptionsDialog({
               placeholder={t('installOptions.platformPlaceholder')}
               maxHeight={500}
             />
-            {targetWine && <WineTargetNote bottle={targetWine.label} />}
+            {targetWine && (
+              <WineTargetNote
+                bottle={targetWine.label}
+                isSteam={target.copy?.platform === 'steam'}
+              />
+            )}
           </div>
         )}
 

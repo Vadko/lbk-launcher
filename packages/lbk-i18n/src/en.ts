@@ -661,6 +661,8 @@ export const en = {
     platformFound: 'Found',
     platformInBottle: '{{platform}} in the “{{bottle}}” bottle',
     wineTarget:
+      'The game was found in the CrossOver bottle “{{bottle}}”. The Ukrainian patch goes into it, and «Play» starts the game through that bottle’s launcher.',
+    wineTarget_steam:
       'The game was found in the CrossOver bottle “{{bottle}}”. The Ukrainian patch goes into it, and the launch options and artwork into that bottle’s Steam. Achievements are not available here: LBK Bridge works only with Steam for macOS.',
     platformNotFound: 'Not found (select manually)',
     platformLabel: 'Game platform',
@@ -817,6 +819,8 @@ export const en = {
     writeFailed: 'Could not save launch options',
     eglWriteFailed: 'could not change the game settings in Epic Games Launcher',
     eglGameNotFound: 'the game is not among those installed with Epic Games Launcher',
+    eglInWine:
+      'LBK Launcher does not write them into Epic Games Launcher in a Wine bottle, so add them in the game settings there',
     eglNeedsShell:
       'they only work through the shell Steam starts them with, and Epic Games Launcher cannot do that',
     eglQueued:

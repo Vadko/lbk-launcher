@@ -693,6 +693,8 @@ export const uk = {
     platformFound: 'Знайдено',
     platformInBottle: '{{platform}} у пляшці «{{bottle}}»',
     wineTarget:
+      'Гру знайдено в пляшці CrossOver «{{bottle}}». Українізатор встановиться в неї, а «Грати» запустить гру через лаунчер цієї пляшки.',
+    wineTarget_steam:
       'Гру знайдено в пляшці CrossOver «{{bottle}}». Українізатор встановиться в неї, а параметри запуску й обкладинки — у Steam цієї пляшки. Досягнення тут недоступні: LBK Bridge працює лише з Steam для macOS.',
     platformNotFound: 'Не знайдено (вибір вручну)',
     platformLabel: 'Платформа гри',
@@ -849,6 +851,8 @@ export const uk = {
     writeFailed: 'Не вдалося записати параметри запуску',
     eglWriteFailed: 'не вдалося змінити налаштування гри в Epic Games Launcher',
     eglGameNotFound: 'гру не знайдено серед встановлених через Epic Games Launcher',
+    eglInWine:
+      'LBK Launcher не записує їх в Epic Games Launcher у пляшці Wine, тож додайте їх у налаштуваннях гри там',
     eglNeedsShell:
       'вони виконуються лише через оболонку, якою їх запускає Steam, а Epic Games Launcher так не вміє',
     eglQueued:

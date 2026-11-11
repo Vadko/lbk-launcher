@@ -19,6 +19,7 @@ import {
   getInstalledSteamGames,
 } from './steam';
 import {
+  getInstalledBottleGamePaths,
   getInstalledEpicGamePathsCached,
   getInstalledGOGGamePathsCached,
   getInstalledRegistryGamePaths,
@@ -192,6 +193,12 @@ export function getAllInstalledGamePaths(): string[] {
     installedPaths.push(...getInstalledEpicGamePathsCached());
   } catch (error) {
     console.error('[GameDetector] Error getting Epic games:', error);
+  }
+
+  try {
+    installedPaths.push(...getInstalledBottleGamePaths());
+  } catch (error) {
+    console.error('[GameDetector] Error getting games in Wine prefixes:', error);
   }
 
   // Xbox games

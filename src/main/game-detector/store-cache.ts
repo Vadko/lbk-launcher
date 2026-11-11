@@ -2,6 +2,7 @@ import { D } from '@mobily/ts-belt';
 import * as fs from 'fs';
 import { LRUCache } from 'lru-cache';
 import * as path from 'path';
+import { bottleStoreGamePaths, bottleStoreSources } from '../wine/bottle-store-games';
 import { getInstalledEAGamePaths } from './ea';
 import { getEglInstallationsPath } from './egl-linux';
 import {
@@ -28,6 +29,7 @@ type StoreId =
   | 'epic-installed'
   | 'epic-library'
   | 'xbox-installed'
+  | 'bottle-installed'
   | 'registry-installed';
 
 function fileStamp(filePath: string): string {
@@ -95,6 +97,16 @@ function epicFingerprint(): string {
     .join(';');
 }
 
+function bottleFingerprint(): string {
+  const { registries, epicDirs } = bottleStoreSources();
+  return registries
+    .map(fileStamp)
+    .concat(
+      epicDirs.map((dir) => dirFileStamps(dir, (name) => /\.(item|egi)$/.test(name)))
+    )
+    .join(';');
+}
+
 function xboxFingerprint(): string {
   return getXboxRootPaths().map(dirStamp).join(';');
 }
@@ -156,6 +168,11 @@ const FILE_STORES = {
   ),
   'epic-library': fingerprintCache('epic-library', epicFingerprint, probeEpicLibrary),
   'xbox-installed': fingerprintCache('xbox-installed', xboxFingerprint, probeXboxGames),
+  'bottle-installed': fingerprintCache(
+    'bottle-installed',
+    bottleFingerprint,
+    bottleStoreGamePaths
+  ),
 } satisfies Record<FileStoreId, ReturnType<typeof fingerprintCache>>;
 
 export const getInstalledGOGGamePathsCached = () => FILE_STORES['gog-installed'].get();
@@ -163,6 +180,8 @@ export const getGogLibrary = () => FILE_STORES['gog-library'].get();
 export const getInstalledEpicGamePathsCached = () => FILE_STORES['epic-installed'].get();
 export const getEpicLibrary = () => FILE_STORES['epic-library'].get();
 export const getInstalledXboxGamePaths = () => FILE_STORES['xbox-installed'].get();
+// GOG and Epic games in CrossOver bottles (macOS only)
+export const getInstalledBottleGamePaths = () => FILE_STORES['bottle-installed'].get();
 // Registry reads are native calls, cheap enough to repeat instead of caching without a way to tell when keys change
 export const getInstalledRegistryGamePaths = () =>
   recordBaseline('registry-installed', registryProbe());
@@ -191,7 +210,10 @@ export function getStoreWatchDirs(): string[] {
   const galaxyDb = getGOGGalaxyDBCandidatePath();
   const manifests = getEpicManifestsCandidatePath();
   const eglLog = getEglInstallationsPath();
+  const bottles = bottleStoreSources();
   const dirs = [
+    ...bottles.registries.map((file) => path.dirname(file)),
+    ...bottles.epicDirs,
     ...(galaxyDb ? [path.dirname(galaxyDb)] : []),
     ...(manifests ? [manifests] : []),
     ...(eglLog ? [path.dirname(eglLog)] : []),
