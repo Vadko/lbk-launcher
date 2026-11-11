@@ -15,8 +15,8 @@ const BASE_COLUMNS = [
   'hide',
 ];
 
-// A database of the previous release: fully migrated, minus this change
-function legacyDb(): Database.Database {
+// A database of a previous release: fully migrated, then the given change undone
+function migratedDb(undo: string): Database.Database {
   const db = new Database(':memory:');
   db.exec(`
     CREATE TABLE games (id TEXT PRIMARY KEY, ${BASE_COLUMNS.join(', ')});
@@ -24,13 +24,19 @@ function legacyDb(): Database.Database {
     INSERT INTO games (id, name, approved, hide) VALUES ('a', 'Game', 1, 0);
   `);
   runMigrations(db);
-  db.exec(`
+  db.exec(undo);
+  return db;
+}
+
+const legacyDb = () =>
+  migratedDb(`
     ALTER TABLE games DROP COLUMN artwork_localized;
     DELETE FROM sync_metadata WHERE key = 'migration_resync_artwork_localized_done';
     INSERT INTO sync_metadata VALUES ('last_sync_timestamp', '2026-01-01', '2026-01-01');
   `);
-  return db;
-}
+
+const metadata = (db: Database.Database, key: string) =>
+  db.prepare('SELECT value FROM sync_metadata WHERE key = ?').pluck().get(key);
 
 const artworkLocalized = (db: Database.Database) =>
   db.prepare('SELECT artwork_localized FROM games WHERE id = ?').pluck().get('a');
@@ -63,5 +69,38 @@ describe('artwork_localized migration', () => {
 
     expect(artworkLocalized(db)).toBe(0);
     expect(lastSync(db)).toBe('2026-02-02');
+  });
+});
+
+describe('downloads_30d migration', () => {
+  const before30d = () =>
+    migratedDb(`
+      ALTER TABLE games DROP COLUMN downloads_30d;
+      INSERT INTO sync_metadata VALUES ('game_counters_synced_at', '2026-01-01', '2026-01-01');
+      INSERT INTO sync_metadata VALUES ('last_sync_timestamp', '2026-01-01', '2026-01-01');
+    `);
+
+  it('adds the column and refetches every counter, without a games resync', () => {
+    const db = before30d();
+
+    runMigrations(db);
+
+    expect(
+      db.prepare('SELECT downloads_30d FROM games WHERE id = ?').pluck().get('a')
+    ).toBe(0);
+    expect(metadata(db, 'game_counters_synced_at')).toBeUndefined();
+    expect(metadata(db, 'last_sync_timestamp')).toBe('2026-01-01');
+  });
+
+  it('keeps the counters cursor on later starts', () => {
+    const db = before30d();
+    runMigrations(db);
+    db.exec(
+      "INSERT INTO sync_metadata VALUES ('game_counters_synced_at', '2026-02-02', '2026-02-02')"
+    );
+
+    runMigrations(db);
+
+    expect(metadata(db, 'game_counters_synced_at')).toBe('2026-02-02');
   });
 });

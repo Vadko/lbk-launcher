@@ -20,6 +20,7 @@ export type Database = {
           success: boolean
           token_id: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           error_message?: string | null
@@ -73,6 +74,7 @@ export type Database = {
           token_hash: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           id?: string
@@ -132,6 +134,7 @@ export type Database = {
           verdict: string | null
           version_id: string | null
         }
+        ComputedFields: never
         Insert: {
           archive_etag?: string | null
           archive_path: string
@@ -203,6 +206,7 @@ export type Database = {
           name: string
           slug: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string | null
           games_count?: number | null
@@ -238,6 +242,7 @@ export type Database = {
           type: Database["public"]["Enums"]["banner_type"]
           updated_at: string | null
         }
+        ComputedFields: never
         Insert: {
           created_at?: string | null
           created_by?: string | null
@@ -285,6 +290,7 @@ export type Database = {
           impression_type: string
           machine_id: string | null
         }
+        ComputedFields: never
         Insert: {
           campaign_id: string
           created_at?: string | null
@@ -318,6 +324,7 @@ export type Database = {
           slug: string | null
           team: string | null
         }
+        ComputedFields: never
         Insert: {
           deleted_at?: string
           game_id: string
@@ -343,6 +350,7 @@ export type Database = {
           source: string
           user_identifier: string | null
         }
+        ComputedFields: never
         Insert: {
           id?: string
           query: string
@@ -397,6 +405,7 @@ export type Database = {
           rejected_text: string | null
           tg_moderation_message_id: number | null
         }
+        ComputedFields: never
         Insert: {
           ai_verdict?: Database["public"]["Enums"]["review_ai_verdict"] | null
           author_avatar_seed?: string | null
@@ -537,6 +546,7 @@ export type Database = {
           type: Database["public"]["Enums"]["feedback_type"]
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           admin_note?: string | null
           ai_verdict?: Database["public"]["Enums"]["review_ai_verdict"] | null
@@ -650,6 +660,7 @@ export type Database = {
           id: string
           is_primary: boolean | null
         }
+        ComputedFields: never
         Insert: {
           author_id: string
           created_at?: string | null
@@ -691,6 +702,7 @@ export type Database = {
           game_id: string
           touched_at: string
         }
+        ComputedFields: never
         Insert: {
           broadcast_pending?: boolean
           game_id: string
@@ -725,6 +737,7 @@ export type Database = {
           machine_id: string | null
           user_identifier: string
         }
+        ComputedFields: never
         Insert: {
           downloaded_at?: string | null
           game_id: string
@@ -774,6 +787,7 @@ export type Database = {
           synced_goal: number | null
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           donatello_goal_id?: string | null
@@ -834,6 +848,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
         }
+        ComputedFields: never
         Insert: {
           game_id: string
           hidden_at?: string | null
@@ -888,6 +903,7 @@ export type Database = {
           ip: string | null
           machine_id: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           game_id: string
@@ -922,6 +938,7 @@ export type Database = {
           granted_by: string | null
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           game_id: string
           granted_at?: string
@@ -968,6 +985,7 @@ export type Database = {
           subscribed_at: string | null
           user_identifier: string
         }
+        ComputedFields: never
         Insert: {
           game_id: string
           id?: string
@@ -1007,6 +1025,7 @@ export type Database = {
           last_notified_at: string | null
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           auto_tech_prev_status?:
             | Database["public"]["Enums"]["game_status"]
@@ -1055,6 +1074,7 @@ export type Database = {
           user_id: string
           watch: boolean | null
         }
+        ComputedFields: never
         Insert: {
           auto_tech_improvement?: boolean | null
           created_at?: string
@@ -1104,6 +1124,7 @@ export type Database = {
           is_primary: boolean | null
           version_id: string
         }
+        ComputedFields: never
         Insert: {
           author_id: string
           created_at?: string | null
@@ -1144,6 +1165,7 @@ export type Database = {
           source: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           donatello_goal_id?: string | null
@@ -1276,6 +1298,7 @@ export type Database = {
           xbox_store_url: string | null
           youtube: string | null
         }
+        ComputedFields: never
         Insert: {
           achievements_archive_file_list?: Json | null
           achievements_archive_hash?: string | null
@@ -1531,6 +1554,7 @@ export type Database = {
           description: string | null
           discord: string | null
           downloads: number | null
+          downloads_30d: number
           ea_archive_file_list: Json | null
           ea_archive_hash: string | null
           ea_archive_path: string | null
@@ -1621,6 +1645,7 @@ export type Database = {
           xbox_store_url: string | null
           youtube: string | null
         }
+        ComputedFields: never
         Insert: {
           achievements_archive_file_list?: Json | null
           achievements_archive_hash?: string | null
@@ -1644,6 +1669,7 @@ export type Database = {
           description?: string | null
           discord?: string | null
           downloads?: number | null
+          downloads_30d?: number
           ea_archive_file_list?: Json | null
           ea_archive_hash?: string | null
           ea_archive_path?: string | null
@@ -1680,7 +1706,7 @@ export type Database = {
           likes?: number
           logo_path?: string | null
           name: string
-          name_fts?: unknown
+          name_fts?: never
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
@@ -1757,6 +1783,7 @@ export type Database = {
           description?: string | null
           discord?: string | null
           downloads?: number | null
+          downloads_30d?: number
           ea_archive_file_list?: Json | null
           ea_archive_hash?: string | null
           ea_archive_path?: string | null
@@ -1793,7 +1820,7 @@ export type Database = {
           likes?: number
           logo_path?: string | null
           name?: string
-          name_fts?: unknown
+          name_fts?: never
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
@@ -1868,6 +1895,7 @@ export type Database = {
           position: number
           set_id: string
         }
+        ComputedFields: never
         Insert: {
           game_id: string
           position: number
@@ -1908,6 +1936,7 @@ export type Database = {
           starts_at: string
           title: string | null
         }
+        ComputedFields: never
         Insert: {
           created_by?: string | null
           expires_at: string
@@ -1950,6 +1979,7 @@ export type Database = {
           status: string
           synced_at: string | null
         }
+        ComputedFields: never
         Insert: {
           game_category_names?: string[] | null
           game_sources?: Json | null
@@ -1993,6 +2023,7 @@ export type Database = {
           localization_index: number
           localization_name: string | null
         }
+        ComputedFields: never
         Insert: {
           data_hash?: string | null
           game_id: string
@@ -2035,6 +2066,7 @@ export type Database = {
           skipped_at: string | null
           skipped_by: string | null
         }
+        ComputedFields: never
         Insert: {
           game_name?: string | null
           id?: string
@@ -2073,6 +2105,7 @@ export type Database = {
           status: Database["public"]["Enums"]["feedback_status"]
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           admin_note?: string | null
           app_version?: string | null
@@ -2114,6 +2147,7 @@ export type Database = {
           started_at: string | null
           user_identifier: string
         }
+        ComputedFields: never
         Insert: {
           app_version?: string | null
           ended_at?: string | null
@@ -2154,6 +2188,7 @@ export type Database = {
           version: string | null
           version_id: string | null
         }
+        ComputedFields: never
         Insert: {
           additional_path?: string | null
           completed_at?: string | null
@@ -2223,6 +2258,7 @@ export type Database = {
           created_at: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           code_hash: string
           created_at?: string
@@ -2247,6 +2283,7 @@ export type Database = {
           created_at: string
           key: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           key: string
@@ -2265,7 +2302,7 @@ export type Database = {
           edited_at: string | null
           entities: Json | null
           id: number
-          images: Json
+          images: NonNullable<Json>
           ingested_at: string
           is_deleted: boolean
           posted_at: string
@@ -2274,6 +2311,7 @@ export type Database = {
           telegram_message_id: number
           title: string | null
         }
+        ComputedFields: never
         Insert: {
           channel_id: number
           channel_username?: string
@@ -2281,7 +2319,7 @@ export type Database = {
           edited_at?: string | null
           entities?: Json | null
           id?: number
-          images?: Json
+          images?: NonNullable<Json>
           ingested_at?: string
           is_deleted?: boolean
           posted_at: string
@@ -2297,7 +2335,7 @@ export type Database = {
           edited_at?: string | null
           entities?: Json | null
           id?: number
-          images?: Json
+          images?: NonNullable<Json>
           ingested_at?: string
           is_deleted?: boolean
           posted_at?: string
@@ -2322,6 +2360,7 @@ export type Database = {
           type: Database["public"]["Enums"]["notification_type"]
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           actor_id?: string | null
           body?: string | null
@@ -2381,6 +2420,7 @@ export type Database = {
           resolved_at: string | null
           sent_at: string
         }
+        ComputedFields: never
         Insert: {
           key: string
           resolved_at?: string | null
@@ -2401,6 +2441,7 @@ export type Database = {
           machine_id: string
           name: string
         }
+        ComputedFields: never
         Insert: {
           avatar_seed: string
           created_at?: string
@@ -2428,6 +2469,7 @@ export type Database = {
           reason: Database["public"]["Enums"]["review_moderation_reason"]
           source: Database["public"]["Enums"]["review_moderation_source"]
         }
+        ComputedFields: never
         Insert: {
           banned_by?: string | null
           banned_by_name?: string | null
@@ -2467,6 +2509,7 @@ export type Database = {
           paths: string[] | null
           tg_message_id: number | null
         }
+        ComputedFields: never
         Insert: {
           attempts?: number
           claimed_at?: string | null
@@ -2503,6 +2546,7 @@ export type Database = {
           noun_gender: string
           superseded_at: string | null
         }
+        ComputedFields: never
         Insert: {
           adjective: string
           adjective_feminine: string
@@ -2513,7 +2557,7 @@ export type Database = {
           id?: string
           ip?: string | null
           machine_id: string
-          name?: string
+          name?: never
           noun: string
           noun_gender: string
           superseded_at?: string | null
@@ -2528,7 +2572,7 @@ export type Database = {
           id?: string
           ip?: string | null
           machine_id?: string
-          name?: string
+          name?: never
           noun?: string
           noun_gender?: string
           superseded_at?: string | null
@@ -2542,6 +2586,7 @@ export type Database = {
           new_path: string
           old_path: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string | null
           id?: string
@@ -2564,6 +2609,7 @@ export type Database = {
           name: string
           tag_ids: number[] | null
         }
+        ComputedFields: never
         Insert: {
           app_id: number
           created_at?: string
@@ -2591,6 +2637,7 @@ export type Database = {
           steam_app_id: number
           synced_at: string | null
         }
+        ComputedFields: never
         Insert: {
           blurb?: string | null
           game_id?: string | null
@@ -2636,6 +2683,7 @@ export type Database = {
           new_status: string
           old_status: string | null
         }
+        ComputedFields: never
         Insert: {
           changed_by?: string | null
           comment?: string | null
@@ -2694,6 +2742,7 @@ export type Database = {
           url: string | null
           views: number | null
         }
+        ComputedFields: never
         Insert: {
           author_name?: string | null
           author_steam_id?: string | null
@@ -2757,6 +2806,7 @@ export type Database = {
           last_sync_at: string | null
           total_synced: number | null
         }
+        ComputedFields: never
         Insert: {
           id?: number
           last_sync_at?: string | null
@@ -2777,6 +2827,7 @@ export type Database = {
           reset_date: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           machine_id: string
@@ -2799,6 +2850,7 @@ export type Database = {
           tagid: number
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           name: string
           tagid: number
@@ -2819,6 +2871,7 @@ export type Database = {
           gog_product_id: string | null
           steam_app_id: number
         }
+        ComputedFields: never
         Insert: {
           egs_namespace?: string | null
           egs_offer_id?: string | null
@@ -2848,6 +2901,7 @@ export type Database = {
           store: string
           touched_at: string
         }
+        ComputedFields: never
         Insert: {
           broadcast_pending?: boolean
           currency?: string | null
@@ -2881,6 +2935,7 @@ export type Database = {
           id: string
           user_identifier: string
         }
+        ComputedFields: never
         Insert: {
           clicked_at?: string | null
           game_id: string
@@ -2915,6 +2970,7 @@ export type Database = {
           user_id: number
           user_message_id: number
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           group_message_id: number
@@ -2951,6 +3007,7 @@ export type Database = {
           status: string
           telegram_message_id: number | null
         }
+        ComputedFields: never
         Insert: {
           content_type: string
           created_at?: string
@@ -2989,6 +3046,7 @@ export type Database = {
           rotation_cycle: number | null
           sent_at: string
         }
+        ComputedFields: never
         Insert: {
           content_type: string
           game_id: string
@@ -3022,17 +3080,18 @@ export type Database = {
         Row: {
           key: string
           updated_at: string
-          value: Json
+          value: NonNullable<Json>
         }
+        ComputedFields: never
         Insert: {
           key: string
           updated_at?: string
-          value: Json
+          value: NonNullable<Json>
         }
         Update: {
           key?: string
           updated_at?: string
-          value?: Json
+          value?: NonNullable<Json>
         }
         Relationships: []
       }
@@ -3045,6 +3104,7 @@ export type Database = {
           steam_app_id: number
           user_identifier: string
         }
+        ComputedFields: never
         Insert: {
           game_id: string
           id?: string
@@ -3083,6 +3143,7 @@ export type Database = {
           uninstalled_at: string | null
           user_identifier: string
         }
+        ComputedFields: never
         Insert: {
           game_id: string
           id?: string
@@ -3119,6 +3180,7 @@ export type Database = {
           user_id: number
           username: string | null
         }
+        ComputedFields: never
         Insert: {
           created_at?: string | null
           first_name?: string | null
@@ -3153,7 +3215,7 @@ export type Database = {
           game_update_telegram: boolean
           game_update_watch: boolean
           id: string
-          notification_prefs: Json
+          notification_prefs: NonNullable<Json>
           reuse_submit_fields: boolean
           role: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids: number[] | null
@@ -3163,6 +3225,7 @@ export type Database = {
           updated_at: string
           verified_user: boolean
         }
+        ComputedFields: never
         Insert: {
           analytics_enabled?: boolean
           approved?: boolean
@@ -3178,7 +3241,7 @@ export type Database = {
           game_update_telegram?: boolean
           game_update_watch?: boolean
           id?: string
-          notification_prefs?: Json
+          notification_prefs?: NonNullable<Json>
           reuse_submit_fields?: boolean
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
@@ -3203,7 +3266,7 @@ export type Database = {
           game_update_telegram?: boolean
           game_update_watch?: boolean
           id?: string
-          notification_prefs?: Json
+          notification_prefs?: NonNullable<Json>
           reuse_submit_fields?: boolean
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
@@ -3234,6 +3297,7 @@ export type Database = {
           translations: Json | null
           translations_count: number | null
         }
+        ComputedFields: never
         Relationships: []
       }
       trending_games_cache: {
@@ -3241,6 +3305,7 @@ export type Database = {
           downloads: number | null
           game_id: string | null
         }
+        ComputedFields: never
         Relationships: []
       }
     }
@@ -3286,8 +3351,14 @@ export type Database = {
         Args: { p_id: string; p_kind: string; p_rev: number }
         Returns: Json
       }
-      broadcast_game_counters: { Args: never; Returns: undefined }
-      broadcast_store_discounts: { Args: never; Returns: number }
+      broadcast_game_counters: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      broadcast_store_discounts: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       can_read_game_archive: {
         Args: { object_name: string; object_owner: string }
         Returns: boolean
@@ -3342,7 +3413,10 @@ export type Database = {
           rev: number
         }[]
       }
-      cleanup_steam_library_rate_limits: { Args: never; Returns: number }
+      cleanup_steam_library_rate_limits: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       deal_review_nickname: {
         Args: {
@@ -3464,6 +3538,7 @@ export type Database = {
         Args: { p_since?: string }
         Returns: {
           downloads: number
+          downloads_30d: number
           error_reviews: number
           game_id: string
           likes: number
@@ -3508,6 +3583,7 @@ export type Database = {
           description: string | null
           discord: string | null
           downloads: number | null
+          downloads_30d: number
           ea_archive_file_list: Json | null
           ea_archive_hash: string | null
           ea_archive_path: string | null
@@ -3606,7 +3682,7 @@ export type Database = {
         }
       }
       get_home_picks: {
-        Args: never
+        Args: Record<PropertyKey, never>
         Returns: {
           expires_at: string
           game_ids: string[]
@@ -3615,7 +3691,7 @@ export type Database = {
         }[]
       }
       get_landing_stats: {
-        Args: never
+        Args: Record<PropertyKey, never>
         Returns: {
           dau: number
           total_creators: number
@@ -3759,14 +3835,17 @@ export type Database = {
             }
             Returns: undefined
           }
-      is_admin: { Args: never; Returns: boolean }
-      is_admin_or_moderator: { Args: never; Returns: boolean }
+      is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
+      is_admin_or_moderator: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_game_owner: { Args: { gid: string }; Returns: boolean }
       is_kuli_game: { Args: { p_game_id: string }; Returns: boolean }
-      is_moderator: { Args: never; Returns: boolean }
-      is_verified_user: { Args: never; Returns: boolean }
+      is_moderator: { Args: Record<PropertyKey, never>; Returns: boolean }
+      is_verified_user: { Args: Record<PropertyKey, never>; Returns: boolean }
       list_watched_games: {
-        Args: never
+        Args: Record<PropertyKey, never>
         Returns: {
           auto_tech: boolean
           email_notifications: boolean
@@ -3787,7 +3866,7 @@ export type Database = {
           unsubscribe_token: string
         }[]
       }
-      mfa_satisfied: { Args: never; Returns: boolean }
+      mfa_satisfied: { Args: Record<PropertyKey, never>; Returns: boolean }
       post_review: {
         Args: {
           p_app_version?: string
@@ -3818,6 +3897,10 @@ export type Database = {
         Args: { p_slots: string[]; p_version_id: string }
         Returns: undefined
       }
+      recount_game_downloads_30d: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       recount_game_reviews: {
         Args: { p_game_ids: string[] }
         Returns: undefined
@@ -3827,7 +3910,10 @@ export type Database = {
         Returns: undefined
       }
       resolve_review_alerts: { Args: { p_prefix: string }; Returns: string[] }
-      review_cleanup_cron: { Args: never; Returns: undefined }
+      review_cleanup_cron: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       review_entry_outcome: {
         Args: { p_id: string; p_machine_id: string; p_text?: string }
         Returns: Json
@@ -3926,7 +4012,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      show_limit: { Args: never; Returns: number }
+      show_limit: { Args: Record<PropertyKey, never>; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       store_discount_lapsed: {
         Args: { p_ends_at: string; p_fetched_at: string }
@@ -3936,8 +4022,14 @@ export type Database = {
         Args: { p_ends_at: string; p_fetched_at: string }
         Returns: string
       }
-      sweep_review_moderation_cron: { Args: never; Returns: undefined }
-      sync_kuli_games_cron: { Args: never; Returns: undefined }
+      sweep_review_moderation_cron: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      sync_kuli_games_cron: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       sync_news_broadcasts: { Args: { p_entries: Json }; Returns: Json }
       take_store_discount_batch: { Args: { p_limit: number }; Returns: Json }
       translation_rating: {
