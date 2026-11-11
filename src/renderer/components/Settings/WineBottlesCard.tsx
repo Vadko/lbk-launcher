@@ -1,4 +1,10 @@
-import { FolderPlusIcon, WineIcon, XIcon } from 'lucide-react';
+import {
+  CircleCheckIcon,
+  CircleMinusIcon,
+  FolderPlusIcon,
+  WineIcon,
+  XIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useRefreshedResource } from '../../hooks/useRefreshedResource';
@@ -46,15 +52,32 @@ export function WineBottlesCard({ isOpen }: WineBottlesCardProps) {
         <p className="text-xs text-text-muted">{t('settings.wine.none')}</p>
       )}
       {bottles.status === 'ready' && bottles.value.length > 0 && (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-2">
           {bottles.value.map((bottle) => (
             <li
               key={bottle.prefix}
-              className="flex items-center gap-2 text-sm text-text-main"
-              title={bottle.prefix}
+              className="flex items-center gap-3 rounded-lg border border-border bg-bg-dark/40 px-3 py-2.5"
             >
-              <span className="truncate">{bottle.label}</span>
-              <span className="text-xs text-text-muted shrink-0">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-text-main">
+                  {bottle.label}
+                </p>
+                <p className="truncate text-xs text-text-muted" title={bottle.prefix}>
+                  {bottle.prefix}
+                </p>
+              </div>
+              <span
+                className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium leading-tight ${
+                  bottle.hasSteam
+                    ? 'bg-color-main/15 border-color-main/40 text-color-main'
+                    : 'bg-glass border-border text-text-muted'
+                }`}
+              >
+                {bottle.hasSteam ? (
+                  <CircleCheckIcon size={12} className="shrink-0" />
+                ) : (
+                  <CircleMinusIcon size={12} className="shrink-0" />
+                )}
                 {bottle.hasSteam
                   ? t('settings.wine.withSteam')
                   : t('settings.wine.noSteam')}
@@ -63,7 +86,7 @@ export function WineBottlesCard({ isOpen }: WineBottlesCardProps) {
                 <button
                   type="button"
                   onClick={() => void window.electronAPI.removeWinePrefix(bottle.prefix)}
-                  className="ml-auto p-1 rounded-md text-text-muted hover:text-text-main hover:bg-glass-hover"
+                  className="shrink-0 p-1 rounded-md text-text-muted hover:text-text-main hover:bg-glass-hover"
                   aria-label={t('settings.wine.remove', { bottle: bottle.label })}
                   data-gamepad-action
                 >
@@ -81,6 +104,7 @@ export function WineBottlesCard({ isOpen }: WineBottlesCardProps) {
         variant="secondary"
         onClick={addBottle}
         icon={<FolderPlusIcon size={16} />}
+        className="self-start px-4! py-2! min-h-0! text-sm"
         data-gamepad-action
       >
         {t('settings.wine.add')}
