@@ -53,7 +53,7 @@ const { syncGameCounters, createGameCountersSubscription } = await import(
 const counters = () =>
   sqlite()
     .prepare(
-      'SELECT id, likes, downloads, subscriptions, reviews, error_reviews FROM games'
+      'SELECT id, likes, downloads, subscriptions, reviews, error_reviews, downloads_30d FROM games'
     )
     .all();
 
@@ -74,7 +74,8 @@ beforeEach(() => {
       downloads INTEGER,
       subscriptions INTEGER,
       reviews INTEGER NOT NULL DEFAULT 0,
-      error_reviews INTEGER NOT NULL DEFAULT 0
+      error_reviews INTEGER NOT NULL DEFAULT 0,
+      downloads_30d INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE my_likes (
       game_id TEXT PRIMARY KEY,
@@ -88,7 +89,7 @@ beforeEach(() => {
 });
 
 describe('syncGameCounters', () => {
-  it('stores the review counts of every fetched row', async () => {
+  it('stores the counters of every fetched row', async () => {
     state.pages = [
       [
         {
@@ -98,6 +99,7 @@ describe('syncGameCounters', () => {
           subscriptions: 1,
           reviews: 4,
           error_reviews: 1,
+          downloads_30d: 7,
           touched_at: '2026-11-01T10:00:00Z',
         },
       ],
@@ -113,6 +115,7 @@ describe('syncGameCounters', () => {
         subscriptions: 1,
         reviews: 4,
         error_reviews: 1,
+        downloads_30d: 7,
       },
       {
         id: 'game-2',
@@ -121,6 +124,7 @@ describe('syncGameCounters', () => {
         subscriptions: null,
         reviews: 0,
         error_reviews: 0,
+        downloads_30d: 0,
       },
     ]);
     expect(state.sent).toHaveBeenCalledWith('game-counters-updated', ['game-1']);
@@ -136,7 +140,7 @@ describe('the counters broadcast', () => {
   });
 
   it('updates a game whose review counts alone changed', () => {
-    broadcast({ counters: [['game-2', 0, null, null, 3, 1]] });
+    broadcast({ counters: [['game-2', 0, null, null, 3, 1, 0]] });
 
     expect(counters()[1]).toEqual({
       id: 'game-2',
@@ -145,33 +149,41 @@ describe('the counters broadcast', () => {
       subscriptions: null,
       reviews: 3,
       error_reviews: 1,
+      downloads_30d: 0,
     });
     expect(state.sent).toHaveBeenCalledWith('game-counters-updated', ['game-2']);
   });
 
   it('sends nothing when no counter changed', () => {
-    broadcast({ counters: [['game-1', 0, null, null, 0, 0]] });
+    broadcast({ counters: [['game-1', 0, null, null, 0, 0, 0]] });
 
     expect(state.sent).not.toHaveBeenCalled();
   });
 
   it('updates a game whose error reviews count alone changed', () => {
-    broadcast({ counters: [['game-1', 0, null, null, 0, 2]] });
+    broadcast({ counters: [['game-1', 0, null, null, 0, 2, 0]] });
 
     expect(counters()[0]).toMatchObject({ reviews: 0, error_reviews: 2 });
     expect(state.sent).toHaveBeenCalledWith('game-counters-updated', ['game-1']);
   });
 
-  it('ignores a tuple of an older shape', () => {
-    broadcast({ counters: [['game-1', 5, 1, 1, 3]] });
+  it('updates a game whose 30-day downloads alone changed', () => {
+    broadcast({ counters: [['game-1', 0, null, null, 0, 0, 12]] });
 
-    expect(counters()[0]).toMatchObject({ likes: 0, reviews: 0, error_reviews: 0 });
+    expect(counters()[0]).toMatchObject({ downloads: null, downloads_30d: 12 });
+    expect(state.sent).toHaveBeenCalledWith('game-counters-updated', ['game-1']);
+  });
+
+  it('ignores a tuple of an older shape', () => {
+    broadcast({ counters: [['game-1', 5, 1, 1, 3, 2]] });
+
+    expect(counters()[0]).toMatchObject({ likes: 0, reviews: 0, downloads_30d: 0 });
     expect(state.sent).not.toHaveBeenCalled();
   });
 
   it.each([
-    ['one counter added later', ['game-1', 5, 1, 1, 3, 2, 9]],
-    ['two counters added later', ['game-1', 5, 1, 1, 3, 2, 9, null]],
+    ['one counter added later', ['game-1', 5, 1, 1, 3, 2, 9, 4]],
+    ['two counters added later', ['game-1', 5, 1, 1, 3, 2, 9, 4, null]],
   ])('reads the counters it knows from a tuple with %s', (_case, tuple) => {
     broadcast({ counters: [tuple] });
 
@@ -182,6 +194,7 @@ describe('the counters broadcast', () => {
       subscriptions: 1,
       reviews: 3,
       error_reviews: 2,
+      downloads_30d: 9,
     });
     expect(state.sent).toHaveBeenCalledWith('game-counters-updated', ['game-1']);
   });
