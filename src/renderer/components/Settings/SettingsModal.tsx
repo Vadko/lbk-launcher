@@ -677,7 +677,9 @@ export function SettingsModal() {
             </div>
           </button>
 
-          {window.electronAPI?.getPlatform() === 'macos' && <WineBottlesCard />}
+          {window.electronAPI?.getPlatform() === 'macos' && (
+            <WineBottlesCard isOpen={isSettingsModalOpen} />
+          )}
 
           {/* Add LBK Launcher itself as a non-Steam shortcut */}
           <button

@@ -1,11 +1,16 @@
 import { FolderPlusIcon, WineIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
-import { useResource } from '../../hooks/useResource';
+import { useRefreshedResource } from '../../hooks/useRefreshedResource';
 import { Button } from '../ui/Button';
 
-export function WineBottlesCard() {
-  const bottles = useResource('wineBottles');
+interface WineBottlesCardProps {
+  isOpen: boolean;
+}
+
+export function WineBottlesCard({ isOpen }: WineBottlesCardProps) {
+  // Steam installed into a bottle LBK already lists changes no prefix, so an open reads the bottles again
+  const bottles = useRefreshedResource('wineBottles', isOpen);
   const [notice, setNotice] = useState<string | null>(null);
 
   const addBottle = () => {

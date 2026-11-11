@@ -1,3 +1,4 @@
+import { LRUCache } from 'lru-cache';
 import * as path from 'path';
 import { isPathInside } from '@/main/utils/fs-safe';
 import type { WinePrefixRef } from '@/shared/wine-types';
@@ -20,13 +21,6 @@ export interface BottleSteam {
 
 const BOTTLE_STEAM_DIRS = ['Program Files (x86)/Steam', 'Program Files/Steam'];
 
-const cache: {
-  // user.reg is read once per prefix snapshot, not on every lookup of a game
-  bottles: { from: readonly WinePrefixRef[]; steams: BottleSteam[] } | null;
-  folders: Map<string, string[]>;
-  games: Map<string, InstalledSteamGames>;
-} = { bottles: null, folders: new Map(), games: new Map() };
-
 function bottleSteamPath(prefix: string): string | null {
   const registered = readUserRegString(prefix, 'Software\\Valve\\Steam', 'SteamPath');
   const fromRegistry = registered === null ? null : wineToHostPath(prefix, registered);
@@ -37,20 +31,23 @@ function bottleSteamPath(prefix: string): string | null {
   return candidates.find(isValidSteamPath) ?? null;
 }
 
+// user.reg is read once per prefix snapshot, not on every lookup of a game
+const steamsOfSnapshot = new LRUCache<
+  readonly WinePrefixRef[],
+  { steams: BottleSteam[] }
+>({
+  max: 1,
+  memoMethod: (prefixes) => ({
+    steams: prefixes.flatMap((prefix) => {
+      const steamPath = bottleSteamPath(prefix.prefix);
+      return steamPath === null ? [] : [{ prefix, steamPath }];
+    }),
+  }),
+});
+
 /** The Steam of every Wine prefix that has one; none off macOS, where LBK lists no prefixes. */
 export function bottleSteams(): BottleSteam[] {
-  const prefixes = listWinePrefixes();
-  if (cache.bottles?.from !== prefixes) {
-    cache.bottles = {
-      from: prefixes,
-      steams: prefixes.flatMap((prefix) => {
-        const steamPath = bottleSteamPath(prefix.prefix);
-        return steamPath === null ? [] : [{ prefix, steamPath }];
-      }),
-    };
-    cache.games.clear();
-  }
-  return cache.bottles.steams;
+  return steamsOfSnapshot.memo(listWinePrefixes()).steams;
 }
 
 /** The Steam of the Wine prefix a game folder lies in. */
@@ -67,25 +64,30 @@ function readLibraryFolders(bottle: BottleSteam): string[] {
   );
 }
 
+// Kept until the watcher sees a library change, keyed by the bottle Steam's folder
+const folderCache = new LRUCache<string, string[], BottleSteam>({
+  max: 32,
+  memoMethod: (_steamPath, _stale, { context: bottle }) => {
+    const folders = readLibraryFolders(bottle);
+    console.log(
+      `[Wine] Steam libraries of ${bottle.prefix.label}: ${folders.join(', ')}`
+    );
+    return folders;
+  },
+});
+
+const gameCache = new LRUCache<string, InstalledSteamGames, BottleSteam>({
+  max: 32,
+  memoMethod: (_steamPath, _stale, { context: bottle }) =>
+    scanSteamGames(libraryFolders(bottle)),
+});
+
 function libraryFolders(bottle: BottleSteam): string[] {
-  const cached = cache.folders.get(bottle.steamPath);
-  if (cached) {
-    return cached;
-  }
-  const folders = readLibraryFolders(bottle);
-  console.log(`[Wine] Steam libraries of ${bottle.prefix.label}: ${folders.join(', ')}`);
-  cache.folders.set(bottle.steamPath, folders);
-  return folders;
+  return folderCache.memo(bottle.steamPath, { context: bottle });
 }
 
 function installedGames(bottle: BottleSteam): InstalledSteamGames {
-  const cached = cache.games.get(bottle.steamPath);
-  if (cached) {
-    return cached;
-  }
-  const games = scanSteamGames(libraryFolders(bottle));
-  cache.games.set(bottle.steamPath, games);
-  return games;
+  return gameCache.memo(bottle.steamPath, { context: bottle });
 }
 
 /** The steamapps folders of every bottle Steam, read afresh. */
@@ -111,7 +113,7 @@ export function findBottleSteamGame(
 }
 
 export function invalidateBottleSteamCaches(): void {
-  cache.bottles = null;
-  cache.folders.clear();
-  cache.games.clear();
+  steamsOfSnapshot.clear();
+  folderCache.clear();
+  gameCache.clear();
 }
