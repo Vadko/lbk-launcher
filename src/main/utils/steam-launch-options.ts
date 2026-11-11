@@ -212,6 +212,21 @@ function writeMergedToLocalConfig(
   writeFileAtomic(localConfigPath, plan.root.dump());
 }
 
+/** Merges a value into one localconfig.vdf; only for a Steam that is not running, which would overwrite it. */
+export function mergeLaunchOptionsIntoFile(
+  localConfigPath: string,
+  appId: number,
+  value: string
+): 'written' | 'already-set' {
+  const appIdStr = String(appId);
+  const plan = readAndPlanMerge(localConfigPath, appIdStr, value);
+  if (plan.merged === (plan.existing ?? '').trim()) {
+    return 'already-set';
+  }
+  writeMergedToLocalConfig(localConfigPath, plan, appIdStr);
+  return 'written';
+}
+
 /**
  * Apply the requested LaunchOptions value for `params.appId`, choosing the bridge
  * or the file based on Steam's current state. See module docstring for details.

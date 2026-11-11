@@ -6,6 +6,7 @@ import type { Game } from '../../shared/types';
 import { syncAchievementsToPlugin } from '../achievements';
 import { removeInstalledAchievements } from '../achievements/install';
 import { removeSteamArtwork } from '../utils/steam-artwork';
+import { artworkTargetForGame } from '../wine/bottle-steam';
 import {
   BACKUP_DIR_NAME,
   BACKUP_DIR_NAME_LEGACY,
@@ -113,7 +114,7 @@ export async function uninstallTranslation(game: Game): Promise<void> {
     // Gated on the platform, so removing an Epic copy keeps Steam's covers.
     if (game.steam_app_id && installInfo.installedPlatform === 'steam') {
       try {
-        await removeSteamArtwork(game.steam_app_id);
+        await removeSteamArtwork(game.steam_app_id, artworkTargetForGame(gamePath));
       } catch (artworkError) {
         console.warn('[Uninstall] Could not revert Steam artwork:', artworkError);
       }

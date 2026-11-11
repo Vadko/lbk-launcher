@@ -18,24 +18,26 @@ import { forCurrentOS, getPlatform, isWindows } from '../utils/platform';
 import { getRegistryString } from '../utils/registry';
 import { getSteamBridge } from '../utils/steam-bridge';
 import {
-  parseAppManifest,
-  parseLibraryFolders,
   parseLocalConfigPlaytime,
   parseMostRecentUser,
   type SteamAppPlaytime,
 } from '../utils/vdf-parser';
+import {
+  bottleInstalledSteamGames,
+  invalidateBottleSteamCaches,
+} from '../wine/bottle-steam-roots';
+import {
+  findSteamGameInLibraries,
+  type InstalledSteamGames,
+  isValidSteamPath,
+  mergeInstalledSteamGames,
+  readSteamLibraryFolders,
+  scanSteamGames,
+} from './steam-library';
 
 // ============================================================================
 // Cache State
 // ============================================================================
-
-/** Installed Steam games from one manifest scan, indexed two ways. */
-interface InstalledSteamGames {
-  /** installdir (lowercase) -> full path */
-  byFolder: Map<string, string>;
-  /** app id -> full path (authoritative; immune to installdir/folder drift) */
-  byAppId: Map<number, string>;
-}
 
 interface SteamCache {
   /** Steam installation path (undefined = not checked, null = not found) */
@@ -61,18 +63,6 @@ const cache: SteamCache = {
 // ============================================================================
 // Steam Path Detection
 // ============================================================================
-
-/**
- * Validate if a path is a valid Steam installation
- */
-function isValidSteamPath(steamPath: string): boolean {
-  try {
-    const requiredDirs = ['steamapps', 'appcache', 'config'];
-    return requiredDirs.every((dir) => fs.existsSync(path.join(steamPath, dir)));
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Detect Steam installation path (with caching)
@@ -314,10 +304,14 @@ function getCurrentSteamUserId(steamPath: string): string | null {
  */
 function getUserConfigPath(filename: string): string | null {
   const steamPath = getSteamPath();
-  if (!steamPath) {
-    return null;
-  }
+  return steamPath ? getSteamUserConfigPath(steamPath, filename) : null;
+}
 
+/** A file of the most recent user's config folder in one Steam install, native or in a Wine prefix. */
+export function getSteamUserConfigPath(
+  steamPath: string,
+  filename: string
+): string | null {
   const steamUserId = getCurrentSteamUserId(steamPath);
   if (!steamUserId) {
     return null;
@@ -406,150 +400,32 @@ export function updateLastKnownLicensecacheSize(size: number | null): void {
 // Steam Library Folders
 // ============================================================================
 
-/**
- * Get Steam library folders (with caching) (internal)
- */
 function getSteamLibraryFolders(steamPath: string): string[] {
   if (cache.libraryFolders?.steamPath === steamPath) {
     return cache.libraryFolders.folders;
   }
-
-  const folders: string[] = [path.join(steamPath, 'steamapps')];
-  console.log('[Steam] Default library:', folders[0]);
-
-  try {
-    const libraryFoldersPath = path.join(steamPath, 'steamapps', 'libraryfolders.vdf');
-    if (fs.existsSync(libraryFoldersPath)) {
-      const content = fs.readFileSync(libraryFoldersPath, 'utf8');
-      const libraryPaths = parseLibraryFolders(content);
-
-      // Resolve real paths of existing folders to avoid symlink duplicates
-      const resolvedFolders = folders.map((f) => {
-        try {
-          return fs.realpathSync(f);
-        } catch {
-          return f;
-        }
-      });
-
-      for (const libraryPath of libraryPaths) {
-        const normalizedPath = libraryPath.replace(/\\\\/g, '\\');
-        const steamappsPath = path.join(normalizedPath, 'steamapps');
-        if (fs.existsSync(steamappsPath)) {
-          let realSteamappsPath: string;
-          try {
-            realSteamappsPath = fs.realpathSync(steamappsPath);
-          } catch {
-            realSteamappsPath = steamappsPath;
-          }
-          if (!resolvedFolders.includes(realSteamappsPath)) {
-            resolvedFolders.push(realSteamappsPath);
-            console.log('[Steam] Additional library found:', steamappsPath);
-            folders.push(steamappsPath);
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error('[Steam] Error parsing library folders:', error);
-  }
-
-  console.log(`[Steam] Total libraries found: ${folders.length}`);
+  const folders = readSteamLibraryFolders(steamPath);
+  console.log(`[Steam] Libraries: ${folders.join(', ')}`);
   cache.libraryFolders = { steamPath, folders };
   return folders;
+}
+
+function getNativeSteamLibraryFolders(): string[] {
+  const steamPath = getSteamPath();
+  return steamPath ? getSteamLibraryFolders(steamPath) : [];
 }
 
 // ============================================================================
 // Installed Steam Games Detection
 // ============================================================================
 
-/**
- * Get all installed games from appmanifest files (with caching)
- */
-function getAllSteamGames(libraryFolders: string[]): InstalledSteamGames {
+function getNativeSteamGames(): InstalledSteamGames {
   if (cache.installedSteam !== null) {
-    console.log(
-      `[Steam] Using cached installed games (${cache.installedSteam.byFolder.size} games)`
-    );
     return cache.installedSteam;
   }
-
   console.log('[Steam] Scanning libraries for installed games...');
-  const games = new Map<string, string>();
-  const byAppId = new Map<number, string>();
-
-  for (const folder of libraryFolders) {
-    try {
-      const files = fs.readdirSync(folder);
-      const manifestFiles = files.filter(
-        (f) => f.startsWith('appmanifest_') && f.endsWith('.acf')
-      );
-
-      for (const manifestFile of manifestFiles) {
-        const manifestPath = path.join(folder, manifestFile);
-        try {
-          const content = fs.readFileSync(manifestPath, 'utf8');
-          const manifest = parseAppManifest(content);
-
-          if (manifest?.installdir) {
-            const gamePath = path.join(folder, 'common', manifest.installdir);
-            if (fs.existsSync(gamePath)) {
-              games.set(manifest.installdir.toLowerCase(), gamePath);
-              const appId = Number(manifest.appid);
-              if (Number.isFinite(appId) && appId > 0) {
-                byAppId.set(appId, gamePath);
-              }
-              console.log(
-                `[Steam] Found game: ${manifest.name} (${manifest.installdir})`
-              );
-            }
-          }
-        } catch (err) {
-          console.error(`[Steam] Error parsing manifest ${manifestFile}:`, err);
-        }
-      }
-    } catch (err) {
-      console.error(`[Steam] Error reading library folder ${folder}:`, err);
-    }
-  }
-
-  cache.installedSteam = { byFolder: games, byAppId };
+  cache.installedSteam = scanSteamGames(getNativeSteamLibraryFolders());
   return cache.installedSteam;
-}
-
-/**
- * Resolve a Steam game's install path directly from its appmanifest, keyed by
- * App ID. This is authoritative and order-independent: when several games share
- * a base installdir, Steam suffixes the second one's folder with the app id
- * (e.g. "WW1GameSeries 242860"), and only the manifest knows the real
- * installdir for each app.
- */
-function resolveSteamGameByAppId(
-  libraryFolders: string[],
-  steamAppId: number
-): string | null {
-  for (const folder of libraryFolders) {
-    const manifestPath = path.join(folder, `appmanifest_${steamAppId}.acf`);
-    if (!fs.existsSync(manifestPath)) {
-      continue;
-    }
-
-    try {
-      const manifest = parseAppManifest(fs.readFileSync(manifestPath, 'utf8'));
-      if (!manifest?.installdir) {
-        continue;
-      }
-
-      const gamePath = path.join(folder, 'common', manifest.installdir);
-      if (fs.existsSync(gamePath)) {
-        return gamePath;
-      }
-    } catch {
-      // Ignore and try the next library
-    }
-  }
-
-  return null;
 }
 
 /**
@@ -569,78 +445,23 @@ export function findSteamGame(
     return null;
   }
 
-  const libraryFolders = getSteamLibraryFolders(steamPath);
-
-  // Authoritative resolution by Steam App ID. The folder name in the database
-  // is ambiguous when several games share a base installdir (Steam suffixes the
-  // second one with the app id), so the manifest's installdir keyed by app id
-  // is the only reliable source and is independent of install order.
-  if (steamAppId != null) {
-    const pathByAppId = resolveSteamGameByAppId(libraryFolders, steamAppId);
-    if (pathByAppId) {
-      console.log(`[Steam] ✓ Game found via appid ${steamAppId}: ${pathByAppId}`);
-      return pathByAppId;
-    }
-  }
-
-  const normalizedFolderName = gameFolderName
-    ?.replace(/^steamapps[/\\]common[/\\]/i, '')
-    .replace(/^common[/\\]/i, '');
-
-  // Without a real name the folder fallbacks would match steamapps/common or steamapps itself.
-  if (
-    !normalizedFolderName ||
-    normalizedFolderName === '.' ||
-    normalizedFolderName === '..'
-  ) {
+  const found = findSteamGameInLibraries(
+    getSteamLibraryFolders(steamPath),
+    getNativeSteamGames,
+    gameFolderName,
+    steamAppId
+  );
+  if (found === null) {
     console.warn(`[Steam] ✗ Game "${gameFolderName ?? ''}" not found`);
-    return null;
   }
-
-  if (normalizedFolderName !== gameFolderName) {
-    console.log(`[Steam] Normalized: "${gameFolderName}" -> "${normalizedFolderName}"`);
-  }
-
-  const installedGames = getAllSteamGames(libraryFolders).byFolder;
-
-  // Try exact match via appmanifest
-  const gamePathFromManifest = installedGames.get(normalizedFolderName.toLowerCase());
-  if (gamePathFromManifest) {
-    const actualBasename = path.basename(gamePathFromManifest).toLowerCase();
-    if (actualBasename === normalizedFolderName.toLowerCase()) {
-      if (fs.existsSync(gamePathFromManifest)) {
-        console.log(`[Steam] ✓ Game found via appmanifest: ${gamePathFromManifest}`);
-        return gamePathFromManifest;
-      }
-    }
-  }
-
-  // Fallback: try exact path matching
-  console.log('[Steam] Not found via appmanifest, checking folders...');
-  for (const folder of libraryFolders) {
-    const commonPath = path.join(folder, 'common', normalizedFolderName);
-    if (fs.existsSync(commonPath)) {
-      console.log(`[Steam] ✓ Game found at (fallback): ${commonPath}`);
-      return commonPath;
-    }
-  }
-
-  console.warn(`[Steam] ✗ Game "${gameFolderName}" not found`);
-  return null;
+  return found;
 }
 
 /**
- * Get all installed Steam games as a Map
+ * Get all installed games of the native Steam as a Map
  */
 export function getAllInstalledSteamGames(): Map<string, string> {
-  const steamPath = getSteamPath();
-  if (!steamPath) {
-    console.log('[Steam] Steam not found');
-    return new Map();
-  }
-
-  const libraryFolders = getSteamLibraryFolders(steamPath);
-  return getAllSteamGames(libraryFolders).byFolder;
+  return getNativeSteamGames().byFolder;
 }
 
 /**
@@ -648,13 +469,10 @@ export function getAllInstalledSteamGames(): Map<string, string> {
  * (authoritative — immune to installdir/folder drift) and by installdir.
  */
 export function getInstalledSteamGames(): InstalledSteamGames {
-  const steamPath = getSteamPath();
-  if (!steamPath) {
-    return { byFolder: new Map(), byAppId: new Map() };
-  }
-
-  const libraryFolders = getSteamLibraryFolders(steamPath);
-  return getAllSteamGames(libraryFolders);
+  const native = getNativeSteamGames();
+  // Games of the Steam in a CrossOver bottle count as installed too; macOS only, none elsewhere
+  const bottles = bottleInstalledSteamGames();
+  return bottles.length === 0 ? native : mergeInstalledSteamGames([native, ...bottles]);
 }
 
 /** App ids of installed Steam games (authoritative install signal). */
@@ -667,19 +485,11 @@ export function getInstalledSteamAppIds(): number[] {
  */
 export function getInstalledSteamGamePaths(): string[] {
   const paths: string[] = [];
-  const steamPath = getSteamPath();
-
-  if (steamPath) {
-    const libraryFolders = getSteamLibraryFolders(steamPath);
-    const steamGames = getAllSteamGames(libraryFolders).byFolder;
-
-    for (const [installdir] of steamGames.entries()) {
-      paths.push(`steamapps/common/${installdir}`);
-      paths.push(`common/${installdir}`);
-      paths.push(installdir);
-    }
+  for (const [installdir] of getInstalledSteamGames().byFolder.entries()) {
+    paths.push(`steamapps/common/${installdir}`);
+    paths.push(`common/${installdir}`);
+    paths.push(installdir);
   }
-
   return paths;
 }
 
@@ -885,6 +695,7 @@ export function invalidateSteamInstalledCaches(): void {
   cache.libraryFolders = null;
   cache.installedSteam = null;
   cache.libraryAppIds = null;
+  invalidateBottleSteamCaches();
 }
 
 /**

@@ -44,6 +44,7 @@ import {
 } from '../game-detector/store-cache';
 import { getUplayGameId } from '../game-detector/uplay';
 import { refreshXboxRootsForGame, whenXboxRootsScanned } from '../game-detector/xbox';
+import { findSteamAppId } from '../game-launcher';
 import { checkInstallation } from '../installer/cache';
 import { findProtons } from '../installer/proton';
 import { checkStoreLibraries } from '../store-library-watcher';
@@ -71,6 +72,9 @@ import {
   setWorkshopSubscription,
 } from '../utils/steam-workshop';
 import { launchUplayGame } from '../utils/uplay-launcher';
+import { findBottleGameCopy } from '../wine/bottle-game-copies';
+import { launchBottleCopy } from '../wine/bottle-launch';
+import { winePrefixRefOf } from '../wine/prefixes';
 import { createHandleOr, orEmpty, orNull } from './handle-or';
 
 const handleOr = createHandleOr('Games');
@@ -378,7 +382,11 @@ export function setupGamesHandlers(): void {
         const selectedInstallPath = (game.install_paths || []).find(
           (p) => p.type === installInfo.installedPlatform
         );
-        gamePath = detectGamePath(selectedInstallPath, game.steam_app_id);
+        // The copy the translation went into, when the game is also in a CrossOver bottle
+        const bottle = winePrefixRefOf(installInfo.gamePath);
+        gamePath = bottle
+          ? findBottleGameCopy(selectedInstallPath, game.steam_app_id, bottle.prefix)
+          : detectGamePath(selectedInstallPath, game.steam_app_id);
       }
 
       // Fallback: use first available game path if platform not found
@@ -404,13 +412,23 @@ export function setupGamesHandlers(): void {
         gamePath.platform
       );
 
+      if (gamePath.wine) {
+        const copy = { ...gamePath, wine: gamePath.wine };
+        const launched = await launchBottleCopy(copy, async () => {
+          const appId = game.steam_app_id ?? (await findSteamAppId(copy.path));
+          return appId ? Number(appId) : null;
+        });
+        return launched
+          ? { success: true }
+          : { success: false, error: t('launch.failed') };
+      }
+
       // For Steam games, try to launch via Steam protocol
       if (gamePath.platform === 'steam') {
         // Use game.steam_app_id if available, otherwise find by path
         let appId = game.steam_app_id?.toString() || null;
 
         if (!appId) {
-          const { findSteamAppId } = await import('../game-launcher');
           appId = await findSteamAppId(gamePath.path);
         }
 

@@ -183,3 +183,25 @@ describe('applyEglIntegration on Windows', () => {
     expect(mocks.setEglWindowsLaunchArgs).not.toHaveBeenCalled();
   });
 });
+
+describe('applyEglIntegration for a copy in a CrossOver bottle', () => {
+  const IN_BOTTLE = {
+    ...EPIC,
+    wine: { prefix: '/Bottles/a', launcher: 'crossover' as const, label: 'a' },
+  };
+
+  it.each([
+    [
+      'says the Windows launch options were not written',
+      '-a',
+      { launchOptionsError: t('launchOptions.eglInWine') },
+    ],
+    ['has nothing to say without them', null, {}],
+  ])('%s', async (_case, windowsOptions, expected) => {
+    expect(await applyEglIntegration(game('-linux', windowsOptions), IN_BOTTLE)).toEqual(
+      expected
+    );
+    expect(mocks.setEglWindowsLaunchArgs).not.toHaveBeenCalled();
+    expect(mocks.addEglLaunchArgs).not.toHaveBeenCalled();
+  });
+});
