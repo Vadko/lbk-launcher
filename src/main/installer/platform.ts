@@ -180,16 +180,14 @@ export async function runInstaller(
         ? new Set(listUninstallKeys().map((entry) => entry.id))
         : null;
 
-    if (
-      (platform === 'macos' || platform === 'linux') &&
-      !isWindowsInstallerFile(installerPath)
-    ) {
+    if (platform === 'macos' || platform === 'linux') {
+      // macOS or Linux - make executable first
       await makeExecutable(installerPath);
     }
 
     onStatus?.({ message: t('installPlatform.launching'), phase: 'install' });
 
-    const wine = isWindows() ? null : winePrefixRefOf(installerPath);
+    const wine = winePrefixRefOf(installerPath);
     if (wine) {
       await runInstallerInWine(wine, installerPath, onStatus);
     } else if (platform === 'linux' && protonPath) {
@@ -372,7 +370,7 @@ export async function runUninstaller(
     console.log(`[Uninstaller] Running uninstaller: ${installerPath}`);
 
     const platform = getPlatform();
-    const wine = isWindows() ? null : winePrefixRefOf(installerPath);
+    const wine = winePrefixRefOf(installerPath);
 
     if (wine) {
       await runUninstallerInWine(wine, installerPath);

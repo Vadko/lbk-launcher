@@ -2,11 +2,13 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { bottleSteamRoots, readSteamLibraryFolders } from './steam-roots';
+import { bottleSteams, readBottleSteamLibraryFolders } from './bottle-steam-roots';
 
-const mocks = vi.hoisted(() => ({ prefixes: [] as { prefix: string }[] }));
+const mocks = vi.hoisted(() => ({
+  prefixes: [] as { prefix: string; launcher: 'crossover'; label: string }[],
+}));
 
-vi.mock('@/main/wine/prefixes', () => ({ listWinePrefixes: () => mocks.prefixes }));
+vi.mock('./prefixes', () => ({ listWinePrefixes: () => [...mocks.prefixes] }));
 
 let root: string;
 let prefix: string;
@@ -53,21 +55,26 @@ afterAll(() => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-describe('bottleSteamRoots', () => {
+function bottle(dir: string) {
+  return { prefix: dir, launcher: 'crossover' as const, label: path.basename(dir) };
+}
+
+describe('bottleSteams', () => {
   it('finds the Steam a bottle registered, in its on-disk spelling', () => {
-    mocks.prefixes = [{ prefix }];
-    expect(bottleSteamRoots()).toEqual([{ steamPath, prefix }]);
+    mocks.prefixes = [bottle(prefix)];
+    expect(bottleSteams()).toEqual([{ prefix: bottle(prefix), steamPath }]);
   });
 
   it('skips a bottle without Steam', () => {
-    mocks.prefixes = [{ prefix: path.join(root, 'Bottles', 'Empty') }];
-    expect(bottleSteamRoots()).toEqual([]);
+    mocks.prefixes = [bottle(path.join(root, 'Bottles', 'Empty'))];
+    expect(bottleSteams()).toEqual([]);
   });
 });
 
-describe('readSteamLibraryFolders', () => {
+describe('readBottleSteamLibraryFolders', () => {
   it('maps the libraries of a bottle Steam through its drives, once each', () => {
-    expect(readSteamLibraryFolders({ steamPath, prefix })).toEqual([
+    mocks.prefixes = [bottle(prefix)];
+    expect(readBottleSteamLibraryFolders()).toEqual([
       path.join(steamPath, 'steamapps'),
       path.join(externalLibrary, 'steamapps'),
     ]);

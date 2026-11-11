@@ -2,7 +2,6 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readSteamLibraryFolders } from './game-detector/steam-roots';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
 
 const steam = vi.hoisted(() => ({
@@ -11,11 +10,9 @@ const steam = vi.hoisted(() => ({
   lastKnownLicensecacheSize: 100,
 }));
 
-vi.mock('./wine/prefixes', () => ({ listWinePrefixes: () => [] }));
+vi.mock('./wine/bottle-steam-roots', () => ({ readBottleSteamLibraryFolders: () => [] }));
 vi.mock('./game-detector/steam', () => ({
-  getSteamRoots: () => [{ steamPath: steam.path, prefix: null }],
-  getAllSteamLibraryFolders: () =>
-    readSteamLibraryFolders({ steamPath: steam.path, prefix: null }),
+  getSteamPath: () => steam.path,
   getLicensecachePath: () => path.join(steam.path, 'userdata/1/config/licensecache'),
   getLicensecacheSize: () => steam.licensecacheSize,
   getLastKnownLicensecacheSize: () => steam.lastKnownLicensecacheSize,

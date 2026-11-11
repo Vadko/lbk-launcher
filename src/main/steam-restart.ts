@@ -129,8 +129,7 @@ export async function applyLaunchOptionsNow(
   const recordedPath = installInfo?.gamePath ?? null;
 
   let gamePath: string | null = null;
-  // The native Steam's options; a copy in a Wine prefix has its own Steam
-  if (detected?.exists && detected.path && !detected.wine) {
+  if (detected?.exists && detected.path) {
     gamePath = detected.path;
   } else if (recordedPath && fs.existsSync(recordedPath)) {
     gamePath = recordedPath;

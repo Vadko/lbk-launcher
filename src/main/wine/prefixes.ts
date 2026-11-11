@@ -32,9 +32,9 @@ function prefixRef(prefix: string): WinePrefixRef {
   };
 }
 
-/** The prefix a host path lies in, whether or not LBK listed it. */
+/** The prefix a host path lies in, whether or not LBK listed it; macOS only, since a Lutris or Proton prefix on Linux runs through Proton. */
 export function winePrefixRefOf(hostPath: string): WinePrefixRef | null {
-  const prefix = winePrefixOf(hostPath);
+  const prefix = isMacOS() ? winePrefixOf(hostPath) : null;
   return prefix === null ? null : prefixRef(prefix);
 }
 

@@ -3,17 +3,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { appEvents } from './app-events';
 import {
-  getAllSteamLibraryFolders,
   getLastKnownLicensecacheSize,
   getLicensecachePath,
   getLicensecacheSize,
-  getSteamRoots,
+  getSteamPath,
   invalidateSteamInstalledCaches,
   invalidateSteamLibraryAppIdsCache,
   updateLastKnownLicensecacheSize,
 } from './game-detector/steam';
-import { readSteamLibraryFolders } from './game-detector/steam-roots';
+import { readSteamLibraryFolders } from './game-detector/steam-library';
 import { sendToRenderer } from './window';
+import { readBottleSteamLibraryFolders } from './wine/bottle-steam-roots';
 
 function notifyLibraryChanged(): void {
   sendToRenderer('steam-library-changed');
@@ -25,6 +25,16 @@ let licensecacheWatcher: fs.FSWatcher | null = null;
 let watchedLibraryFolders = '';
 const DEBOUNCE = { delay: 2000, leading: false };
 const LIBRARY_FOLDERS_FILE = 'libraryfolders.vdf';
+
+// Read afresh, not from the detector's cache, which is what a change is told against
+function currentLibraryFolders(): string[] {
+  const steamPath = getSteamPath();
+  return [
+    ...(steamPath ? readSteamLibraryFolders(steamPath) : []),
+    // The Steam in each CrossOver bottle, macOS only
+    ...readBottleSteamLibraryFolders(),
+  ];
+}
 
 /** Appmanifest changes (game install/uninstall). */
 const libraryChanged = F.makeControlledDebounce(() => {
@@ -51,9 +61,7 @@ const ownedGamesChanged = F.makeControlledDebounce(() => {
 
 // libraryfolders.vdf also stores per-library app lists and sizes, so most rewrites leave the folder list as is
 const libraryFoldersChanged = F.makeControlledDebounce(() => {
-  if (
-    getSteamRoots().flatMap(readSteamLibraryFolders).join('|') === watchedLibraryFolders
-  ) {
+  if (currentLibraryFolders().join('|') === watchedLibraryFolders) {
     return;
   }
   console.log('[SteamWatcher] Steam library folders changed, restarting watchers');
@@ -140,8 +148,7 @@ export function startSteamWatcher(): void {
   // Close any existing watchers first to prevent EMFILE errors
   stopSteamWatcher();
 
-  // The native Steam and the Steam of every Wine prefix
-  const libraryFolders = getAllSteamLibraryFolders();
+  const libraryFolders = currentLibraryFolders();
   if (libraryFolders.length === 0) {
     console.log('[SteamWatcher] Steam not found, watcher not started');
     return;

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getSteamPath } from '../game-detector/steam';
-import { winePrefixOf } from '../wine/dos-path';
+import { winePrefixRefOf } from '../wine/prefixes';
 import { getPlatform } from './platform';
 import { parseCompatToolName } from './vdf-parser';
 
@@ -213,7 +213,7 @@ export async function resolveGameBuildOs(
   ignoredFiles: Array<string | null | undefined> = []
 ): Promise<GameBuildOs> {
   // Wine runs Windows programs only, whatever else the folder holds
-  if (gamePath && winePrefixOf(gamePath) !== null) {
+  if (gamePath && winePrefixRefOf(gamePath) !== null) {
     return 'windows';
   }
   if (gamePath) {

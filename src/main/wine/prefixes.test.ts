@@ -8,10 +8,11 @@ const mocks = vi.hoisted(() => ({
   store: new Map<string, unknown>(),
   emit: vi.fn(),
   bottles: [] as string[],
+  mac: true,
 }));
 
 vi.mock('@/main/app-events', () => ({ appEvents: { emit: mocks.emit } }));
-vi.mock('@/main/utils/platform', () => ({ isMacOS: () => true }));
+vi.mock('@/main/utils/platform', () => ({ isMacOS: () => mocks.mac }));
 vi.mock('@/main/utils/store-storage', () => ({
   readStoreValue: (key: string) => mocks.store.get(key),
   writeStoreValue: (key: string, value: unknown) => mocks.store.set(key, value),
@@ -43,6 +44,7 @@ beforeEach(() => {
   mocks.store.clear();
   mocks.emit.mockClear();
   mocks.bottles = [];
+  mocks.mac = true;
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
 });
 
@@ -114,5 +116,18 @@ describe('wine prefixes', () => {
 
     expect(addUserWinePrefix(root)).toEqual({ success: false, error: 'not-a-prefix' });
     expect(mocks.emit).not.toHaveBeenCalled();
+  });
+
+  // A Lutris game on Linux sits in a prefix's drive_c too, and goes through Proton
+  it.each([
+    ['macOS', true, true],
+    ['Linux or Windows', false, false],
+  ])('puts a folder inside a prefix in it on %s', async (_os, mac, inPrefix) => {
+    mocks.mac = mac;
+    const { winePrefixRefOf } = await import('./prefixes');
+
+    const ref = winePrefixRefOf(path.join(prefix, 'drive_c', 'users'));
+
+    expect(ref?.prefix ?? null).toBe(inPrefix ? prefix : null);
   });
 });

@@ -52,6 +52,7 @@ import { applySteamIntegration } from './installer/steam-integration';
 import { isCurrentSessionFirstLaunch } from './tracking';
 import { resolveGameBuildOs } from './utils/game-build';
 import { isLinux } from './utils/platform';
+import { findBottleGameCopy } from './wine/bottle-game-copies';
 import { winePrefixRefOf } from './wine/prefixes';
 import { hasWineRunner } from './wine/run';
 
@@ -157,11 +158,9 @@ export async function installTranslation(
       const selectedInstallPath = (game.install_paths || []).find(
         (p) => p.type === platform
       );
-      gamePath = detectGamePath(
-        selectedInstallPath,
-        game.steam_app_id,
-        options.winePrefix
-      );
+      gamePath = options.winePrefix
+        ? findBottleGameCopy(selectedInstallPath, game.steam_app_id, options.winePrefix)
+        : detectGamePath(selectedInstallPath, game.steam_app_id);
     }
 
     if (!gamePath || !gamePath.exists || !gamePath.path) {

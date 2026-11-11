@@ -27,9 +27,9 @@ vi.mock('@/main/installer/installation-info', () => ({
 vi.mock('@/main/steam-pending-actions', () => ({ queueSteamAction: vi.fn() }));
 vi.mock('@/main/wine/bottle-steam', () => ({
   artworkTargetForGame: () => undefined,
-  bottleSteamRootOf: () => null,
   writeBottleLaunchOptions: vi.fn(),
 }));
+vi.mock('@/main/wine/bottle-steam-roots', () => ({ bottleSteamOf: () => null }));
 vi.mock('@/main/game-detector/steam', () => ({
   getCurrentSteamAccountId: () => null,
 }));

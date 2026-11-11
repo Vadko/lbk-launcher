@@ -72,8 +72,9 @@ import {
   setWorkshopSubscription,
 } from '../utils/steam-workshop';
 import { launchUplayGame } from '../utils/uplay-launcher';
+import { findBottleGameCopy } from '../wine/bottle-game-copies';
 import { launchInBottleSteam } from '../wine/bottle-steam';
-import { winePrefixOf } from '../wine/dos-path';
+import { winePrefixRefOf } from '../wine/prefixes';
 import { createHandleOr, orEmpty, orNull } from './handle-or';
 
 const handleOr = createHandleOr('Games');
@@ -381,12 +382,11 @@ export function setupGamesHandlers(): void {
         const selectedInstallPath = (game.install_paths || []).find(
           (p) => p.type === installInfo.installedPlatform
         );
-        // The copy the translation went into, when the game is also in a Wine prefix or the native Steam
-        gamePath = detectGamePath(
-          selectedInstallPath,
-          game.steam_app_id,
-          winePrefixOf(installInfo.gamePath)
-        );
+        // The copy the translation went into, when the game is also in a CrossOver bottle
+        const bottle = winePrefixRefOf(installInfo.gamePath);
+        gamePath = bottle
+          ? findBottleGameCopy(selectedInstallPath, game.steam_app_id, bottle.prefix)
+          : detectGamePath(selectedInstallPath, game.steam_app_id);
       }
 
       // Fallback: use first available game path if platform not found
@@ -414,7 +414,7 @@ export function setupGamesHandlers(): void {
 
       if (gamePath.platform === 'steam' && gamePath.wine) {
         const appId = game.steam_app_id ?? (await findSteamAppId(gamePath.path));
-        return appId && launchInBottleSteam(gamePath.wine, gamePath.path, Number(appId))
+        return appId && launchInBottleSteam(gamePath.path, Number(appId))
           ? { success: true }
           : { success: false, error: t('launch.failed') };
       }

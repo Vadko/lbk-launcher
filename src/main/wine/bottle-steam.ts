@@ -5,8 +5,7 @@ import { promisify } from 'node:util';
 import pLimit from 'p-limit';
 import pWaitFor from 'p-wait-for';
 import { z } from 'zod';
-import { getSteamRoots, getSteamUserConfigPath } from '@/main/game-detector/steam';
-import type { SteamRoot } from '@/main/game-detector/steam-roots';
+import { getSteamUserConfigPath } from '@/main/game-detector/steam';
 import { isPathInside } from '@/main/utils/fs-safe';
 import { resolveGameDirToken } from '@/main/utils/launch-options-value';
 import { type ArtworkTarget, prefixArtworkTarget } from '@/main/utils/steam-artwork';
@@ -18,7 +17,7 @@ import {
 } from '@/main/utils/store-storage';
 import { errnoCode, errorMessage } from '@/shared/errors';
 import type { Game } from '@/shared/types';
-import type { WinePrefixRef } from '@/shared/wine-types';
+import { type BottleSteam, bottleSteamOf } from './bottle-steam-roots';
 import { hostToWinePath } from './dos-path';
 import { startInWine } from './run';
 
@@ -27,54 +26,39 @@ const execFileAsync = promisify(execFile);
 const PENDING_KEY = 'pending-wine-launch-options';
 const POLL_MS = 15000;
 
-/** The Steam of the Wine prefix a game folder lies in. */
-export function bottleSteamRootOf(gamePath: string): SteamRoot | null {
-  return (
-    getSteamRoots().find(
-      (root) => root.prefix !== null && isPathInside(root.prefix, gamePath)
-    ) ?? null
-  );
-}
-
-function bottleArtworkTarget(root: SteamRoot): ArtworkTarget {
+function bottleArtworkTarget(bottle: BottleSteam): ArtworkTarget {
   return prefixArtworkTarget(
-    root.prefix ?? root.steamPath,
-    getSteamUserConfigPath(root.steamPath, 'grid')
+    bottle.prefix.prefix,
+    getSteamUserConfigPath(bottle.steamPath, 'grid')
   );
 }
 
 /** The grid of the Steam a game copy belongs to; undefined for the native Steam. */
 export function artworkTargetForGame(gamePath: string): ArtworkTarget | undefined {
-  const root = bottleSteamRootOf(gamePath);
-  return root ? bottleArtworkTarget(root) : undefined;
+  const bottle = bottleSteamOf(gamePath);
+  return bottle ? bottleArtworkTarget(bottle) : undefined;
 }
 
 /** Asks the bottle's Steam to start the game, starting that Steam first when it is closed. */
-export function launchInBottleSteam(
-  prefix: WinePrefixRef,
-  gamePath: string,
-  appId: number
-): boolean {
-  const root = bottleSteamRootOf(gamePath);
-  const steamExe = root
-    ? fs.readdirSync(root.steamPath).find((entry) => entry.toLowerCase() === 'steam.exe')
+export function launchInBottleSteam(gamePath: string, appId: number): boolean {
+  const bottle = bottleSteamOf(gamePath);
+  const steamExe = bottle
+    ? fs
+        .readdirSync(bottle.steamPath)
+        .find((entry) => entry.toLowerCase() === 'steam.exe')
     : undefined;
-  if (!root || !steamExe) {
+  if (!bottle || !steamExe) {
     console.warn(`[Wine] No Steam for ${gamePath}`);
     return false;
   }
-  return startInWine(prefix, path.join(root.steamPath, steamExe), [
+  return startInWine(bottle.prefix, path.join(bottle.steamPath, steamExe), [
     '-applaunch',
     String(appId),
   ]);
 }
 
 // Wine replaces a program's argv on macOS, so the bottle shows only through the working folder Steam runs in
-async function isBottleSteamRunning(root: SteamRoot): Promise<boolean> {
-  const prefix = root.prefix;
-  if (prefix === null) {
-    return true;
-  }
+async function isBottleSteamRunning(prefix: string): Promise<boolean> {
   try {
     const { stdout } = await execFileAsync(
       '/usr/sbin/lsof',
@@ -130,11 +114,10 @@ async function flushPending(): Promise<boolean> {
   const pending = readPending();
   const kept: PendingLaunchOptions[] = [];
   for (const entry of pending) {
-    const root = { steamPath: entry.steamPath, prefix: entry.prefix };
     if (!fs.existsSync(entry.steamPath)) {
       continue;
     }
-    if (await isBottleSteamRunning(root)) {
+    if (await isBottleSteamRunning(entry.prefix)) {
       kept.push(entry);
       continue;
     }
@@ -172,24 +155,22 @@ export type BottleLaunchOptionsResult =
 /** The Windows launch options go into the bottle Steam's localconfig.vdf, now or once that Steam exits. */
 export function writeBottleLaunchOptions(
   game: Pick<Game, 'steam_app_id' | 'steam_launch_options_windows'>,
-  root: SteamRoot,
+  bottle: BottleSteam,
   gamePath: string
 ): Promise<BottleLaunchOptionsResult> {
+  const prefix = bottle.prefix.prefix;
   return edits(async (): Promise<BottleLaunchOptionsResult> => {
     const configured = game.steam_launch_options_windows?.trim();
-    if (!game.steam_app_id || !configured || root.prefix === null) {
+    if (!game.steam_app_id || !configured) {
       return { mode: 'noop' };
     }
-    const resolution = resolveGameDirToken(
-      configured,
-      hostToWinePath(root.prefix, gamePath)
-    );
+    const resolution = resolveGameDirToken(configured, hostToWinePath(prefix, gamePath));
     if (resolution.value === null) {
       return { mode: 'failed', reason: resolution.reason };
     }
     const entry = {
-      prefix: root.prefix,
-      steamPath: root.steamPath,
+      prefix,
+      steamPath: bottle.steamPath,
       appId: game.steam_app_id,
       value: resolution.value,
     };
@@ -197,7 +178,7 @@ export function writeBottleLaunchOptions(
     const others = readPending().filter(
       (item) => !(item.prefix === entry.prefix && item.appId === entry.appId)
     );
-    if (await isBottleSteamRunning(root)) {
+    if (await isBottleSteamRunning(prefix)) {
       writePending([...others, entry]);
       watchBottleSteamExit();
       return { mode: 'queued' };
