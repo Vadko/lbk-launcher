@@ -199,9 +199,9 @@ export const GameListItem = memo(function GameListItem({
           {showDownloadCounter && (
             <div className="flex items-center gap-2">
               <PopularIcon />
-              <span>{t('gameCard.downloadsLast30Days')}</span>
+              <span>{t('gameCard.downloadedByPlayers')}</span>
               <span className="ml-auto">
-                <AppNumberFlow value={game.downloads_30d} />
+                <AppNumberFlow value={game.downloads ?? 0} />
               </span>
             </div>
           )}
