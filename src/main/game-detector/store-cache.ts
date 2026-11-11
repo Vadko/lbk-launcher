@@ -10,6 +10,7 @@ import {
   getInstalledEpicGamePaths,
   getEpicLibrary as probeEpicLibrary,
 } from './epic';
+import { getEpicInstalledItemsPath } from './epic-installed-items';
 import {
   getGOGGalaxyDBCandidatePath,
   getInstalledGOGGamePaths,
@@ -80,6 +81,7 @@ function gogFingerprint(): string {
 
 function epicFingerprint(): string {
   const manifests = getEpicManifestsCandidatePath();
+  const installedItems = getEpicInstalledItemsPath();
   const eglLog = getEglInstallationsPath();
   return [
     ...(eglLog ? [eglLog] : []),
@@ -94,6 +96,11 @@ function epicFingerprint(): string {
     .map(fileStamp)
     .concat(getHeroicGamePaths().map(dirStamp))
     .concat(manifests ? [dirFileStamps(manifests, (name) => name.endsWith('.item'))] : [])
+    .concat(
+      installedItems
+        ? [dirFileStamps(installedItems, (name) => name.endsWith('.egi'))]
+        : []
+    )
     .join(';');
 }
 
@@ -209,6 +216,7 @@ export function revalidateStores(force: boolean): StoreId[] {
 export function getStoreWatchDirs(): string[] {
   const galaxyDb = getGOGGalaxyDBCandidatePath();
   const manifests = getEpicManifestsCandidatePath();
+  const installedItems = getEpicInstalledItemsPath();
   const eglLog = getEglInstallationsPath();
   const bottles = bottleStoreSources();
   const dirs = [
@@ -216,6 +224,7 @@ export function getStoreWatchDirs(): string[] {
     ...bottles.epicDirs,
     ...(galaxyDb ? [path.dirname(galaxyDb)] : []),
     ...(manifests ? [manifests] : []),
+    ...(installedItems ? [installedItems] : []),
     ...(eglLog ? [path.dirname(eglLog)] : []),
     ...getHeroicConfigPaths().flatMap((root) => [
       path.join(root, 'gog_store'),

@@ -7,6 +7,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { isLinux, isMacOS, isWindows } from '../utils/platform';
 import { getEglInstallDirs } from './egl-linux';
+import { getNativeEpicInstalledItems } from './epic-installed-items';
 import { parseEpicManifest } from './epic-manifest';
 import { getCleanTitle } from './game-titles';
 import { getHeroicGogInstallFolders } from './gog';
@@ -157,6 +158,14 @@ export function findEpicGame(gameFolderName: string): string | null {
     }
   }
 
+  const item = getNativeEpicInstalledItems().find(
+    (entry) => path.basename(entry.dir).toLowerCase() === gameFolderName.toLowerCase()
+  );
+  if (item) {
+    console.log(`[Epic] ✓ Game found (EGL install item): ${item.dir}`);
+    return item.dir;
+  }
+
   const epicManifestPath = getEpicPath();
   if (!epicManifestPath) {
     logIfChanged(
@@ -243,6 +252,8 @@ export function getInstalledEpicGamePaths(): string[] {
       paths.push(...getLutrisEpicGameDirNames());
       paths.push(...getEglInstallDirs().map((dir) => path.basename(dir)));
     }
+
+    paths.push(...getNativeEpicInstalledItems().map((item) => path.basename(item.dir)));
 
     const epicManifestPath = getEpicPath();
     if (epicManifestPath && fs.existsSync(epicManifestPath)) {
@@ -467,7 +478,16 @@ export function getEpicAppName(gamePath: string): string | null {
   }
   const manifest = findEpicManifest(gamePath);
   // Prefer AppName: it is the ownership key Epic checks on launch.
-  return manifest?.appName || manifest?.catalogItemId || null;
+  const fromManifest = manifest?.appName || manifest?.catalogItemId;
+  if (fromManifest) {
+    return fromManifest;
+  }
+  // EGL from 2026 writes no .item; its launch link takes namespace:itemId:artifactId instead
+  const resolved = path.resolve(gamePath);
+  return (
+    getNativeEpicInstalledItems().find((item) => path.resolve(item.dir) === resolved)
+      ?.appId ?? null
+  );
 }
 
 // EGL's own app id, the key of its per-game settings on Windows

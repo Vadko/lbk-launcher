@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { z } from 'zod';
 import { readJsonFile } from '../utils/json-file';
+import { isWindows } from '../utils/platform';
 
 // EGL from 2026 (its EOS install helper) records each install here instead of a Data\Manifests .item
 export const EPIC_INSTALLED_ITEMS_DIR =
@@ -48,4 +49,24 @@ export function readEpicInstalledItems(itemsDir: string): EpicInstalledItem[] {
       },
     ];
   });
+}
+
+/** Where EGL on Windows records its installs as .egi items, whether or not it is installed. */
+export function getEpicInstalledItemsPath(): string | null {
+  const programData = isWindows() ? process.env.PROGRAMDATA : undefined;
+  return programData
+    ? path.join(
+        programData,
+        'Epic',
+        'EpicOnlineServices',
+        'InstallHelper',
+        'InstalledItems'
+      )
+    : null;
+}
+
+/** The .egi installs of this machine's EGL whose folder exists. */
+export function getNativeEpicInstalledItems(): EpicInstalledItem[] {
+  const dir = getEpicInstalledItemsPath();
+  return dir ? readEpicInstalledItems(dir).filter((item) => fs.existsSync(item.dir)) : [];
 }
