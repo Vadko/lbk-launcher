@@ -68,6 +68,8 @@ describe('getEpicManifestAppId', () => {
   });
 });
 
+const GAME_ID = 'BD66FDE00A985F30BF384EDE2AA03876';
+
 // The shape EGL 2026 wrote for a real install, ids shortened
 function egi(dir: string, state: string, id: string): Record<string, unknown> {
   return {
@@ -77,7 +79,7 @@ function egi(dir: string, state: string, id: string): Record<string, unknown> {
       dir,
       sandboxId: 'ns',
       itemId: 'item',
-      artifactId: `art${id}`,
+      artifactId: `art-${id}`,
       manifestData: { launchExe: 'Game.exe' },
     },
   };
@@ -110,15 +112,18 @@ describe('an EGL that records installs only as .egi items', () => {
     const pending = path.join(root, 'Pending');
     fs.mkdirSync(game);
     fs.mkdirSync(pending);
+    const eosService = path.join(root, 'Epic Online Services');
+    fs.mkdirSync(eosService);
     setUpInstalledItems([
-      egi(game, 'Installed', '1'),
-      egi(gone, 'Installed', '2'),
-      egi(pending, 'Installing', '3'),
+      egi(game, 'Installed', GAME_ID),
+      egi(gone, 'Installed', 'B'.repeat(32)),
+      egi(pending, 'Installing', 'C'.repeat(32)),
+      egi(eosService, 'Installed', 'service'),
     ]);
     return game;
   }
 
-  it('lists the finished installs whose folder exists', () => {
+  it("lists the finished game installs whose folder exists, not EGL's own components", () => {
     setUp();
     expect(getInstalledEpicGamePaths()).toEqual(['Snakebird']);
   });
@@ -135,6 +140,6 @@ describe('an EGL that records installs only as .egi items', () => {
 
   it('launches by namespace:itemId:artifactId', () => {
     const game = setUp();
-    expect(getEpicAppName(game)).toBe('ns:item:art1');
+    expect(getEpicAppName(game)).toBe(`ns:item:art-${GAME_ID}`);
   });
 });

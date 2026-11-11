@@ -27,7 +27,7 @@ afterAll(() => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-describe('wineToHostPath', () => {
+describe.skipIf(process.platform === 'win32')('wineToHostPath', () => {
   it.each([
     [
       'a path on C:',
@@ -58,7 +58,7 @@ describe('wineToHostPath', () => {
   });
 });
 
-describe('hostToWinePath', () => {
+describe.skipIf(process.platform === 'win32')('hostToWinePath', () => {
   it('takes the drive that maps the most of the path', () => {
     expect(
       hostToWinePath(prefix, path.join(prefix, 'drive_c', 'Program Files (x86)', 'Steam'))
@@ -76,7 +76,7 @@ describe('hostToWinePath', () => {
   });
 });
 
-describe('winePrefixOf', () => {
+describe.skipIf(process.platform === 'win32')('winePrefixOf', () => {
   it.each([
     ['a game folder', () => path.join(prefix, 'drive_c', 'Program Files (x86)', 'Steam')],
     ['drive_c itself', () => path.join(prefix, 'drive_c')],

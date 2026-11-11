@@ -59,7 +59,7 @@ function bottle(dir: string) {
   return { prefix: dir, launcher: 'crossover' as const, label: path.basename(dir) };
 }
 
-describe('bottleSteams', () => {
+describe.skipIf(process.platform === 'win32')('bottleSteams', () => {
   it('finds the Steam a bottle registered, in its on-disk spelling', () => {
     mocks.prefixes = [bottle(prefix)];
     expect(bottleSteams()).toEqual([{ prefix: bottle(prefix), steamPath }]);
@@ -71,7 +71,7 @@ describe('bottleSteams', () => {
   });
 });
 
-describe('readBottleSteamLibraryFolders', () => {
+describe.skipIf(process.platform === 'win32')('readBottleSteamLibraryFolders', () => {
   it('maps the libraries of a bottle Steam through its drives, once each', () => {
     mocks.prefixes = [bottle(prefix)];
     expect(readBottleSteamLibraryFolders()).toEqual([

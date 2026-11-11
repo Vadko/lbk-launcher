@@ -49,7 +49,7 @@ const ref = (launcher: WinePrefixRef['launcher']): WinePrefixRef => ({
   label: 'Bottle',
 });
 
-describe('wineCommand', () => {
+describe.skipIf(process.platform === 'win32')('wineCommand', () => {
   it.each([
     ['an exe, waited for', 'setup.exe', 'wait', ['C:\\Games\\Ihor\\setup.exe', '/S']],
     [

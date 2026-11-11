@@ -10,6 +10,7 @@ export const EPIC_INSTALLED_ITEMS_DIR =
 
 const installedItemSchema = z.object({
   v4: z.object({
+    installationId: z.string(),
     state: z.string(),
     dir: z.string().min(1),
     sandboxId: z.string().optional(),
@@ -17,6 +18,8 @@ const installedItemSchema = z.object({
     artifactId: z.string().optional(),
   }),
 });
+
+const GAME_INSTALLATION_ID = /^[0-9a-f]{32}$/i;
 
 export interface EpicInstalledItem {
   /** The game folder as EGL wrote it, a Windows path */
@@ -35,7 +38,8 @@ export function readEpicInstalledItems(itemsDir: string): EpicInstalledItem[] {
   }
   return files.flatMap((name) => {
     const item = readJsonFile(path.join(itemsDir, name), installedItemSchema)?.v4;
-    if (item?.state !== 'Installed') {
+    // EGL's own EOS components (overlay, service, support) are items too, named so; a game's id is a GUID
+    if (item?.state !== 'Installed' || !GAME_INSTALLATION_ID.test(item.installationId)) {
       return [];
     }
     const { sandboxId, itemId, artifactId } = item;
