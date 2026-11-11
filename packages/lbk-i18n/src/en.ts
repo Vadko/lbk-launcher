@@ -660,6 +660,11 @@ export const en = {
     platformAuto: 'Automatic ({{platform}})',
     platformManual: 'Manual selection ({{platform}})',
     platformFound: 'Found',
+    platformInBottle: '{{platform}} in the “{{bottle}}” bottle',
+    wineTarget:
+      'The game was found in the CrossOver bottle “{{bottle}}”. The Ukrainian patch goes into it, and «Play» starts the game through that bottle’s launcher.',
+    wineTarget_steam:
+      'The game was found in the CrossOver bottle “{{bottle}}”. The Ukrainian patch goes into it, and the launch options and artwork into that bottle’s Steam. Achievements are not available here: LBK Bridge works only with Steam for macOS.',
     platformNotFound: 'Not found (select manually)',
     platformLabel: 'Game platform',
     platformPlaceholder: 'Select a platform',
@@ -702,6 +707,9 @@ export const en = {
     installerFileNotFound: 'installer file not found: {{path}}',
     launching: 'Starting installer...',
     protonSetup: 'Setting up and starting Proton',
+    wineSetup: 'Starting in the Wine bottle “{{bottle}}”...',
+    wineMissing:
+      'No Wine found for the bottle “{{bottle}}”. Install CrossOver (or Wine for a bottle added by hand).',
     notCompleted: 'installation was not completed',
     windowsNeedsProton: 'The Windows installer ({{extensions}}) requires Proton.',
     runFailed: 'Could not start installer: {{error}}',
@@ -811,6 +819,8 @@ export const en = {
     writeFailed: 'Could not save launch options',
     eglWriteFailed: 'could not change the game settings in Epic Games Launcher',
     eglGameNotFound: 'the game is not among those installed with Epic Games Launcher',
+    eglInWine:
+      'LBK Launcher does not write them into Epic Games Launcher in a Wine bottle, so add them in the game settings there',
     eglNeedsShell:
       'they only work through the shell Steam starts them with, and Epic Games Launcher cannot do that',
     eglQueued:
@@ -1164,6 +1174,10 @@ export const en = {
       'The Ukrainian patch for “{{name}}” has been downloaded and extracted. The Windows installer will run using your selected Proton version.\n\nThe folder path will be copied to the clipboard.',
     scriptProtonMessage:
       'The Ukrainian patch for “{{name}}” has been downloaded and extracted. The Windows script will run using your selected Proton version.\n\nThe folder path will be copied to the clipboard.',
+    exeWineMessage:
+      'The Ukrainian patch for “{{name}}” has been downloaded and extracted. The Windows installer will run in the “{{bottle}}” bottle.\n\nThe folder path will be copied to the clipboard.',
+    scriptWineMessage:
+      'The Ukrainian patch for “{{name}}” has been downloaded and extracted. The Windows script will run in the “{{bottle}}” bottle.\n\nThe folder path will be copied to the clipboard.',
     exeAskMessage:
       'The Ukrainian patch for “{{name}}” has been downloaded and extracted.\n\nRun the installer now?',
     scriptAskMessage:
@@ -1287,6 +1301,21 @@ export const en = {
       synced_many: 'Synced {{count}} games: {{games}}',
       synced_other: 'Synced {{count}} games: {{games}}',
       none: 'No games installed through Kurin were found, or Kurin is not installed.',
+    },
+    wine: {
+      title: 'Wine bottles',
+      description:
+        'Steam games in CrossOver bottles are found by themselves. Add a bottle from another folder or another Wine by hand.',
+      none: 'No bottles found.',
+      withSteam: 'with Steam',
+      noSteam: 'no Steam',
+      remove: 'Remove the “{{bottle}}” bottle',
+      add: 'Add a bottle',
+      pickTitle: 'Choose a Wine bottle folder',
+      pickButton: 'Add',
+      'addFailed_not-a-prefix':
+        'This is not a Wine bottle: the chosen folder has no drive_c and system.reg.',
+      addFailed_failed: 'Could not add the bottle.',
     },
     lbkShortcut: {
       title: 'LBK Launcher in your Steam library',

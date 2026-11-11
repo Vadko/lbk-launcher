@@ -662,6 +662,11 @@ export const pl = {
     platformAuto: 'Automatycznie ({{platform}})',
     platformManual: 'Wybór ręczny ({{platform}})',
     platformFound: 'Znaleziono',
+    platformInBottle: '{{platform}} w butelce „{{bottle}}”',
+    wineTarget:
+      'Gra została znaleziona w butelce CrossOver „{{bottle}}”. Ukraińska lokalizacja trafi do niej, a „Graj” uruchomi grę przez launcher tej butelki.',
+    wineTarget_steam:
+      'Gra została znaleziona w butelce CrossOver „{{bottle}}”. Ukraińska lokalizacja trafi do niej, a opcje uruchamiania i grafiki do Steam tej butelki. Osiągnięcia nie są tu dostępne: LBK Bridge działa tylko ze Steam dla macOS.',
     platformNotFound: 'Nie znaleziono (wybierz ręcznie)',
     platformLabel: 'Platforma gry',
     platformPlaceholder: 'Wybierz platformę',
@@ -704,6 +709,9 @@ export const pl = {
     installerFileNotFound: 'nie znaleziono pliku instalatora: {{path}}',
     launching: 'Uruchamianie instalatora...',
     protonSetup: 'Konfigurowanie i uruchamianie Proton',
+    wineSetup: 'Uruchamianie w butelce Wine „{{bottle}}”...',
+    wineMissing:
+      'Nie znaleziono Wine dla butelki „{{bottle}}”. Zainstaluj CrossOver (lub Wine dla butelki dodanej ręcznie).',
     notCompleted: 'instalacja nie została ukończona',
     windowsNeedsProton: 'Instalator dla Windows ({{extensions}}) wymaga Proton.',
     runFailed: 'Nie udało się uruchomić instalatora: {{error}}',
@@ -815,6 +823,8 @@ export const pl = {
     writeFailed: 'Nie udało się zapisać opcji uruchamiania',
     eglWriteFailed: 'nie udało się zmienić ustawień gry w Epic Games Launcher',
     eglGameNotFound: 'gry nie ma wśród zainstalowanych w Epic Games Launcher',
+    eglInWine:
+      'LBK Launcher nie zapisuje ich w Epic Games Launcher w butelce Wine, więc dodaj je tam w ustawieniach gry',
     eglNeedsShell:
       'działają tylko przez powłokę, z którą uruchamia je Steam, a Epic Games Launcher tego nie potrafi',
     eglQueued:
@@ -1179,6 +1189,10 @@ export const pl = {
       'Ukraińska lokalizacja „{{name}}” została pobrana i rozpakowana. Instalator dla Windows zostanie uruchomiony przy użyciu wybranej wersji Proton.\n\nŚcieżka do folderu zostanie skopiowana do schowka.',
     scriptProtonMessage:
       'Ukraińska lokalizacja „{{name}}” została pobrana i rozpakowana. Skrypt dla Windows zostanie uruchomiony przy użyciu wybranej wersji Proton.\n\nŚcieżka do folderu zostanie skopiowana do schowka.',
+    exeWineMessage:
+      'Ukraińska lokalizacja „{{name}}” została pobrana i rozpakowana. Instalator dla Windows zostanie uruchomiony w butelce „{{bottle}}”.\n\nŚcieżka do folderu zostanie skopiowana do schowka.',
+    scriptWineMessage:
+      'Ukraińska lokalizacja „{{name}}” została pobrana i rozpakowana. Skrypt dla Windows zostanie uruchomiony w butelce „{{bottle}}”.\n\nŚcieżka do folderu zostanie skopiowana do schowka.',
     exeAskMessage:
       'Ukraińska lokalizacja „{{name}}” została pobrana i rozpakowana.\n\nUruchomić instalator teraz?',
     scriptAskMessage:
@@ -1302,6 +1316,21 @@ export const pl = {
       synced_many: 'Zsynchronizowano {{count}} gier: {{games}}',
       synced_other: 'Zsynchronizowano {{count}} gry: {{games}}',
       none: 'Nie znaleziono gier zainstalowanych przez Kurin lub Kurin nie jest zainstalowany.',
+    },
+    wine: {
+      title: 'Butelki Wine',
+      description:
+        'Gry Steam w butelkach CrossOver są wykrywane automatycznie. Butelkę z innego folderu lub innego Wine dodaj ręcznie.',
+      none: 'Nie znaleziono butelek.',
+      withSteam: 'ze Steam',
+      noSteam: 'bez Steam',
+      remove: 'Usuń butelkę „{{bottle}}”',
+      add: 'Dodaj butelkę',
+      pickTitle: 'Wybierz folder butelki Wine',
+      pickButton: 'Dodaj',
+      'addFailed_not-a-prefix':
+        'To nie jest butelka Wine: wybrany folder nie zawiera drive_c i system.reg.',
+      addFailed_failed: 'Nie udało się dodać butelki.',
     },
     lbkShortcut: {
       title: 'LBK Launcher w bibliotece Steam',

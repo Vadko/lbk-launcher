@@ -18,6 +18,10 @@ vi.mock('../utils/platform', () => ({
 }));
 
 vi.mock('registry-js', () => ({ HKEY: {} }));
+vi.mock('../wine/bottle-steam-roots', () => ({
+  bottleInstalledSteamGames: () => [],
+  invalidateBottleSteamCaches: () => undefined,
+}));
 vi.mock('../utils/registry', () => ({ getRegistryString: vi.fn() }));
 vi.mock('../utils/steam-bridge', () => ({ getSteamBridge: vi.fn() }));
 vi.mock('../steam-library-api', () => ({

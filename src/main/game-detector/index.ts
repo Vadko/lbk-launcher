@@ -7,6 +7,7 @@ import { G } from '@mobily/ts-belt';
 import type { DetectedGame, InstallPath } from '../../shared/types';
 import { fetchGames } from '../api';
 import { normalizeInstalledFolder } from '../utils/install-path';
+import { bottleGameCopies } from '../wine/bottle-game-copies';
 import { findEAGame } from './ea';
 import { findEpicGame, getHeroicEpicAppName } from './epic';
 import { findGOGGame, getHeroicGOGId } from './gog';
@@ -18,6 +19,7 @@ import {
   getInstalledSteamGames,
 } from './steam';
 import {
+  getInstalledBottleGamePaths,
   getInstalledEpicGamePathsCached,
   getInstalledGOGGamePathsCached,
   getInstalledRegistryGamePaths,
@@ -136,7 +138,7 @@ export function detectGamePath(
 }
 
 /**
- * Detect all possible paths for a game
+ * Detect all possible paths for a game, then its copies in CrossOver bottles (macOS only)
  */
 export function detectGamePaths(
   installPaths: InstallPath[],
@@ -151,7 +153,7 @@ export function detectGamePaths(
     }
   }
 
-  return results;
+  return [...results, ...bottleGameCopies(installPaths, steamAppId)];
 }
 
 /**
@@ -191,6 +193,12 @@ export function getAllInstalledGamePaths(): string[] {
     installedPaths.push(...getInstalledEpicGamePathsCached());
   } catch (error) {
     console.error('[GameDetector] Error getting Epic games:', error);
+  }
+
+  try {
+    installedPaths.push(...getInstalledBottleGamePaths());
+  } catch (error) {
+    console.error('[GameDetector] Error getting games in Wine prefixes:', error);
   }
 
   // Xbox games

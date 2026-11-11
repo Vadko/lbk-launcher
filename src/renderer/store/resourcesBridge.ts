@@ -22,6 +22,7 @@ const SUBSCRIBE_AT = {
   ratings: 'idle',
   steamBridgeStatus: 'idle',
   pluginHostState: 'idle',
+  wineBottles: 'idle',
 } as const satisfies Record<ResourceKey, 'start' | 'idle'>;
 
 const keysAt = (when: 'start' | 'idle'): ResourceKey[] =>

@@ -8,6 +8,7 @@ import type {
   TagOption,
 } from './types';
 import type { WeeklyPicks } from './weekly-picks-types';
+import type { WineBottle } from './wine-types';
 
 // State main owns and pushes to the main window; the port's structured clone keeps Map and Set
 export interface ResourceMap {
@@ -26,6 +27,8 @@ export interface ResourceMap {
   newStarGames: readonly Game[];
   steamBridgeStatus: SteamBridgeStatus;
   pluginHostState: PluginHostState;
+  // The Wine prefixes LBK reads games from, on a Mac only
+  wineBottles: readonly WineBottle[];
 }
 
 export type ResourceKey = keyof ResourceMap;

@@ -691,6 +691,11 @@ export const uk = {
     platformAuto: 'Автоматично ({{platform}})',
     platformManual: 'Ручний вибір ({{platform}})',
     platformFound: 'Знайдено',
+    platformInBottle: '{{platform}} у пляшці «{{bottle}}»',
+    wineTarget:
+      'Гру знайдено в пляшці CrossOver «{{bottle}}». Українізатор встановиться в неї, а «Грати» запустить гру через лаунчер цієї пляшки.',
+    wineTarget_steam:
+      'Гру знайдено в пляшці CrossOver «{{bottle}}». Українізатор встановиться в неї, а параметри запуску й обкладинки — у Steam цієї пляшки. Досягнення тут недоступні: LBK Bridge працює лише з Steam для macOS.',
     platformNotFound: 'Не знайдено (вибір вручну)',
     platformLabel: 'Платформа гри',
     platformPlaceholder: 'Оберіть платформу',
@@ -733,6 +738,9 @@ export const uk = {
     installerFileNotFound: 'файл інсталятора не знайдено: {{path}}',
     launching: 'Запуск інсталятора...',
     protonSetup: 'Налаштування та запуск Proton',
+    wineSetup: 'Запуск у пляшці Wine «{{bottle}}»...',
+    wineMissing:
+      'Не знайдено Wine для пляшки «{{bottle}}». Встановіть CrossOver (або Wine для пляшки, доданої вручну).',
     notCompleted: 'встановлення не завершено',
     windowsNeedsProton: 'Windows-інсталятор ({{extensions}}) потребує Proton.',
     runFailed: 'Не вдалося запустити інсталятор: {{error}}',
@@ -843,6 +851,8 @@ export const uk = {
     writeFailed: 'Не вдалося записати параметри запуску',
     eglWriteFailed: 'не вдалося змінити налаштування гри в Epic Games Launcher',
     eglGameNotFound: 'гру не знайдено серед встановлених через Epic Games Launcher',
+    eglInWine:
+      'LBK Launcher не записує їх в Epic Games Launcher у пляшці Wine, тож додайте їх у налаштуваннях гри там',
     eglNeedsShell:
       'вони виконуються лише через оболонку, якою їх запускає Steam, а Epic Games Launcher так не вміє',
     eglQueued:
@@ -1508,6 +1518,10 @@ export const uk = {
       'Українізатор для «{{name}}» завантажено й розпаковано. Інсталятор для Windows буде запущено через вибрану версію Proton.\n\nШлях до теки буде скопійовано в буфер обміну.',
     scriptProtonMessage:
       'Українізатор для «{{name}}» завантажено й розпаковано. Скрипт для Windows буде запущено через вибрану версію Proton.\n\nШлях до теки буде скопійовано в буфер обміну.',
+    exeWineMessage:
+      'Українізатор для «{{name}}» завантажено й розпаковано. Інсталятор для Windows буде запущено в пляшці «{{bottle}}».\n\nШлях до теки буде скопійовано в буфер обміну.',
+    scriptWineMessage:
+      'Українізатор для «{{name}}» завантажено й розпаковано. Скрипт для Windows буде запущено в пляшці «{{bottle}}».\n\nШлях до теки буде скопійовано в буфер обміну.',
     exeAskMessage:
       'Українізатор для «{{name}}» завантажено та розпаковано.\n\nЗапустити інсталятор зараз?',
     scriptAskMessage:
@@ -1634,6 +1648,21 @@ export const uk = {
       synced_many: 'Синхронізовано {{count}} ігор: {{games}}',
       synced_other: 'Синхронізовано {{count}} гри: {{games}}',
       none: 'Не знайдено ігор, встановлених через Kurin, або Kurin не встановлено.',
+    },
+    wine: {
+      title: 'Пляшки Wine',
+      description:
+        'Ігри зі Steam у пляшках CrossOver знаходяться самі. Пляшку з іншої теки або з іншого Wine додайте вручну.',
+      none: 'Пляшок не знайдено.',
+      withSteam: 'зі Steam',
+      noSteam: 'без Steam',
+      remove: 'Прибрати пляшку «{{bottle}}»',
+      add: 'Додати пляшку',
+      pickTitle: 'Оберіть теку пляшки Wine',
+      pickButton: 'Додати',
+      'addFailed_not-a-prefix':
+        'Це не пляшка Wine: у вибраній теці немає drive_c і system.reg.',
+      addFailed_failed: 'Не вдалося додати пляшку.',
     },
     lbkShortcut: {
       title: 'LBK Launcher у бібліотеці Steam',

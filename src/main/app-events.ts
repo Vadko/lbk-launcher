@@ -23,6 +23,7 @@ interface AppEventMap {
   'likes-changed': [];
   'workshop-installs-changed': [];
   'hide-ai-changed': [];
+  'wine-prefixes-changed': [];
   error: [error: unknown];
 }
 

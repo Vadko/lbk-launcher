@@ -7,10 +7,12 @@ import { resolveGameDirToken } from '@/main/utils/launch-options-value';
 import { isLinux, isWindows } from '@/main/utils/platform';
 import { t } from '@/shared/i18n/i18n';
 import type { Game, Platform } from '@/shared/types';
+import type { WinePrefixRef } from '@/shared/wine-types';
 
 interface EglIntegrationTarget {
   platform: Platform;
   path: string;
+  wine?: WinePrefixRef;
 }
 
 interface EglIntegrationResult {
@@ -91,6 +93,14 @@ export function applyEglIntegration(
 ): Promise<EglIntegrationResult> {
   if (target.platform !== 'epic') {
     return Promise.resolve({});
+  }
+  // The EGL in a CrossOver bottle keeps its settings inside the bottle, which LBK does not edit
+  if (target.wine) {
+    return Promise.resolve(
+      game.steam_launch_options_windows?.trim()
+        ? { launchOptionsError: t('launchOptions.eglInWine') }
+        : {}
+    );
   }
   const windowsOptions = isWindows() ? game.steam_launch_options_windows : null;
   if (windowsOptions) {

@@ -11,8 +11,9 @@ import {
   invalidateSteamLibraryAppIdsCache,
   updateLastKnownLicensecacheSize,
 } from './game-detector/steam';
-import { parseLibraryFolders } from './utils/vdf-parser';
+import { readSteamLibraryFolders } from './game-detector/steam-library';
 import { sendToRenderer } from './window';
+import { readBottleSteamLibraryFolders } from './wine/bottle-steam-roots';
 
 function notifyLibraryChanged(): void {
   sendToRenderer('steam-library-changed');
@@ -24,6 +25,16 @@ let licensecacheWatcher: fs.FSWatcher | null = null;
 let watchedLibraryFolders = '';
 const DEBOUNCE = { delay: 2000, leading: false };
 const LIBRARY_FOLDERS_FILE = 'libraryfolders.vdf';
+
+// Read afresh, not from the detector's cache, which is what a change is told against
+function currentLibraryFolders(): string[] {
+  const steamPath = getSteamPath();
+  return [
+    ...(steamPath ? readSteamLibraryFolders(steamPath) : []),
+    // The Steam in each CrossOver bottle, macOS only
+    ...readBottleSteamLibraryFolders(),
+  ];
+}
 
 /** Appmanifest changes (game install/uninstall). */
 const libraryChanged = F.makeControlledDebounce(() => {
@@ -50,11 +61,7 @@ const ownedGamesChanged = F.makeControlledDebounce(() => {
 
 // libraryfolders.vdf also stores per-library app lists and sizes, so most rewrites leave the folder list as is
 const libraryFoldersChanged = F.makeControlledDebounce(() => {
-  const steamPath = getSteamPath();
-  if (
-    !steamPath ||
-    getSteamLibraryFolders(steamPath).join('|') === watchedLibraryFolders
-  ) {
+  if (currentLibraryFolders().join('|') === watchedLibraryFolders) {
     return;
   }
   console.log('[SteamWatcher] Steam library folders changed, restarting watchers');
@@ -63,32 +70,12 @@ const libraryFoldersChanged = F.makeControlledDebounce(() => {
   notifyLibraryChanged();
 }, DEBOUNCE);
 
-/**
- * Get all Steam library folders from libraryfolders.vdf
- */
-function getSteamLibraryFolders(steamPath: string): string[] {
-  const folders: string[] = [path.join(steamPath, 'steamapps')];
-
-  try {
-    const libraryFoldersPath = path.join(steamPath, 'steamapps', LIBRARY_FOLDERS_FILE);
-    if (fs.existsSync(libraryFoldersPath)) {
-      const content = fs.readFileSync(libraryFoldersPath, 'utf8');
-      const libraryPaths = parseLibraryFolders(content);
-
-      for (const libraryPath of libraryPaths) {
-        const normalizedPath = libraryPath.replace(/\\\\/g, '\\');
-        const steamappsPath = path.join(normalizedPath, 'steamapps');
-        if (fs.existsSync(steamappsPath) && !folders.includes(steamappsPath)) {
-          folders.push(steamappsPath);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('[SteamWatcher] Error parsing library folders:', error);
-  }
-
-  return folders;
-}
+appEvents.on('wine-prefixes-changed', () => {
+  console.log('[SteamWatcher] Wine prefixes changed, restarting watchers');
+  invalidateSteamInstalledCaches();
+  startSteamWatcher();
+  notifyLibraryChanged();
+});
 
 /**
  * Start watching a steamapps folder for appmanifest changes
@@ -161,14 +148,11 @@ export function startSteamWatcher(): void {
   // Close any existing watchers first to prevent EMFILE errors
   stopSteamWatcher();
 
-  const steamPath = getSteamPath();
-  if (!steamPath) {
+  const libraryFolders = currentLibraryFolders();
+  if (libraryFolders.length === 0) {
     console.log('[SteamWatcher] Steam not found, watcher not started');
     return;
   }
-
-  // Watch all steamapps folders for appmanifest changes
-  const libraryFolders = getSteamLibraryFolders(steamPath);
   watchedLibraryFolders = libraryFolders.join('|');
 
   for (const steamappsPath of libraryFolders) {
