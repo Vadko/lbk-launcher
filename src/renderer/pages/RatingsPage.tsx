@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDownloads } from '@/shared/formatters';
 import { t } from '@/shared/i18n/i18n';
+import { perLocale } from '@/shared/i18n/locale';
 import type { GameRatingItem, TeamRatingItem } from '@/shared/ratings-types';
 import { StatusBadge } from '../components/Elements/StatusBadge';
 import { RatingsSearch } from '../components/Ratings/RatingsSearch';
@@ -26,12 +27,12 @@ const teamKey = (team: TeamRatingItem) => team.name;
 const gameKey = (game: GameRatingItem) => game.id;
 const gameName = (game: GameRatingItem) => game.name;
 
-const numberFormat = new Intl.NumberFormat('uk-UA');
+const numberFormat = perLocale((locale) => new Intl.NumberFormat(locale));
 
 const likesCell = (likes: number) => (
   <span className="inline-flex items-center gap-1.5 font-bold text-color-main">
     <ThumbsUpIcon size={14} />
-    {numberFormat.format(likes)}
+    {numberFormat().format(likes)}
   </span>
 );
 

@@ -12,6 +12,7 @@ interface AppEventMap {
   'millennium-phase': [phase: 'install-files' | 'installed'];
   'millennium-applied': [report: MillenniumApplyReport];
   'sync-status': [status: SyncStatus];
+  'language-changed': [];
   // Sources of the resources main pushes to the renderer
   'catalog-changed': [];
   'library-changed': [];

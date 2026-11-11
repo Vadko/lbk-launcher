@@ -1,4 +1,9 @@
+import type { ReviewEvent } from '../../../shared/game-reviews-types';
 import type { Game } from '../../../shared/types';
+import type { ReviewRefusalReason } from '../../utils/reviewRefusalMessage';
+
+// The translationProgress dictionary keys
+export type ProgressKind = 'translation' | 'editing' | 'voice' | 'textures' | 'fonts';
 
 interface BaseNotification {
   id: string;
@@ -18,22 +23,29 @@ interface BaseNotification {
   // The review thread and entry a review notice is about
   feedbackId?: string;
   entryId?: string;
+  // A status (an older notice holds its label) or a version
+  oldValue?: string;
+  newValue?: string;
+  teamName?: string;
+  // Raw values the notice is worded from in the language shown
+  progress?: { kind: ProgressKind; from: number; to: number };
+  reply?: Pick<ReviewEvent, 'authorRole' | 'authorName' | 'message'>;
+  refusalReason?: ReviewRefusalReason;
+  // The worded reply or refusal of a notice stored before its raw values
+  message?: string;
 }
 
 export interface Notification extends BaseNotification {
-  oldValue?: string;
-  newValue?: string;
   gameId: string;
-  teamName?: string;
   read: boolean;
-  message?: string;
   sourceId?: string;
 }
 
 export interface ToastNotification extends BaseNotification {
-  message: string;
   gameId: string;
 }
+
+export type NoticeContent = Omit<BaseNotification, 'id' | 'timestamp'>;
 
 export type GameProgress = Pick<
   Game,
@@ -43,6 +55,15 @@ export type GameProgress = Pick<
   | 'textures_progress'
   | 'fonts_progress'
 >;
+
+// The translationProgress dictionary key of each progress column
+export const PROGRESS_KINDS: Record<keyof GameProgress, ProgressKind> = {
+  translation_progress: 'translation',
+  editing_progress: 'editing',
+  voice_progress: 'voice',
+  textures_progress: 'textures',
+  fonts_progress: 'fonts',
+};
 
 export interface SerializedMap {
   __type: 'Map';

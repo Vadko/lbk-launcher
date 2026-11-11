@@ -1059,9 +1059,9 @@ export const uk = {
     appUpdate: 'Доступна нова версія застосунку: {{version}}',
     teamNewGame: 'Нова локалізація від <team/>',
     teamStatusChange: '<team/>: стан змінено на «<status/>»',
+    progressChange: '{{kind}}: {{to}}%',
     feedbackReply: 'Нова відповідь:',
     reviewRejected: 'Запис не прийнято:',
-    fallback: 'Нове сповіщення',
     appUpdatesTitle: 'Оновлення застосунку',
     appUpdatesDescription: 'Сповіщення про нові версії LBK Launcher',
     gameUpdatesTitle: 'Оновлення українізаторів',
@@ -1082,7 +1082,6 @@ export const uk = {
     firstFavorite: 'Натисніть, щоб відфільтрувати список улюблених',
     feedbackReply: 'Нова відповідь',
     reviewPublished: 'Ваш допис пройшов модерацію, і тепер його бачать усі.',
-    fallback: 'Нове сповіщення',
   },
   notificationToast: {
     'status-change': 'Зміна стану',
@@ -1102,6 +1101,7 @@ export const uk = {
     teamStatusChange: '{{team}}: стан змінено на «{{status}}»',
     feedbackReplyTitle: 'Нова відповідь: {{game}}',
     replyBy: '{{name}}: {{message}}',
+    progressChange: '{{kind}}: {{from}}% → {{to}}%',
   },
   pendingLaunchOptions: {
     queued_one: 'Очікують закриття Steam: параметри запуску для {{count}} гри.',
@@ -1555,6 +1555,10 @@ export const uk = {
   },
   settings: {
     title: 'Налаштування',
+    language: {
+      title: 'Мова',
+      description: 'Мова інтерфейсу лаунчера',
+    },
     feedback: {
       title: "Зворотний зв'язок",
       description: 'Написати нам у Telegram',

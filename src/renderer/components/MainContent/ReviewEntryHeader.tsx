@@ -1,6 +1,7 @@
 import { BugIcon, CornerDownRightIcon, LockIcon } from 'lucide-react';
 import type { GameReviewAuthor } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
+import { currentLocale } from '@/shared/i18n/locale';
 import { reviewAuthorName } from '../../utils/reviewAuthorName';
 import { Tooltip } from '../ui/Tooltip';
 import { ReviewModerationBadge } from './ReviewModerationBadge';
@@ -26,7 +27,7 @@ const TIME_FORMAT: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-di
 function formatReviewDate(iso: string): string {
   const date = new Date(iso);
   const now = new Date();
-  const time = date.toLocaleTimeString('uk-UA', TIME_FORMAT);
+  const time = date.toLocaleTimeString(currentLocale(), TIME_FORMAT);
   const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const daysAgo = Math.round(
     (dayStart(now).getTime() - dayStart(date).getTime()) / 86_400_000
@@ -39,7 +40,7 @@ function formatReviewDate(iso: string): string {
     return t('gameReviews.yesterday', { time });
   }
   const day = date
-    .toLocaleDateString('uk-UA', {
+    .toLocaleDateString(currentLocale(), {
       day: 'numeric',
       month: 'short',
       ...(date.getFullYear() !== now.getFullYear() && { year: 'numeric' }),

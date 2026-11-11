@@ -11,6 +11,7 @@ import {
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
+import { useOpenNewsPage } from '../../hooks/useOpenNewsPage';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
@@ -29,6 +30,7 @@ export function SidebarFooter({
   isCompact = false,
 }: SidebarFooterProps) {
   const navigate = useNavigate();
+  const openNewsPage = useOpenNewsPage();
   const { uiSoundsEnabled, toggleUiSounds } = useSettingsStore();
   const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
   const [badgeRef, animateBadge] = useAnimate<HTMLSpanElement>();
@@ -77,7 +79,7 @@ export function SidebarFooter({
             <TrophyIcon size={20} className="mx-auto text-text-muted" />
           </button>
           <button
-            onClick={() => navigate('/news')}
+            onClick={openNewsPage}
             data-nav-group="sidebar-actions"
             data-gamepad-header-item
             className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"

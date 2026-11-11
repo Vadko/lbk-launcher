@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { NewsFeedSection } from '../components/MainContent/NewsFeedSection';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useStore } from '../store/useStore';
-import { trackEvent } from '../utils/analytics';
 
 /**
  * Launcher news page
@@ -17,10 +16,6 @@ export function NewsPage() {
   useEffect(() => {
     setSelectedGame(null);
   }, [setSelectedGame]);
-
-  useEffect(() => {
-    trackEvent('News Page Open');
-  }, []);
 
   return (
     <div

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useFocusEntry } from '../../hooks/useFocusEntry';
 import type { ReviewThreadView } from '../../queries/reviewViewTypes';
+import { replyDraftKey, useReviewDraftsStore } from '../../store/useReviewDraftsStore';
 import { buildReplyTree, type ReplyNode } from '../../utils/replyTree';
 import { ReviewComposer } from './ReviewComposer';
 import { ReviewEntry } from './ReviewEntry';
@@ -38,7 +39,16 @@ export function ReviewThread({
   onFocused,
 }: ReviewThreadProps) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const reply = useReviewDraftsStore((state) => state.replies[review.id]);
+  const replyingTo = reply?.entryId ?? null;
+  const setReplyingTo = (entryId: string | null) => {
+    const drafts = useReviewDraftsStore.getState();
+    if (entryId === null) {
+      drafts.closeReply(review.id);
+    } else {
+      drafts.openReply(review.id, entryId);
+    }
+  };
   const tree = buildReplyTree(review.id, review.replies, MAX_DEPTH);
   useFocusEntry({
     rootId: review.id,
@@ -65,6 +75,11 @@ export function ReviewThread({
         <ReviewReveal key="composer">
           <div className="pt-1.5">
             <ReviewComposer
+              draftKey={replyDraftKey(review.id)}
+              text={reply?.text ?? ''}
+              onTextChange={(text) =>
+                useReviewDraftsStore.getState().setReplyText(review.id, text)
+              }
               submitLabel={t('gameReviews.send')}
               captchaAction="reply"
               isPublic={review.isPublic}

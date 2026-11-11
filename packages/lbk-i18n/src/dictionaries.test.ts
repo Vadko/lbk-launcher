@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { be } from './be';
 import { en } from './en';
+import { pl } from './pl';
 import { uk } from './uk';
 
 interface Dictionary {
@@ -25,7 +26,7 @@ const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
 
 const source = flatten(uk);
 
-describe.each(Object.entries({ be, en }))('%s dictionary', (_locale, dictionary) => {
+describe.each(Object.entries({ be, en, pl }))('%s dictionary', (_locale, dictionary) => {
   const translated = new Map(flatten(dictionary));
 
   it('keeps the interpolations and tags of every uk message', () => {
@@ -45,7 +46,7 @@ describe.each(Object.entries({ be, en }))('%s dictionary', (_locale, dictionary)
   });
 });
 
-describe.each(Object.entries({ uk, be, en }))('%s plurals', (locale, dictionary) => {
+describe.each(Object.entries({ uk, be, en, pl }))('%s plurals', (locale, dictionary) => {
   it('have every form the locale tells apart', () => {
     const keys = new Set(flatten(dictionary).map(([key]) => key));
     const bases = new Set(

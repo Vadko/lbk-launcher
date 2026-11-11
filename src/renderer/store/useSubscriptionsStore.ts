@@ -3,12 +3,11 @@ import { persist } from 'zustand/middleware';
 import { t } from '@/shared/i18n/i18n';
 import type { ReviewEvent } from '../../shared/game-reviews-types';
 import { isGameReviewNotice } from '../utils/isGameReviewNotice';
+import { notificationMessage } from '../utils/notificationMessage';
 import { reviewModerationKey } from '../utils/reviewModerationKey';
-import { reviewReplyText } from '../utils/reviewReplyText';
 import {
   createNotification,
   createToast,
-  getNotificationMessage,
   playNotificationSoundIfEnabled,
   scheduleToastDismissal,
   showSystemNotificationIfHidden,
@@ -26,6 +25,7 @@ import type {
   GameProgress,
   Notification,
   PersistedSubscriptionsState,
+  ProgressKind,
   ToastNotification,
 } from './subscriptions/types';
 
@@ -85,7 +85,7 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
   addProgressChangeNotification: (
     gameId: string,
     gameName: string,
-    progressType: string,
+    kind: ProgressKind,
     oldValue: number,
     newValue: number,
     showToast?: boolean
@@ -301,8 +301,8 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
-          const message = getNotificationMessage(notificationParams);
-          const toast = createToast(notification, message);
+          const message = notificationMessage(notification);
+          const toast = createToast(notification);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
@@ -346,10 +346,8 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         });
 
         if (showToast) {
-          const message = t('notifications.versionAvailable', {
-            version: newVersion,
-          });
-          const toast = createToast(notification, message);
+          const message = notificationMessage(notification);
+          const toast = createToast(notification);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
@@ -364,7 +362,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
       addProgressChangeNotification: (
         gameId,
         gameName,
-        progressType,
+        kind,
         oldValue,
         newValue,
         showToast = true
@@ -373,16 +371,15 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           type: 'progress-change',
           gameId,
           gameName,
-          oldValue: `${progressType}: ${oldValue}%`,
-          newValue: `${progressType}: ${newValue}%`,
+          progress: { kind, from: oldValue, to: newValue },
           idPrefix: `${gameId}-progress`,
         });
 
         set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
-          const message = `${progressType}: ${oldValue}% → ${newValue}%`;
-          const toast = createToast(notification, message);
+          const message = notificationMessage(notification);
+          const toast = createToast(notification);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
@@ -415,10 +412,8 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         });
 
         if (showToast) {
-          const message = t('notifications.versionAvailable', {
-            version: newVersion,
-          });
-          const toast = createToast(notification, message);
+          const message = notificationMessage(notification);
+          const toast = createToast(notification);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
@@ -443,8 +438,8 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
-          const message = t('notifications.teamNewGame', { team: teamName });
-          const toast = createToast(notification, message);
+          const message = notificationMessage(notification);
+          const toast = createToast(notification);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
@@ -477,11 +472,8 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
-          const message = t('notifications.teamStatusChange', {
-            team: teamName,
-            status: newStatus,
-          });
-          const toast = createToast(notification, message);
+          const message = notificationMessage(notification);
+          const toast = createToast(notification);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
@@ -504,12 +496,8 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
-          const message = getNotificationMessage({
-            type: 'first-favorite',
-            gameId,
-            gameName,
-          });
-          const toast = createToast(notification, message);
+          const message = notificationMessage(notification);
+          const toast = createToast(notification);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
@@ -527,7 +515,6 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           return false;
         }
 
-        const message = reviewReplyText(reply);
         const notification: Notification = {
           id: `feedback-reply-${reply.entryId}`,
           type: 'feedback-reply',
@@ -535,7 +522,11 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           gameName: reply.gameName,
           feedbackId: reply.feedbackId,
           entryId: reply.entryId,
-          message,
+          reply: {
+            authorRole: reply.authorRole,
+            authorName: reply.authorName,
+            message: reply.message,
+          },
           sourceId: reply.entryId,
           timestamp: Date.parse(reply.createdAt),
           read: false,
@@ -550,8 +541,8 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         }));
 
         if (showToast) {
-          // The toast renders "gameName • message", so pass just the reply text.
-          const toast = createToast(notification, message);
+          const message = notificationMessage(notification);
+          const toast = createToast(notification);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
@@ -589,7 +580,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         set((state) => ({ toasts: [...state.toasts, toast] }));
         playNotificationSoundIfEnabled(toast.type);
         scheduleToastDismissal(toast.id, get().dismissToast);
-        showSystemNotificationIfHidden(toast.gameName, toast.message, toast);
+        showSystemNotificationIfHidden(toast.gameName, notificationMessage(toast), toast);
       },
 
       markNotificationAsRead: (notificationId) => {
