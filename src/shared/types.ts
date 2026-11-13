@@ -78,11 +78,14 @@ export interface StoreDiscount {
 
 export interface NewsFeedItem {
   id: string;
+  postId: number;
   url: string;
   title?: string;
   content?: string;
-  publishedAt?: string;
+  publishedAt: string;
 }
+
+export type NewsFeedCursor = Pick<NewsFeedItem, 'publishedAt' | 'postId'>;
 
 export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
 
@@ -337,7 +340,10 @@ export interface ElectronAPI
   setGameVisibility: (gameId: string, hidden: boolean) => Promise<boolean>;
   getAllInstalledGameIds: () => Promise<string[]>;
   removeOrphanedMetadata: (gameIds: string[]) => Promise<{ success: boolean }>;
-  fetchNewsFeed: (filter: NewsFeedFilter, before?: string) => Promise<NewsFeedItem[]>;
+  fetchNewsFeed: (
+    filter: NewsFeedFilter,
+    before?: NewsFeedCursor
+  ) => Promise<NewsFeedItem[]>;
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
   selectGameFolder: () => Promise<string | null>;
   // Real-time updates (managed automatically in the main process)

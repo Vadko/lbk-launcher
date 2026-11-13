@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { afterCursor, collectPages, keysetPages, latest, rewind } from './sync-cursor';
+import {
+  afterCursor,
+  beforeCursor,
+  collectPages,
+  keysetPages,
+  latest,
+  rewind,
+} from './sync-cursor';
 
 describe('latest', () => {
   it('compares instants, not strings, so mixed offsets and precisions order correctly', () => {
@@ -30,6 +37,12 @@ it('rewinds a cursor by the overlap a caller asks for', () => {
 it('quotes values so timestamps survive the or-filter syntax', () => {
   expect(afterCursor('updated_at', '2026-10-20T20:00:00.5+00:00', 'id', 'abc')).toBe(
     'updated_at.gt."2026-10-20T20:00:00.5+00:00",and(updated_at.eq."2026-10-20T20:00:00.5+00:00",id.gt."abc")'
+  );
+});
+
+it('spells the descending cursor with lt on both columns', () => {
+  expect(beforeCursor('posted_at', '2026-10-20T20:00:00+00:00', 'id', 42)).toBe(
+    'posted_at.lt."2026-10-20T20:00:00+00:00",and(posted_at.eq."2026-10-20T20:00:00+00:00",id.lt."42")'
   );
 });
 
