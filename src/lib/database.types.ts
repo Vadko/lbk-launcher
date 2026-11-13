@@ -2465,6 +2465,7 @@ export type Database = {
           created_at: string
           entry_id: string | null
           entry_kind: string | null
+          id: string
           machine_id: string
           reason: Database["public"]["Enums"]["review_moderation_reason"]
           source: Database["public"]["Enums"]["review_moderation_source"]
@@ -2476,6 +2477,7 @@ export type Database = {
           created_at?: string
           entry_id?: string | null
           entry_kind?: string | null
+          id?: string
           machine_id: string
           reason: Database["public"]["Enums"]["review_moderation_reason"]
           source: Database["public"]["Enums"]["review_moderation_source"]
@@ -2486,6 +2488,7 @@ export type Database = {
           created_at?: string
           entry_id?: string | null
           entry_kind?: string | null
+          id?: string
           machine_id?: string
           reason?: Database["public"]["Enums"]["review_moderation_reason"]
           source?: Database["public"]["Enums"]["review_moderation_source"]
@@ -3740,11 +3743,12 @@ export type Database = {
       }
       get_review_author: { Args: { p_machine_id: string }; Returns: Json }
       get_review_bans: {
-        Args: { p_limit?: number; p_offset?: number }
+        Args: { p_cursor?: string; p_limit?: number; p_offset?: number }
         Returns: Json
       }
       get_review_machine_entries: {
         Args: {
+          p_cursor?: string
           p_id: string
           p_kind: string
           p_limit?: number
@@ -3753,7 +3757,12 @@ export type Database = {
         Returns: Json
       }
       get_review_moderation_queue: {
-        Args: { p_limit?: number; p_offset?: number; p_state?: string }
+        Args: {
+          p_cursor?: string
+          p_limit?: number
+          p_offset?: number
+          p_state?: string
+        }
         Returns: Json
       }
       get_store_discounts: {
@@ -3867,6 +3876,10 @@ export type Database = {
         }[]
       }
       mfa_satisfied: { Args: Record<PropertyKey, never>; Returns: boolean }
+      parse_list_cursor: {
+        Args: { p_cursor: string }
+        Returns: Record<string, unknown>
+      }
       post_review: {
         Args: {
           p_app_version?: string
