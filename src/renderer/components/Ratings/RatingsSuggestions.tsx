@@ -40,42 +40,37 @@ export const RatingsSuggestions = <T,>({
       role="option"
       aria-selected={index === active}
       tabIndex={-1}
-      data-gamepad-action
+      data-gamepad-dropdown-item
       // Keeps the focus in the field, so a click does not close the list before it lands
       onMouseDown={(e) => e.preventDefault()}
       onMouseEnter={() => onActive(index)}
+      onFocus={() => onActive(index)}
       onClick={() => onChoose(index)}
-      className="relative flex h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-base"
+      className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-text-muted outline-hidden transition-colors aria-selected:bg-glass aria-selected:text-text-main focus:bg-glass-hover focus:text-text-main"
     >
-      {index === active && (
-        <motion.span
-          layoutId={`${id}-active`}
-          transition={{ type: 'spring', stiffness: 600, damping: 45 }}
-          className="absolute inset-0 rounded-lg bg-white/5"
-        />
-      )}
-      <SearchIcon size={20} className="relative shrink-0 text-text-muted" />
-      <span className="relative min-w-0 flex-1 truncate">{label}</span>
+      <SearchIcon size={16} className="shrink-0 text-text-muted" />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
     </button>
   );
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -6, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -6, scale: 0.98 }}
-      transition={{ duration: 0.15, ease: 'easeOut' }}
-      className="absolute inset-x-0 top-full z-30 mt-2 origin-top overflow-hidden rounded-xl border border-border bg-card shadow-[0_12px_32px_rgba(0,0,0,0.4)]"
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.15 }}
+      data-gamepad-dropdown
+      className="absolute inset-x-0 top-full z-60 mt-1 overflow-hidden rounded-lg border border-border bg-bg-dark shadow-xl"
     >
       {suggestions.length === 0 ? (
-        <div role="status" className="flex flex-col gap-1 px-5 py-4">
-          <p className="text-base font-semibold text-text-main">
+        <div role="status" className="flex flex-col gap-1 px-3 py-4">
+          <p className="text-sm font-semibold text-text-main">
             {t('ratings.search.noResults')}
           </p>
           <p className="text-sm text-text-muted">{t('ratings.search.noResultsHint')}</p>
         </div>
       ) : (
-        <div id={id} role="listbox" className="flex flex-col gap-0.5 p-2">
+        <div id={id} role="listbox" className="flex flex-col py-1">
           {option(
             0,
             <>

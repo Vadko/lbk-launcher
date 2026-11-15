@@ -82,11 +82,43 @@ const isVisible = (el: Element) =>
 const isEnabled = (el: Element) =>
   !el.matches(':disabled') && el.getAttribute('aria-disabled') !== 'true';
 
-const intersects = (el: Element, container: Element) => {
+const intersects = (el: Element, container: Element, covered = 0) => {
   const r = el.getBoundingClientRect();
   const c = container.getBoundingClientRect();
-  return r.bottom > c.top + 1 && r.top < c.bottom - 1;
+  return r.bottom > c.top + covered + 1 && r.top < c.bottom - 1;
 };
+
+interface StickyBar {
+  el: HTMLElement;
+  top: number;
+  cover: number;
+}
+
+// A bar sticks below the container's padding, which gamepad mode adds to the game page
+const getStickyBars = (container: Element): StickyBar[] => {
+  const padding = Number.parseFloat(getComputedStyle(container).paddingTop) || 0;
+  return Array.from(container.querySelectorAll<HTMLElement>('[data-gamepad-sticky]')).map(
+    (el) => {
+      const top = padding + (Number.parseFloat(getComputedStyle(el).top) || 0);
+      return { el, top, cover: top + el.offsetHeight };
+    }
+  );
+};
+
+const isStuck = (bar: StickyBar, container: Element) =>
+  bar.el.getBoundingClientRect().top - container.getBoundingClientRect().top <=
+  bar.top + 1;
+
+// How far down sticky bars cover the area once they stick, for an element after them
+const coveredBy = (bars: StickyBar[], el: Element) =>
+  bars.reduce(
+    (covered, bar) =>
+      !bar.el.contains(el) &&
+      bar.el.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING
+        ? Math.max(covered, bar.cover)
+        : covered,
+    0
+  );
 
 const getMainContent = (): HTMLElement | null => {
   const roots = Array.from(
@@ -173,7 +205,7 @@ const findNext = (from: HTMLElement, items: HTMLElement[], direction: Direction)
 const revealInContainer = (el: HTMLElement, container: HTMLElement) => {
   const r = el.getBoundingClientRect();
   const c = container.getBoundingClientRect();
-  const top = c.top + REVEAL_MARGIN_TOP;
+  const top = c.top + coveredBy(getStickyBars(container), el) + REVEAL_MARGIN_TOP;
   const bottom = c.bottom - REVEAL_MARGIN_BOTTOM;
   let delta = 0;
   if (r.top < top || r.height > bottom - top) {
@@ -724,6 +756,12 @@ export function useGamepadModeNavigation(enabled = true) {
         return;
       }
 
+      const dropdown = getOpenDropdown(root);
+      if (dropdown) {
+        handleDropdown(f, dropdown);
+        return;
+      }
+
       if (f.pressed(BUTTON.B)) {
         playBackSound();
         switchArea('games');
@@ -735,9 +773,17 @@ export function useGamepadModeNavigation(enabled = true) {
       }
 
       const items = getMainCandidates(root);
-      const visibleItems = items.filter((el) => intersects(el, root));
+      const bars = getStickyBars(root);
+      const isOnScreen = (el: HTMLElement) => intersects(el, root, coveredBy(bars, el));
+      const onScreen = items.filter(isOnScreen);
+      // A stuck bar never leaves the screen, so picking from what is visible starts below it
+      const stuckBars = bars.filter((bar) => isStuck(bar, root));
+      const belowBars = onScreen.filter(
+        (el) => !stuckBars.some((bar) => bar.el.contains(el))
+      );
+      const visibleItems = belowBars.length > 0 ? belowBars : onScreen;
       const current = findCurrent(items);
-      const currentVisible = !!current && intersects(current, root);
+      const currentVisible = !!current && isOnScreen(current);
 
       // Focus or a text field's mark already placed inside, as on a deep-linked review entry, is kept on entering
       const isPlaced =

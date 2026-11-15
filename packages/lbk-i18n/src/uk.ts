@@ -376,7 +376,7 @@ export const uk = {
   },
   gameCard: {
     unknownAuthor: 'Невідомий автор',
-    downloadedByPlayers: 'Завантажено гравцями',
+    downloadsLastMonth: 'за останній місяць',
   },
   gameHero: {
     share: 'Поділитися',
@@ -450,7 +450,8 @@ export const uk = {
       feedback: 'Відгуки',
       error: 'Помилки',
     },
-    installRequired: 'Залишити відгук можна лише після встановлення перекладу.',
+    installRequired:
+      'Залишити відгук або відповісти на нього можна лише після встановлення перекладу.',
     loadFailed: 'Не вдалося завантажити відгуки. Спробуйте пізніше.',
     empty: 'Поки що немає відгуків.',
     emptyErrors: 'Поки що немає повідомлень про помилки.',
@@ -508,7 +509,7 @@ export const uk = {
     },
   },
   gameSearch: {
-    placeholder: 'Пошук гри...',
+    placeholder: 'Пошук ігор...',
   },
   gameSections: {
     aboutTranslation: 'Про українізатор',
@@ -547,7 +548,7 @@ export const uk = {
       press: 'Натиснути / відкрити',
       back: 'Назад або закрити вікно',
       scroll: 'Плавна прокрутка',
-      search: 'Пошук гри',
+      search: 'Пошук ігор',
       home: 'Головна сторінка',
       settings: 'Налаштування',
       help: 'Ця довідка',
@@ -1025,12 +1026,11 @@ export const uk = {
     search: {
       placeholder: {
         teams: 'Пошук спілок...',
-        games: 'Пошук ігор...',
+        games: 'Знайти гру в рейтингу...',
       },
       allResults: '– усі результати',
       noResults: 'Нічого не знайдено',
       noResultsHint: 'Перевірте написання або спробуйте іншу назву',
-      clear: 'Очистити пошук',
     },
   },
   pagination: {

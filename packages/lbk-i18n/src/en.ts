@@ -353,7 +353,7 @@ export const en = {
   gameAuthors: { many: 'Localization creators', one: 'Localization creator' },
   gameCard: {
     unknownAuthor: 'Unknown creator',
-    downloadedByPlayers: 'Downloaded by players',
+    downloadsLastMonth: 'in the last month',
   },
   gameHero: { share: 'Share' },
   gameLike: {
@@ -421,7 +421,8 @@ export const en = {
       feedback: 'Reviews',
       error: 'Errors',
     },
-    installRequired: 'You can leave a review after installing the translation.',
+    installRequired:
+      'You can leave a review or reply to one after installing the translation.',
     loadFailed: 'Could not load reviews. Try again later.',
     empty: 'No reviews yet.',
     emptyErrors: 'No error reports yet.',
@@ -990,12 +991,11 @@ export const en = {
     search: {
       placeholder: {
         teams: 'Search teams...',
-        games: 'Search games...',
+        games: 'Find a game in the ratings...',
       },
       allResults: '– all results',
       noResults: 'Nothing found',
       noResultsHint: 'Check the spelling or try another name',
-      clear: 'Clear search',
     },
   },
   pagination: {

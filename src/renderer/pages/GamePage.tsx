@@ -214,7 +214,7 @@ export function GamePage() {
   const selectedGameSlug = selectedGame?.slug;
 
   const recommended = useRecommendedGames(selectedGameId, RECOMMENDED_LIMIT);
-  const { panelRef, showPanel } = useTabPanelScroll();
+  const { barRef, panelRef, showPanel } = useTabPanelScroll();
   // A link to the tab alone scrolls once the list has rendered, since a loading list is too short to reach
   const [revealReviews, setRevealReviews] = useState(false);
   const requestReviewsReveal = () => setRevealReviews(true);
@@ -514,8 +514,12 @@ export function GamePage() {
           )}
 
           {/* Actions block */}
-          <div className="glass-card-no-motion grid gap-6">
-            <div className="flex items-start gap-3">
+          <div
+            ref={barRef}
+            data-gamepad-sticky
+            className="game-actions sticky top-0 z-10"
+          >
+            <div className="game-actions-card glass-card-no-motion flex items-start gap-3">
               <div className="flex flex-1 flex-wrap items-center gap-3">
                 {/* Primary actions */}
                 {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
@@ -663,21 +667,21 @@ export function GamePage() {
                 onChange={selectTab}
               />
             </div>
+          </div>
 
-            <div className="flex gap-3 flex-wrap">
-              {installationInfo && !isInstalling && (
-                <>
-                  <InstallationStatusBadge
-                    isUpdateAvailable={!!isUpdateAvailable}
-                    installedVersion={installationInfo.version}
-                    hasInstallError={installationInfo.hasInstallError}
-                    newVersion={selectedGame?.version}
-                  />
-                  <div className="divider w-0 h-auto border-l border-border-hover last:hidden" />
-                </>
-              )}
-              <ImportantNotice game={selectedGame} />
-            </div>
+          <div className="game-actions-info glass-card-no-motion flex gap-3 flex-wrap empty:hidden">
+            {installationInfo && !isInstalling && (
+              <>
+                <InstallationStatusBadge
+                  isUpdateAvailable={!!isUpdateAvailable}
+                  installedVersion={installationInfo.version}
+                  hasInstallError={installationInfo.hasInstallError}
+                  newVersion={selectedGame.version}
+                />
+                <div className="divider w-0 h-auto border-l border-border-hover last:hidden" />
+              </>
+            )}
+            <ImportantNotice game={selectedGame} />
           </div>
 
           {(isInstalling || isPaused || isWaitingForNetwork || isUninstalling) && (

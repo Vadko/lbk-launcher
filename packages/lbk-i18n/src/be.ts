@@ -358,7 +358,7 @@ export const be = {
   gameAuthors: { many: 'Аўтары лакалізацыі', one: 'Аўтар лакалізацыі' },
   gameCard: {
     unknownAuthor: 'Невядомы аўтар',
-    downloadedByPlayers: 'Спампавана гульцамі',
+    downloadsLastMonth: 'за апошні месяц',
   },
   gameHero: { share: 'Падзяліцца' },
   gameLike: {
@@ -426,7 +426,8 @@ export const be = {
       feedback: 'Водгукі',
       error: 'Памылкі',
     },
-    installRequired: 'Пакінуць водгук можна толькі пасля ўсталявання перакладу.',
+    installRequired:
+      'Пакінуць водгук або адказаць на яго можна толькі пасля ўсталявання перакладу.',
     loadFailed: 'Не ўдалося загрузіць водгукі. Паспрабуйце пазней.',
     empty: 'Пакуль няма водгукаў.',
     emptyErrors: 'Пакуль няма паведамленняў пра памылкі.',
@@ -484,7 +485,7 @@ export const be = {
       generic: 'Не ўдалося адправіць запіс.',
     },
   },
-  gameSearch: { placeholder: 'Пошук гульні...' },
+  gameSearch: { placeholder: 'Пошук гульняў...' },
   gameSections: { aboutTranslation: 'Пра ўкраінізатар', aboutGame: 'Пра гульню' },
   gameStatus: {
     planned: 'Запланаваны',
@@ -519,7 +520,7 @@ export const be = {
       press: 'Націснуць / адкрыць',
       back: 'Назад або закрыць акно',
       scroll: 'Плаўная пракрутка',
-      search: 'Пошук гульні',
+      search: 'Пошук гульняў',
       home: 'Галоўная старонка',
       settings: 'Налады',
       help: 'Гэтая даведка',
@@ -994,12 +995,11 @@ export const be = {
     search: {
       placeholder: {
         teams: 'Пошук суполак...',
-        games: 'Пошук гульняў...',
+        games: 'Знайсці гульню ў рэйтынгу...',
       },
       allResults: '– усе вынікі',
       noResults: 'Нічога не знойдзена',
       noResultsHint: 'Праверце напісанне або паспрабуйце іншую назву',
-      clear: 'Ачысціць пошук',
     },
   },
   pagination: {

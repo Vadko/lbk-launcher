@@ -10,6 +10,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    // A local .env with VITE_ADMIN_MODE=true would make hidden games visible in every query test
+    env: { VITE_ADMIN_MODE: '' },
     include: ['src/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
   },
 });

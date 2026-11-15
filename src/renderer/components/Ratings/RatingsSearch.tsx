@@ -1,9 +1,9 @@
 import { G } from '@mobily/ts-belt';
-import { AnimatePresence, motion } from 'framer-motion';
-import { SearchIcon, XIcon } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { SearchIcon } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
-import { t } from '@/shared/i18n/i18n';
-import { useCompositionSafeChange } from '../../hooks/useCompositionSafeChange';
+import { useCloseOnOutsideMouseDown } from '../../hooks/useCloseOnOutsideMouseDown';
+import { Input } from '../ui/Input';
 import { optionId } from './optionId';
 import { RatingsSuggestions } from './RatingsSuggestions';
 import { type RatingsFilter, suggest } from './ratingsFilter';
@@ -29,7 +29,7 @@ export const RatingsSearch = <T,>({
   placeholder,
 }: RatingsSearchProps<T>) => {
   const listId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [text, setText] = useState(() => filterText(filter));
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -40,37 +40,28 @@ export const RatingsSearch = <T,>({
   const current = Math.min(active, optionCount - 1);
   const hasOptions = open && optionCount > 0;
 
+  useCloseOnOutsideMouseDown(wrapperRef, open, () => setOpen(false));
+
   const commit = (next: RatingsFilter) => {
     setText(filterText(next));
     setOpen(false);
-    inputRef.current?.blur();
     onFilter(next);
   };
 
   const choose = (index: number) => {
-    const picked = suggestions[index - 1];
+    const suggestion = suggestions[index - 1];
     commit(
-      picked
-        ? { kind: 'item', key: getKey(picked.item), name: getName(picked.item) }
-        : { kind: 'query', text: query }
+      G.isNullable(suggestion)
+        ? { kind: 'query', text: query }
+        : { kind: 'item', key: getKey(suggestion.item), name: getName(suggestion.item) }
     );
   };
 
-  const change = useCompositionSafeChange((value) => {
+  const change = (value: string) => {
     setText(value);
     setActive(0);
     setOpen(value.trim() !== '');
     if (value.trim() === '' && G.isNotNullable(filter)) {
-      onFilter(null);
-    }
-  });
-
-  const clear = () => {
-    // Focus first: onFocus still sees the old text and would reopen the list after it
-    inputRef.current?.focus();
-    setText('');
-    setOpen(false);
-    if (G.isNotNullable(filter)) {
       onFilter(null);
     }
   };
@@ -96,54 +87,35 @@ export const RatingsSearch = <T,>({
 
   return (
     <div
-      // Gamepad B blurs the field without a click, so leaving focus is what closes the list
+      ref={wrapperRef}
+      // Gamepad B blurs the field with no new focus and keeps the list to pick from, unless it has nothing to pick or the window lost focus
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) {
+        const next = e.relatedTarget;
+        const leaves = next
+          ? !e.currentTarget.contains(next)
+          : !document.hasFocus() || optionCount === 0;
+        if (leaves) {
           setOpen(false);
         }
       }}
       className="relative w-[400px] max-w-full"
     >
-      <div className="group flex items-center gap-4 rounded-xl border border-border bg-glass px-[17px] py-[13px] backdrop-blur-[8px] transition-colors hover:border-white/20 focus-within:border-color-main!">
-        <SearchIcon
-          size={24}
-          className={`shrink-0 transition-colors group-focus-within:text-color-main ${text ? 'text-color-main' : 'text-text-muted'}`}
-        />
-        <input
-          ref={inputRef}
-          type="search"
-          role="combobox"
-          aria-label={placeholder}
-          aria-expanded={hasOptions}
-          aria-controls={listId}
-          aria-autocomplete="list"
-          aria-activedescendant={hasOptions ? optionId(listId, current) : undefined}
-          value={text}
-          {...change}
-          onFocus={() => setOpen(query !== '')}
-          onKeyDown={onKeyDown}
-          placeholder={placeholder}
-          data-gamepad-action
-          className="min-w-0 flex-1 bg-transparent text-base [&::-webkit-search-cancel-button]:hidden text-text-main caret-color-main outline-hidden placeholder:text-text-muted"
-        />
-        <AnimatePresence>
-          {text && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              transition={{ duration: 0.12 }}
-              type="button"
-              onClick={clear}
-              aria-label={t('ratings.search.clear')}
-              data-gamepad-action
-              className="shrink-0 text-text-muted transition-colors hover:text-text-main"
-            >
-              <XIcon size={20} />
-            </motion.button>
-          )}
-        </AnimatePresence>
-      </div>
+      <Input
+        type="search"
+        role="combobox"
+        aria-label={placeholder}
+        aria-expanded={hasOptions}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={hasOptions ? optionId(listId, current) : undefined}
+        value={text}
+        onChange={change}
+        onFocus={() => setOpen(query !== '')}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        icon={<SearchIcon size={18} className="text-text-muted" />}
+        data-gamepad-action
+      />
       <AnimatePresence>
         {open && (
           <RatingsSuggestions
