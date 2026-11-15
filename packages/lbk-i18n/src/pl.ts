@@ -1003,7 +1003,6 @@ export const pl = {
       allResults: '– wszystkie wyniki',
       noResults: 'Nic nie znaleziono',
       noResultsHint: 'Sprawdź pisownię lub spróbuj innej nazwy',
-      clear: 'Wyczyść wyszukiwanie',
     },
   },
   pagination: {

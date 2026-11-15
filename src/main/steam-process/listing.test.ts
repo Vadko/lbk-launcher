@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseLinuxPsOutput, parseProcStatus } from '@/main/steam-process/list-linux';
 import {
   classifyMacProcess,
@@ -145,6 +145,20 @@ describe('classifyMacProcess', () => {
 });
 
 describe('listMacSteam', () => {
+  const realGetuid = Object.getOwnPropertyDescriptor(process, 'getuid');
+
+  beforeEach(() => {
+    Object.defineProperty(process, 'getuid', { value: () => 501, configurable: true });
+  });
+
+  afterEach(() => {
+    if (realGetuid) {
+      Object.defineProperty(process, 'getuid', realGetuid);
+    } else {
+      Reflect.deleteProperty(process, 'getuid');
+    }
+  });
+
   it("counts this user's steam_osx by executable and leaves out Millennium's launcher", async () => {
     const launcher =
       '/Users/u/Applications/Steam Millennium.app/Contents/MacOS/steam_osx';
@@ -166,7 +180,7 @@ describe('listMacSteam', () => {
       ],
       webhelpers: [{ pid: 300, ppid: 200, args: `${MAC_HELPER} -nocrashdialog` }],
     });
-    const uid = String(process.getuid?.());
+    const uid = '501';
     expect(hostExec.calls).toContainEqual(['pgrep', '-x', '-u', uid, 'steam_osx']);
     expect(hostExec.calls).toContainEqual([
       'ps',
