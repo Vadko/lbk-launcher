@@ -1,3 +1,4 @@
+import { A, pipe } from '@mobily/ts-belt';
 import { useLayoutEffect, useState } from 'react';
 
 // The measure layer holds every badge at its natural width, then the "+N" badge last
@@ -9,18 +10,19 @@ function fitBadges(row: HTMLElement, measure: HTMLElement) {
   const gap = Number.parseFloat(getComputedStyle(row).columnGap) || 0;
   const available = row.getBoundingClientRect().width;
 
-  let used = 0;
-  let visible = 0;
-  for (const [index, width] of widths.entries()) {
-    const next = used + (index > 0 ? gap : 0) + width;
-    const reserve = index < widths.length - 1 ? gap + moreWidth : 0;
-    if (next + reserve > available) {
-      break;
-    }
-    used = next;
-    visible = index + 1;
-  }
-  return Math.max(1, visible);
+  return pipe(
+    widths,
+    A.reduce<number, number[]>([], (rows, width) => [
+      ...rows,
+      (rows.at(-1) ?? -gap) + gap + width,
+    ]),
+    A.mapWithIndex(
+      (index, row) => row + (index < widths.length - 1 ? gap + moreWidth : 0)
+    ),
+    A.takeWhile((needed) => needed <= available),
+    A.length,
+    (count) => Math.max(1, count)
+  );
 }
 
 export function useVisibleBadgeCount(
