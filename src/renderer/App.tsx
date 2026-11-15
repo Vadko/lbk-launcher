@@ -324,7 +324,10 @@ export function App() {
         statusMessage: status.message,
         statusKey: null,
         statusTone: status.tone ?? null,
-        ...(status.phase !== 'download' && { downloadProgress: null, progress: 0 }),
+        ...(status.phase !== 'download' && {
+          downloadProgress: null,
+          progress: status.progress ?? 0,
+        }),
       });
     });
     return () => {

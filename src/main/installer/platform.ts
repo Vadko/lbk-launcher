@@ -12,6 +12,7 @@ import { isCmdSafePath } from '../utils/shell-safety';
 import { winePrefixRefOf } from '../wine/prefixes';
 import { readInstallationInfo, saveInstallationInfo } from './cache';
 import { WINDOWS_INSTALLER_EXTENSIONS } from './executable';
+import { followInstallerOutput } from './installer-progress';
 import { runProton } from './proton';
 import { checkNewUninstallRegistryKeys, listUninstallKeys } from './uninstall-registry';
 import { runInstallerInWine, runUninstallerInWine } from './wine-installer';
@@ -255,9 +256,9 @@ export async function runInstaller(
           env,
         });
 
-        child.stdout?.on('data', (data) => {
-          console.log(`[Installer stdout] ${data.toString().trim()}`);
-        });
+        if (child.stdout) {
+          followInstallerOutput(child.stdout, onStatus);
+        }
 
         child.stderr?.on('data', (data) => {
           const line = data.toString().trim();
@@ -292,12 +293,9 @@ export async function runInstaller(
         const stderrLines: string[] = [];
         // Add output capturing for batch files
         if (isBatch) {
-          child.stdout?.on('data', (data) => {
-            const line = data.toString('utf8').trim();
-            if (line) {
-              console.log(`[Installer stdout] ${line}`);
-            }
-          });
+          if (child.stdout) {
+            followInstallerOutput(child.stdout, onStatus);
+          }
 
           child.stderr?.on('data', (data) => {
             const line = data.toString('utf8').trim();

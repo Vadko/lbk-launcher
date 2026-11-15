@@ -8,6 +8,7 @@ interface InstallationStatusMessageProps {
   isUpdateAvailable: boolean;
   isOnline: boolean;
   isInstalling: boolean;
+  progress: number;
 }
 
 // Full class names: Tailwind doesn't see strings assembled at runtime
@@ -26,6 +27,7 @@ export function InstallationStatusMessage({
   isUpdateAvailable,
   isOnline,
   isInstalling,
+  progress,
 }: InstallationStatusMessageProps) {
   const tone = statusTone ? TONE_STYLES[statusTone] : null;
 
@@ -41,13 +43,29 @@ export function InstallationStatusMessage({
         ) : (
           <div className="w-5 h-5 border-2 border-color-accent border-t-transparent rounded-full animate-spin" />
         )}
-        <span className={`text-sm font-medium ${tone?.text ?? 'text-white'}`}>
+        <span className={`flex-1 text-sm font-medium ${tone?.text ?? 'text-white'}`}>
           {statusMessage ||
             (isUpdateAvailable
               ? t('installStatus.updating')
               : t('installStatus.installing'))}
         </span>
+        {progress > 0 && !tone && (
+          <span className="text-sm font-bold text-color-accent">
+            {Math.round(progress)}%
+          </span>
+        )}
       </div>
+      {progress > 0 && !tone && (
+        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-300 ease-out bg-linear-to-r/srgb from-color-accent to-color-main"
+            style={{
+              width: `${progress}%`,
+              boxShadow: '0 0 10px rgba(0, 242, 255, 0.5)',
+            }}
+          />
+        </div>
+      )}
       {!isOnline && isInstalling && (
         <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
           <p className="text-xs text-red-400 flex items-center gap-1.5">
