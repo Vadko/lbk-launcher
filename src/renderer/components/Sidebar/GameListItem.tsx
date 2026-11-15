@@ -1,4 +1,4 @@
-import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon, LanguagesIcon } from 'lucide-react';
+import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { DiscountPill } from '@/renderer/components/Elements/DiscountPill';
 import { InfoIcons } from '@/renderer/components/Elements/InfoIcons';
@@ -8,13 +8,12 @@ import type { Game } from '../../../shared/types';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { isTranslationInstallable } from '../../utils/gameStatus';
 import { getGameImageUrl } from '../../utils/imageUrl';
-import { StatusBadge } from '../Elements/StatusBadge';
 import { PopularIcon } from '../Icons/PopularIcon';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { TranslationSummary } from './TranslationSummary';
 
 interface GameListItemProps {
   game: Game;
@@ -29,7 +28,8 @@ interface GameListItemProps {
   isTranslationAvailable?: boolean;
   variant?: string;
   imageDeferred?: boolean;
-  moreTranslations?: number;
+  cardTranslations?: Game[];
+  variantById?: Map<string, string>;
 }
 
 export const GameListItem = memo(function GameListItem({
@@ -45,7 +45,8 @@ export const GameListItem = memo(function GameListItem({
   isTranslationAvailable = true,
   variant,
   imageDeferred = false,
-  moreTranslations = 0,
+  cardTranslations,
+  variantById,
 }: GameListItemProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [erroredUrl, setErroredUrl] = useState<string | null>(null);
@@ -207,40 +208,14 @@ export const GameListItem = memo(function GameListItem({
               </span>
             </div>
           )}
-          {/* Info */}
-          <div className="p-3 bg-glass-hover rounded-xl mt-auto">
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-semibold truncate flex-1" title={game.team}>
-                {game.team}
-              </h4>
-              {moreTranslations > 0 && (
-                <span className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-color-main text-text-dark text-xs font-semibold">
-                  <LanguagesIcon size={12} />
-                  {t('gameCard.moreTranslations', { count: moreTranslations })}
-                </span>
-              )}
-            </div>
-
-            <div className="flex gap-3 items-center w-full flex-wrap">
-              {game.status && (
-                <StatusBadge
-                  status={game.status}
-                  style="capsule"
-                  className="shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
-                />
-              )}
-              {isTranslationInstallable(game.status) && (
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="h-1 bg-white/10 rounded-full overflow-hidden grow">
-                    <div
-                      className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
-                      style={{ width: `${averageProgress}%` }}
-                    />
-                  </div>
-                  <span className="text-text-main font-bold">{`${averageProgress}%`}</span>
-                </div>
-              )}
-            </div>
+          <div className="mt-auto flex flex-col gap-2">
+            {(cardTranslations ?? [game]).map((translation) => (
+              <TranslationSummary
+                key={translation.id}
+                game={translation}
+                variant={variantById?.get(translation.id)}
+              />
+            ))}
           </div>
         </div>
       </div>

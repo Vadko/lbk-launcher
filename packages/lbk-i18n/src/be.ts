@@ -359,10 +359,6 @@ export const be = {
   gameCard: {
     unknownAuthor: 'Невядомы аўтар',
     downloadedByPlayers: 'Спампавана гульцамі',
-    moreTranslations_one: 'Яшчэ {{count}} пераклад',
-    moreTranslations_few: 'Яшчэ {{count}} пераклады',
-    moreTranslations_many: 'Яшчэ {{count}} перакладаў',
-    moreTranslations_other: 'Яшчэ {{count}} перакладу',
   },
   gameHero: { share: 'Падзяліцца' },
   gameLike: {
