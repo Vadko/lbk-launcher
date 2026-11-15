@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ListFilterIcon } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -12,12 +12,20 @@ import { useStore } from '@/renderer/store/useStore';
 import { getGameGroupKey } from '@/shared/game-filters';
 import { t } from '@/shared/i18n/i18n';
 import type { Game } from '@/shared/types';
+import { deriveGroupNaming } from '../../utils/groupName';
 import { WarningFillIcon } from '../Icons/WarningFillIcon';
+import { TranslationPickerModal } from '../Modal/TranslationPickerModal';
 import { GameListItem } from '../Sidebar/GameListItem';
+import type { GameGroup } from '../Sidebar/types';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 
 const NO_GAMES: Game[] = [];
+
+interface InstalledCard {
+  game: Game;
+  group: GameGroup;
+}
 
 interface InstalledGamesSectionProps {
   title?: string;
@@ -29,6 +37,7 @@ export function InstalledGamesSection({
   showLimit = 3,
 }: InstalledGamesSectionProps) {
   const navigate = useNavigate();
+  const [pickerGroup, setPickerGroup] = useState<GameGroup | null>(null);
 
   const { installedTranslations } = useStore(
     useShallow((state) => ({
@@ -43,7 +52,7 @@ export function InstalledGamesSection({
   const isInstalled = useIsTranslationInstalled();
 
   // One card per game, not per translation - two authors' translations are still one installed game
-  const { gamesWithoutInstalls, installedGameCount } = useMemo(() => {
+  const { shownCards, installedGameCount } = useMemo(() => {
     const groups = new Map<string, Game[]>();
     for (const game of allInstalledGames) {
       const key = getGameGroupKey(game);
@@ -55,20 +64,21 @@ export function InstalledGamesSection({
       }
     }
 
-    const cards = [...groups.values()].map((translations) => {
+    const cards = [...groups.entries()].map(([key, translations]) => {
       const installed = translations.find((game) => isInstalled(game.id));
+      const naming = deriveGroupNaming(translations);
       // SQL lists each game's translations best first
       return {
         game: installed ?? translations[0],
+        group: { key, translations, ...naming },
         isTranslated: Boolean(installed),
       };
     });
 
     // If no games without translations, show all installed games
     const withoutTranslations = cards.filter((card) => !card.isTranslated);
-    const gamesToShow = (
-      withoutTranslations.length > 0 ? withoutTranslations : cards
-    ).map((card) => card.game);
+    const cardsToShow: InstalledCard[] =
+      withoutTranslations.length > 0 ? withoutTranslations : cards;
 
     const hasUpdate = (game: Game) => {
       const installInfo = installedTranslations.get(game.id);
@@ -76,14 +86,14 @@ export function InstalledGamesSection({
     };
 
     return {
-      gamesWithoutInstalls: gamesToShow.sort((a, b) => hasUpdate(b) - hasUpdate(a)),
+      shownCards: cardsToShow.sort((a, b) => hasUpdate(b.game) - hasUpdate(a.game)),
       installedGameCount: groups.size,
     };
   }, [allInstalledGames, installedTranslations, isInstalled]);
 
-  const visibleGames = useMemo(
-    () => gamesWithoutInstalls.slice(0, showLimit),
-    [gamesWithoutInstalls, showLimit]
+  const visibleCards = useMemo(
+    () => shownCards.slice(0, showLimit),
+    [shownCards, showLimit]
   );
 
   const handleViewAll = () => {
@@ -185,7 +195,7 @@ export function InstalledGamesSection({
               <Loader size="md" />
             </motion.div>
           ) : (
-            visibleGames.map((game, index) => (
+            visibleCards.map(({ game, group }, index) => (
               <motion.div
                 key={`${game.id}-installed`}
                 id={`game-${game.slug}`}
@@ -202,13 +212,28 @@ export function InstalledGamesSection({
                   isSelected={false}
                   isCardStyle={true}
                   showDownloadCounter={false}
-                  onClick={() => navigate(`/game/${game.id}`)}
+                  translations={group.translations}
+                  onClick={() => {
+                    if (group.translations.length > 1) {
+                      setPickerGroup(group);
+                    } else {
+                      navigate(`/game/${game.id}`);
+                    }
+                  }}
                 />
               </motion.div>
             ))
           )}
         </AnimatePresence>
       </div>
+
+      <TranslationPickerModal
+        isOpen={pickerGroup !== null}
+        onClose={() => setPickerGroup(null)}
+        translations={pickerGroup?.translations ?? NO_GAMES}
+        gameName={pickerGroup?.name ?? ''}
+        variantById={pickerGroup?.variantById}
+      />
     </section>
   );
 }

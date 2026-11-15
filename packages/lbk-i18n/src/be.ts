@@ -359,6 +359,10 @@ export const be = {
   gameCard: {
     unknownAuthor: 'Невядомы аўтар',
     downloadsLastMonth: 'за апошні месяц',
+    translationsFound_one: 'Знойдзены {{count}} пераклад',
+    translationsFound_few: 'Знойдзены {{count}} пераклады',
+    translationsFound_many: 'Знойдзена {{count}} перакладаў',
+    translationsFound_other: 'Знойдзена {{count}} перакладу',
   },
   gameHero: { share: 'Падзяліцца' },
   gameLike: {

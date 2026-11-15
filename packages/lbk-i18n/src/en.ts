@@ -354,6 +354,10 @@ export const en = {
   gameCard: {
     unknownAuthor: 'Unknown creator',
     downloadsLastMonth: 'in the last month',
+    translationsFound_one: '{{count}} translation found',
+    translationsFound_few: '{{count}} translations found',
+    translationsFound_many: '{{count}} translations found',
+    translationsFound_other: '{{count}} translations found',
   },
   gameHero: { share: 'Share' },
   gameLike: {

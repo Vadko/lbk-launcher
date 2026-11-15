@@ -377,6 +377,10 @@ export const uk = {
   gameCard: {
     unknownAuthor: 'Невідомий автор',
     downloadsLastMonth: 'за останній місяць',
+    translationsFound_one: 'Знайдено {{count}} переклад',
+    translationsFound_few: 'Знайдено {{count}} переклади',
+    translationsFound_many: 'Знайдено {{count}} перекладів',
+    translationsFound_other: 'Знайдено {{count}} переклади',
   },
   gameHero: {
     share: 'Поділитися',

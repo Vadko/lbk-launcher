@@ -8,12 +8,12 @@ import type { Game } from '../../../shared/types';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { isTranslationInstallable } from '../../utils/gameStatus';
 import { getGameImageUrl } from '../../utils/imageUrl';
-import { StatusBadge } from '../Elements/StatusBadge';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { TranslationSummary } from './TranslationSummary';
+import { TranslationsFoundSummary } from './TranslationsFoundSummary';
 
 interface GameListItemProps {
   game: Game;
@@ -28,6 +28,7 @@ interface GameListItemProps {
   isTranslationAvailable?: boolean;
   variant?: string;
   imageDeferred?: boolean;
+  translations?: Game[];
 }
 
 export const GameListItem = memo(function GameListItem({
@@ -43,6 +44,7 @@ export const GameListItem = memo(function GameListItem({
   isTranslationAvailable = true,
   variant,
   imageDeferred = false,
+  translations,
 }: GameListItemProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [erroredUrl, setErroredUrl] = useState<string | null>(null);
@@ -205,33 +207,11 @@ export const GameListItem = memo(function GameListItem({
               </span>
             </div>
           )}
-          {/* Info */}
-          <div className="p-3 bg-glass-hover rounded-xl mt-auto">
-            <h4 className="font-semibold mb-2 truncate" title={game.team}>
-              {game.team}
-            </h4>
-
-            <div className="flex gap-3 items-center w-full flex-wrap">
-              {game.status && (
-                <StatusBadge
-                  status={game.status}
-                  style="capsule"
-                  className="shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
-                />
-              )}
-              {isTranslationInstallable(game.status) && (
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="h-1 bg-white/10 rounded-full overflow-hidden grow">
-                    <div
-                      className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
-                      style={{ width: `${averageProgress}%` }}
-                    />
-                  </div>
-                  <span className="text-text-main font-bold">{`${averageProgress}%`}</span>
-                </div>
-              )}
-            </div>
-          </div>
+          {translations && translations.length > 1 ? (
+            <TranslationsFoundSummary translations={translations} />
+          ) : (
+            <TranslationSummary game={game} />
+          )}
         </div>
       </div>
     );
