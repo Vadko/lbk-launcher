@@ -198,24 +198,30 @@
   padding: 24px;
 }
 
-.stuck-host {
+.game-actions {
   container-type: scroll-state;
 }
 
-.stuck-spacer {
-  display: none;
+/* The info row continues the actions card outside the sticky bar, so it scrolls away under the bar instead of resizing it */
+.game-actions-info {
+  margin-top: -24px;
+  padding-top: 0;
+  border-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+@container not scroll-state(stuck: top) {
+  .game-actions:has(+ .game-actions-info:not(:empty)) .game-actions-card {
+    border-bottom: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
 }
 
 @container scroll-state(stuck: top) {
-  .hide-when-stuck {
-    display: none;
-  }
-
-  .stuck-spacer:not(:empty) {
-    display: flex;
-    visibility: hidden;
-    padding-top: 24px;
-    margin-inline: 25px;
+  .game-actions-card {
+    background: rgb(var(--bg-dark-rgb) / 0.9);
   }
 }
 

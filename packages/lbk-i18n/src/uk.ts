@@ -376,7 +376,7 @@ export const uk = {
   },
   gameCard: {
     unknownAuthor: 'Невідомий автор',
-    downloadedByPlayers: 'за останній місяць',
+    downloadsLastMonth: 'за останній місяць',
   },
   gameHero: {
     share: 'Поділитися',
@@ -1026,7 +1026,7 @@ export const uk = {
     search: {
       placeholder: {
         teams: 'Пошук спілок...',
-        games: 'Пошук ігор...',
+        games: 'Знайти гру в рейтингу...',
       },
       allResults: '– усі результати',
       noResults: 'Нічого не знайдено',

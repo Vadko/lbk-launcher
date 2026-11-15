@@ -1,12 +1,16 @@
 import { motion } from 'framer-motion';
 import { SearchIcon } from 'lucide-react';
 import { t } from '@/shared/i18n/i18n';
+import { optionId } from './optionId';
 import type { NameMatch, Suggestion } from './ratingsFilter';
 
 interface RatingsSuggestionsProps<T> {
+  id: string;
   query: string;
   suggestions: readonly Suggestion<T>[];
   getName: (item: T) => string;
+  active: number;
+  onActive: (index: number) => void;
   onChoose: (index: number) => void;
 }
 
@@ -20,19 +24,29 @@ const highlighted = (name: string, { start, end }: NameMatch) => (
 );
 
 export const RatingsSuggestions = <T,>({
+  id,
   query,
   suggestions,
   getName,
+  active,
+  onActive,
   onChoose,
 }: RatingsSuggestionsProps<T>) => {
   const option = (index: number, label: React.ReactNode) => (
     <button
       key={index}
+      id={optionId(id, index)}
       type="button"
-      data-suggestion
+      role="option"
+      aria-selected={index === active}
+      tabIndex={-1}
       data-gamepad-dropdown-item
+      // Keeps the focus in the field, so a click does not close the list before it lands
+      onMouseDown={(e) => e.preventDefault()}
+      onMouseEnter={() => onActive(index)}
+      onFocus={() => onActive(index)}
       onClick={() => onChoose(index)}
-      className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-text-muted outline-hidden transition-colors hover:bg-glass hover:text-text-main focus:bg-glass-hover focus:text-text-main"
+      className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-text-muted outline-hidden transition-colors aria-selected:bg-glass aria-selected:text-text-main focus:bg-glass-hover focus:text-text-main"
     >
       <SearchIcon size={16} className="shrink-0 text-text-muted" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
@@ -56,7 +70,7 @@ export const RatingsSuggestions = <T,>({
           <p className="text-sm text-text-muted">{t('ratings.search.noResultsHint')}</p>
         </div>
       ) : (
-        <div className="flex flex-col py-1">
+        <div id={id} role="listbox" className="flex flex-col py-1">
           {option(
             0,
             <>

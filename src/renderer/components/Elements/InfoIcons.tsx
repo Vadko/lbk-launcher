@@ -14,6 +14,10 @@ export function InfoIcons({
   isPlanned = false,
   floatPosition = null,
 }: InfoIconsProps) {
+  if (likesCount <= 0 && isPlanned) {
+    return null;
+  }
+
   return (
     <div
       className={`flex gap-2 ${floatPosition ? 'absolute rounded-ss-lg bg-glass p-2 pr-4 -bottom-px -right-px backdrop-blur-md backdrop-brightness-50' : ''}`}

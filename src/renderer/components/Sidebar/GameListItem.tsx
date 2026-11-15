@@ -1,4 +1,4 @@
-import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon } from 'lucide-react';
+import { BookmarkCheckIcon, BookmarkIcon, DownloadIcon, EyeOffIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { DiscountPill } from '@/renderer/components/Elements/DiscountPill';
 import { InfoIcons } from '@/renderer/components/Elements/InfoIcons';
@@ -11,7 +11,6 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { isTranslationInstallable } from '../../utils/gameStatus';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
-import { DownloadIcon } from '../Icons/DownloadIcon';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
@@ -200,7 +199,7 @@ export const GameListItem = memo(function GameListItem({
           {showDownloadCounter && (
             <div className="flex items-center gap-2">
               <DownloadIcon size={16} />
-              <span>{t('gameCard.downloadedByPlayers')}</span>
+              <span>{t('gameCard.downloadsLastMonth')}</span>
               <span className="ml-auto">
                 <AppNumberFlow value={game.downloads_30d ?? 0} />
               </span>

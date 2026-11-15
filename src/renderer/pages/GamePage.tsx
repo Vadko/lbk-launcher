@@ -214,7 +214,7 @@ export function GamePage() {
   const selectedGameSlug = selectedGame?.slug;
 
   const recommended = useRecommendedGames(selectedGameId, RECOMMENDED_LIMIT);
-  const { panelRef, showPanel } = useTabPanelScroll();
+  const { barRef, panelRef, showPanel } = useTabPanelScroll();
   // A link to the tab alone scrolls once the list has rendered, since a loading list is too short to reach
   const [revealReviews, setRevealReviews] = useState(false);
   const requestReviewsReveal = () => setRevealReviews(true);
@@ -456,23 +456,6 @@ export function GamePage() {
     );
   }
 
-  const infoRow = (
-    <>
-      {installationInfo && !isInstalling && (
-        <>
-          <InstallationStatusBadge
-            isUpdateAvailable={!!isUpdateAvailable}
-            installedVersion={installationInfo.version}
-            hasInstallError={installationInfo.hasInstallError}
-            newVersion={selectedGame.version}
-          />
-          <div className="divider w-0 h-auto border-l border-border-hover last:hidden" />
-        </>
-      )}
-      <ImportantNotice game={selectedGame} />
-    </>
-  );
-
   return (
     <>
       {/* Install Options Dialog for games with voice archive */}
@@ -531,169 +514,174 @@ export function GamePage() {
           )}
 
           {/* Actions block */}
-          <div className="stuck-host top-0 sticky z-10">
-            <div className="glass-card-no-motion grid gap-6">
-              <div className="flex items-start gap-3">
-                <div className="flex flex-1 flex-wrap items-center gap-3">
-                  {/* Primary actions */}
-                  {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
-                    <Button
-                      variant="primary"
-                      width="narrow"
-                      icon={
-                        <AppActionIcon
-                          phase={launchPhase}
-                          icon={Play}
-                          size={20}
-                          inheritColor
-                        />
-                      }
-                      onClick={handleLaunchGame}
-                      aria-busy={isLaunching}
-                      disabled={isInstalling || isUninstalling || isWorkshopChangePending}
-                      data-gamepad-action
-                      data-gamepad-primary-action
-                    >
-                      {t('gameActions.play')}
-                    </Button>
-                  )}
-                  {isWorkshop && (
-                    <WorkshopInstallButton
-                      key={selectedGame.id}
-                      gameId={selectedGame.id}
-                      workshopId={selectedGame.workshop_id ?? ''}
-                      steamAppId={selectedGame.steam_app_id}
-                      isGameInstalledOnSystem={isGameInstalledOnSystem}
-                      isOnline={isOnline}
-                      isTombstoned={isTombstoned}
-                    />
-                  )}
-                  {!isWorkshop && (
-                    <Button
-                      variant={installVariant}
-                      width="narrow"
-                      icon={
-                        <AppActionIcon
-                          phase={installButtonPhase}
-                          icon={isUpdateAvailable ? RefreshCw : Download}
-                          size={20}
-                          inheritColor={installVariant === 'primary'}
-                        />
-                      }
-                      onClick={() => void handleInstall()}
-                      aria-busy={installButtonPhase === 'pending'}
-                      disabled={
-                        isInstalling ||
-                        isUninstalling ||
-                        !isInstallable ||
-                        !isOnline ||
-                        isTombstoned
-                      }
-                      title={
-                        isTombstoned
-                          ? t('gameActions.removedFromCatalog')
-                          : !isOnline
-                            ? t('gameActions.offline')
-                            : undefined
-                      }
-                      data-gamepad-primary-action
-                      data-gamepad-action
-                    >
-                      {getInstallButtonText()}
-                    </Button>
-                  )}
-                  {!isWorkshop &&
-                    installationInfo?.installerPath &&
-                    !isInstalling &&
-                    !isUninstalling && (
-                      <Button
-                        variant="secondary"
-                        width="narrow"
-                        icon={
-                          <AppActionIcon phase={rerunPhase} icon={ReplaceAll} size={20} />
-                        }
-                        onClick={() => void handleRerunInstaller()}
-                        aria-busy={rerunPhase === 'pending'}
-                        data-gamepad-action
-                        title={t('gameActions.rerunTitle')}
-                      >
-                        {t('gameActions.rerun')}
-                      </Button>
-                    )}
-                  {!isWorkshop && installationInfo && !isInstalling && (
+          <div
+            ref={barRef}
+            data-gamepad-sticky
+            className="game-actions sticky top-0 z-10"
+          >
+            <div className="game-actions-card glass-card-no-motion flex items-start gap-3">
+              <div className="flex flex-1 flex-wrap items-center gap-3">
+                {/* Primary actions */}
+                {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
+                  <Button
+                    variant="primary"
+                    width="narrow"
+                    icon={
+                      <AppActionIcon
+                        phase={launchPhase}
+                        icon={Play}
+                        size={20}
+                        inheritColor
+                      />
+                    }
+                    onClick={handleLaunchGame}
+                    aria-busy={isLaunching}
+                    disabled={isInstalling || isUninstalling || isWorkshopChangePending}
+                    data-gamepad-action
+                    data-gamepad-primary-action
+                  >
+                    {t('gameActions.play')}
+                  </Button>
+                )}
+                {isWorkshop && (
+                  <WorkshopInstallButton
+                    key={selectedGame.id}
+                    gameId={selectedGame.id}
+                    workshopId={selectedGame.workshop_id ?? ''}
+                    steamAppId={selectedGame.steam_app_id}
+                    isGameInstalledOnSystem={isGameInstalledOnSystem}
+                    isOnline={isOnline}
+                    isTombstoned={isTombstoned}
+                  />
+                )}
+                {!isWorkshop && (
+                  <Button
+                    variant={installVariant}
+                    width="narrow"
+                    icon={
+                      <AppActionIcon
+                        phase={installButtonPhase}
+                        icon={isUpdateAvailable ? RefreshCw : Download}
+                        size={20}
+                        inheritColor={installVariant === 'primary'}
+                      />
+                    }
+                    onClick={() => void handleInstall()}
+                    aria-busy={installButtonPhase === 'pending'}
+                    disabled={
+                      isInstalling ||
+                      isUninstalling ||
+                      !isInstallable ||
+                      !isOnline ||
+                      isTombstoned
+                    }
+                    title={
+                      isTombstoned
+                        ? t('gameActions.removedFromCatalog')
+                        : !isOnline
+                          ? t('gameActions.offline')
+                          : undefined
+                    }
+                    data-gamepad-primary-action
+                    data-gamepad-action
+                  >
+                    {getInstallButtonText()}
+                  </Button>
+                )}
+                {!isWorkshop &&
+                  installationInfo?.installerPath &&
+                  !isInstalling &&
+                  !isUninstalling && (
                     <Button
                       variant="secondary"
                       width="narrow"
-                      icon={<Trash2Icon size={20} />}
-                      onClick={handleUninstall}
-                      disabled={isUninstalling}
-                      title={t('gameActions.uninstallTitle')}
+                      icon={
+                        <AppActionIcon phase={rerunPhase} icon={ReplaceAll} size={20} />
+                      }
+                      onClick={() => void handleRerunInstaller()}
+                      aria-busy={rerunPhase === 'pending'}
                       data-gamepad-action
-                    />
+                      title={t('gameActions.rerunTitle')}
+                    >
+                      {t('gameActions.rerun')}
+                    </Button>
                   )}
-                  {/* Separator */}
-                  <div className="hidden sm:block w-0 h-10 border-l border-border-hover last:hidden" />
+                {!isWorkshop && installationInfo && !isInstalling && (
+                  <Button
+                    variant="secondary"
+                    width="narrow"
+                    icon={<Trash2Icon size={20} />}
+                    onClick={handleUninstall}
+                    disabled={isUninstalling}
+                    title={t('gameActions.uninstallTitle')}
+                    data-gamepad-action
+                  />
+                )}
+                {/* Separator */}
+                <div className="hidden sm:block w-0 h-10 border-l border-border-hover last:hidden" />
 
-                  {/* Secondary actions */}
-                  {(isPlanned || isTechImprovement) && (
-                    <SubscribeButton
-                      gameId={selectedGame.id}
-                      gameName={selectedGame.name}
-                      gameStatus={selectedGame.status}
-                      variant="amber"
-                      data-gamepad-action
-                    />
-                  )}
-                  {selectedGame.support_url &&
-                    bannerInfo.placementType &&
-                    !(
-                      bannerInfo.placementType === 'small_square' && !bannerInfo.data?.id
-                    ) && (
-                      <Button
-                        variant="accent"
-                        width="narrow"
-                        icon={<HeartIcon size={20} />}
-                        onClick={handleSupport}
-                        data-gamepad-action
-                        className="support-button"
-                      >
-                        {t('gameActions.support')}
-                      </Button>
-                    )}
-                  {canLeaveFeedback && (
+                {/* Secondary actions */}
+                {(isPlanned || isTechImprovement) && (
+                  <SubscribeButton
+                    gameId={selectedGame.id}
+                    gameName={selectedGame.name}
+                    gameStatus={selectedGame.status}
+                    variant="amber"
+                    data-gamepad-action
+                  />
+                )}
+                {selectedGame.support_url &&
+                  bannerInfo.placementType &&
+                  !(
+                    bannerInfo.placementType === 'small_square' && !bannerInfo.data?.id
+                  ) && (
                     <Button
-                      variant="secondary"
+                      variant="accent"
                       width="narrow"
-                      icon={<FileEditIcon size={20} />}
-                      onClick={openFeedback}
+                      icon={<HeartIcon size={20} />}
+                      onClick={handleSupport}
                       data-gamepad-action
                       className="support-button"
                     >
-                      {t('gameActions.feedback')}
+                      {t('gameActions.support')}
                     </Button>
                   )}
-                </div>
-                <GameTabs
-                  gameId={selectedGame.id}
-                  reviewCounts={counts}
-                  tabs={gameTabs}
-                  activeTab={activeTab}
-                  onChange={selectTab}
+                {canLeaveFeedback && (
+                  <Button
+                    variant="secondary"
+                    width="narrow"
+                    icon={<FileEditIcon size={20} />}
+                    onClick={openFeedback}
+                    data-gamepad-action
+                    className="support-button"
+                  >
+                    {t('gameActions.feedback')}
+                  </Button>
+                )}
+              </div>
+              <GameTabs
+                gameId={selectedGame.id}
+                reviewCounts={counts}
+                tabs={gameTabs}
+                activeTab={activeTab}
+                onChange={selectTab}
+              />
+            </div>
+          </div>
+
+          <div className="game-actions-info glass-card-no-motion flex gap-3 flex-wrap empty:hidden">
+            {installationInfo && !isInstalling && (
+              <>
+                <InstallationStatusBadge
+                  isUpdateAvailable={!!isUpdateAvailable}
+                  installedVersion={installationInfo.version}
+                  hasInstallError={installationInfo.hasInstallError}
+                  newVersion={selectedGame.version}
                 />
-              </div>
-
-              <div className="hide-when-stuck flex gap-3 flex-wrap empty:hidden">
-                {infoRow}
-              </div>
-            </div>
-
-            <div
-              aria-hidden
-              inert
-              className="stuck-spacer flex gap-3 flex-wrap empty:hidden"
-            >
-              {infoRow}
-            </div>
+                <div className="divider w-0 h-auto border-l border-border-hover last:hidden" />
+              </>
+            )}
+            <ImportantNotice game={selectedGame} />
           </div>
 
           {(isInstalling || isPaused || isWaitingForNetwork || isUninstalling) && (

@@ -358,7 +358,7 @@ export const be = {
   gameAuthors: { many: 'Аўтары лакалізацыі', one: 'Аўтар лакалізацыі' },
   gameCard: {
     unknownAuthor: 'Невядомы аўтар',
-    downloadedByPlayers: 'за апошні месяц',
+    downloadsLastMonth: 'за апошні месяц',
   },
   gameHero: { share: 'Падзяліцца' },
   gameLike: {
@@ -995,7 +995,7 @@ export const be = {
     search: {
       placeholder: {
         teams: 'Пошук суполак...',
-        games: 'Пошук гульняў...',
+        games: 'Знайсці гульню ў рэйтынгу...',
       },
       allResults: '– усе вынікі',
       noResults: 'Нічога не знойдзена',

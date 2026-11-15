@@ -353,7 +353,7 @@ export const en = {
   gameAuthors: { many: 'Localization creators', one: 'Localization creator' },
   gameCard: {
     unknownAuthor: 'Unknown creator',
-    downloadedByPlayers: 'in the last month',
+    downloadsLastMonth: 'in the last month',
   },
   gameHero: { share: 'Share' },
   gameLike: {
@@ -991,7 +991,7 @@ export const en = {
     search: {
       placeholder: {
         teams: 'Search teams...',
-        games: 'Search games...',
+        games: 'Find a game in the ratings...',
       },
       allResults: '– all results',
       noResults: 'Nothing found',

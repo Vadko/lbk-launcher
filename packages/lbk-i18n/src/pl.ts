@@ -353,7 +353,7 @@ export const pl = {
   gameAuthors: { many: 'Twórcy lokalizacji', one: 'Twórca lokalizacji' },
   gameCard: {
     unknownAuthor: 'Nieznany twórca',
-    downloadedByPlayers: 'Pobrane przez graczy',
+    downloadsLastMonth: 'w ostatnim miesiącu',
   },
   gameHero: { share: 'Udostępnij' },
   gameLike: {
@@ -422,7 +422,8 @@ export const pl = {
       feedback: 'Opinie',
       error: 'Błędy',
     },
-    installRequired: 'Opinię możesz zostawić po zainstalowaniu lokalizacji.',
+    installRequired:
+      'Opinię możesz zostawić lub na nią odpowiedzieć po zainstalowaniu lokalizacji.',
     loadFailed: 'Nie udało się załadować opinii. Spróbuj ponownie później.',
     empty: 'Na razie brak opinii.',
     emptyErrors: 'Na razie brak zgłoszeń błędów.',
@@ -998,7 +999,7 @@ export const pl = {
     search: {
       placeholder: {
         teams: 'Szukaj zespołów...',
-        games: 'Szukaj gier...',
+        games: 'Znajdź grę w rankingu...',
       },
       allResults: '– wszystkie wyniki',
       noResults: 'Nic nie znaleziono',
