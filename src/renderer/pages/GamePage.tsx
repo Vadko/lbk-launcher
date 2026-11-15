@@ -701,6 +701,7 @@ export function GamePage() {
                         isUpdateAvailable={!!isUpdateAvailable}
                         isOnline={isOnline}
                         isInstalling={isInstalling}
+                        progress={installProgress}
                       />
                       {isWaitingForNetwork && (
                         <div className="mt-3 flex justify-end">
