@@ -1,4 +1,4 @@
-import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon } from 'lucide-react';
+import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon, LanguagesIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { DiscountPill } from '@/renderer/components/Elements/DiscountPill';
 import { InfoIcons } from '@/renderer/components/Elements/InfoIcons';
@@ -29,6 +29,7 @@ interface GameListItemProps {
   isTranslationAvailable?: boolean;
   variant?: string;
   imageDeferred?: boolean;
+  moreTranslations?: number;
 }
 
 export const GameListItem = memo(function GameListItem({
@@ -44,6 +45,7 @@ export const GameListItem = memo(function GameListItem({
   isTranslationAvailable = true,
   variant,
   imageDeferred = false,
+  moreTranslations = 0,
 }: GameListItemProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [erroredUrl, setErroredUrl] = useState<string | null>(null);
@@ -207,9 +209,17 @@ export const GameListItem = memo(function GameListItem({
           )}
           {/* Info */}
           <div className="p-3 bg-glass-hover rounded-xl mt-auto">
-            <h4 className="font-semibold mb-2 truncate" title={game.team}>
-              {game.team}
-            </h4>
+            <div className="flex items-center gap-2 mb-2">
+              <h4 className="font-semibold truncate flex-1" title={game.team}>
+                {game.team}
+              </h4>
+              {moreTranslations > 0 && (
+                <span className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-color-main text-text-dark text-xs font-semibold">
+                  <LanguagesIcon size={12} />
+                  {t('gameCard.moreTranslations', { count: moreTranslations })}
+                </span>
+              )}
+            </div>
 
             <div className="flex gap-3 items-center w-full flex-wrap">
               {game.status && (

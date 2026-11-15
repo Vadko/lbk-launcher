@@ -354,6 +354,10 @@ export const pl = {
   gameCard: {
     unknownAuthor: 'Nieznany twórca',
     downloadedByPlayers: 'Pobrane przez graczy',
+    moreTranslations_one: 'Jeszcze {{count}} tłumaczenie',
+    moreTranslations_few: 'Jeszcze {{count}} tłumaczenia',
+    moreTranslations_many: 'Jeszcze {{count}} tłumaczeń',
+    moreTranslations_other: 'Jeszcze {{count}} tłumaczenia',
   },
   gameHero: { share: 'Udostępnij' },
   gameLike: {
