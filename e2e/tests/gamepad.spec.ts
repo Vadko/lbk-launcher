@@ -47,7 +47,11 @@ test.beforeAll(async () => {
   // Opened with the mouse before the pad connects: any mouse move leaves gamepad mode
   await page.locator('[data-nav-group="game-list"]').first().click();
   await page.locator('[data-gamepad-sticky]').waitFor({ state: 'visible' });
+  // The install check keeps the primary action disabled for a moment, and entering would then select something else
+  await expect(page.locator('[data-gamepad-primary-action]').first()).toBeEnabled();
   await connectGamepad(page);
+  // Gamepad mode swaps the sidebar for the strip; the navigation loop runs only once that layout is up
+  await page.locator('[data-gamepad-game-list]').waitFor({ state: 'visible' });
 });
 
 test.afterAll(async () => {
