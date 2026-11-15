@@ -94,13 +94,16 @@ interface StickyBar {
   cover: number;
 }
 
-const getStickyBars = (container: Element): StickyBar[] =>
-  Array.from(container.querySelectorAll<HTMLElement>('[data-gamepad-sticky]')).map(
+// A bar sticks below the container's padding, which gamepad mode adds to the game page
+const getStickyBars = (container: Element): StickyBar[] => {
+  const padding = Number.parseFloat(getComputedStyle(container).paddingTop) || 0;
+  return Array.from(container.querySelectorAll<HTMLElement>('[data-gamepad-sticky]')).map(
     (el) => {
-      const top = Number.parseFloat(getComputedStyle(el).top) || 0;
+      const top = padding + (Number.parseFloat(getComputedStyle(el).top) || 0);
       return { el, top, cover: top + el.offsetHeight };
     }
   );
+};
 
 const isStuck = (bar: StickyBar, container: Element) =>
   bar.el.getBoundingClientRect().top - container.getBoundingClientRect().top <=

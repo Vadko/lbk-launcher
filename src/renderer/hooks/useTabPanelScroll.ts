@@ -13,8 +13,13 @@ export function useTabPanelScroll() {
     if (!panel) {
       return;
     }
-    // The actions bar sticks over the top of the scroll area, so the panel stops below it
-    panel.style.scrollMarginTop = `${(barRef.current?.offsetHeight ?? 0) + BAR_GAP}px`;
+    const bar = barRef.current;
+    // The actions bar sticks below the scroll area's padding, so the panel stops below the bar
+    const barCover = bar?.parentElement
+      ? Number.parseFloat(getComputedStyle(bar.parentElement).paddingTop) +
+        bar.offsetHeight
+      : 0;
+    panel.style.scrollMarginTop = `${barCover + BAR_GAP}px`;
     void panel.scrollIntoView({ block: 'start', behavior: scrollBehavior() });
   };
   return { barRef, panelRef, showPanel };
