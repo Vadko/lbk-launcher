@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Route } from 'react-router-dom';
 import { Router } from '../lib/electron-router-dom';
 import { MainLayout } from './components/Layout/MainLayout';
-import { useIdleEffect } from './hooks/useIdleEffect';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { useSteamRestartPrompt } from './hooks/useSteamRestartPrompt';
 import { GamePage } from './pages/GamePage';
@@ -14,7 +13,6 @@ import { SitePage } from './pages/SitePage';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useStore } from './store/useStore';
-import { useWorkshopInstallsStore } from './store/useWorkshopInstallsStore';
 import { trackEvent } from './utils/analytics';
 import { isValidGamepad } from './utils/isValidGamepad';
 
@@ -87,7 +85,7 @@ if (isMixpanelInitialized) {
 }
 
 export function App() {
-  const { detectInstalledGames, setSyncStatus, syncStatus } = useStore();
+  const setSyncStatus = useStore((s) => s.setSyncStatus);
   const { liquidGlassEnabled } = useSettingsStore();
   const setGamepadMode = useGamepadModeStore((s) => s.setGamepadMode);
   const [online, setOnline] = useState(navigator.onLine);
@@ -295,46 +293,6 @@ export function App() {
     checkAndApplyLiquidGlass();
   }, [liquidGlassEnabled]);
 
-  // Gated on sync: pre-sync catalog rows have stale versions and may be missing entirely
-  useIdleEffect(() => {
-    if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
-      useStore.getState().loadInstalledGamesFromSystem();
-    }
-  }, [syncStatus]);
-
-  useIdleEffect(() => {
-    if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
-      void useWorkshopInstallsStore.getState().reconcileAll();
-    }
-  }, [syncStatus]);
-
-  // Detect installed games — only once sync has finished (otherwise the catalog is
-  // still empty). The effect reruns when syncStatus becomes ready/error.
-  useIdleEffect(() => {
-    if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
-      detectInstalledGames();
-    }
-  }, [detectInstalledGames, syncStatus]);
-
-  // Listen for Steam library changes
-  useEffect(() => {
-    if (!window.electronAPI) {
-      return;
-    }
-
-    const handleSteamLibraryChange = async () => {
-      console.log('[App] Steam library changed, re-detecting installed games');
-      // detectInstalledGames replaces the map wholesale on success and, on
-      // error, leaves the previous detection intact — no pre-clear needed.
-      await detectInstalledGames();
-    };
-
-    const unsubscribe = window.electronAPI.onSteamLibraryChanged?.(
-      handleSteamLibraryChange
-    );
-    return unsubscribe;
-  }, [detectInstalledGames]);
-
   // Listen for changes to installed translations
   // This listener is needed for all changes: install, uninstall, external changes
   useEffect(() => {
@@ -364,6 +322,7 @@ export function App() {
     const unsubStatus = window.electronAPI?.onInstallationStatus?.((gameId, status) => {
       useStore.getState().setInstallationProgress(gameId, {
         statusMessage: status.message,
+        statusKey: null,
         statusTone: status.tone ?? null,
         ...(status.phase !== 'download' && { downloadProgress: null, progress: 0 }),
       });

@@ -53,3 +53,66 @@
     !pragma warning pop
   !endif
 !macroend
+
+; Under Wine powershell.exe exits 0 for anything and findstr ignores /B and /C:, so the stock FIND_PROCESS always sees the app running.
+; customCheckAppRunning makes the template skip getProcessInfo.nsh and $pid, which its Windows path still needs.
+!include "getProcessInfo.nsh"
+Var pid
+
+!macro lbkIsWine _RESULT
+  Push $0
+  Push $1
+  StrCpy $1 0
+  System::Call 'kernel32::GetModuleHandle(t "ntdll.dll") p .r0'
+  ${if} $0 != 0
+    System::Call 'kernel32::GetProcAddress(p r0, m "wine_get_version") p .r1'
+  ${endIf}
+  ${if} $1 != 0
+    StrCpy ${_RESULT} 1
+  ${else}
+    StrCpy ${_RESULT} 0
+  ${endIf}
+  Pop $1
+  Pop $0
+!macroend
+
+!macro lbkWineCheckAppRunning
+  nsProcess::_FindProcess "${APP_EXECUTABLE_FILENAME}"
+  Pop $R0
+  ${if} $R0 == 0
+    ${ifNot} ${isUpdated}
+      MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "$(appRunning)" /SD IDOK IDOK lbkWineStop
+      Quit
+    ${endIf}
+    lbkWineStop:
+    DetailPrint "$(appClosing)"
+    StrCpy $R1 0
+    lbkWineLoop:
+      nsProcess::_KillProcess "${APP_EXECUTABLE_FILENAME}"
+      Pop $R0
+      Sleep 1000
+      nsProcess::_FindProcess "${APP_EXECUTABLE_FILENAME}"
+      Pop $R0
+      ${if} $R0 == 0
+        IntOp $R1 $R1 + 1
+        ${if} $R1 > 5
+          MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "$(appCannotBeClosed)" /SD IDCANCEL IDRETRY lbkWineRetry
+          Quit
+          lbkWineRetry:
+          StrCpy $R1 0
+        ${endIf}
+        Goto lbkWineLoop
+      ${endIf}
+  ${endIf}
+  nsProcess::_Unload
+!macroend
+
+!macro customCheckAppRunning
+  !insertmacro lbkIsWine $R9
+  ${if} $R9 == 1
+    !insertmacro lbkWineCheckAppRunning
+  ${else}
+    !insertmacro IS_POWERSHELL_AVAILABLE
+    !insertmacro _CHECK_APP_RUNNING
+  ${endIf}
+!macroend

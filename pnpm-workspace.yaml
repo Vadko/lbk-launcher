@@ -23,6 +23,8 @@ overrides:
   '@steambrew/ttc>typescript': 6.0.3
   # ttc lists the npm `fs` placeholder; hoisted, it shadows the builtin and breaks the renderer's dep pre-bundle in `pnpm dev`.
   '@steambrew/ttc>fs': '-'
+  # @sentry/node needs it only for its vite/rollup/webpack/esbuild plugin entries; as a runtime dependency it packs the Sentry CLI and oxc-parser into app.asar.
+  '@sentry/node>@sentry/bundler-plugins': '-'
 
 patchedDependencies:
   node-7z@3.0.0: patches/node-7z@3.0.0.patch

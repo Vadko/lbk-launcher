@@ -225,7 +225,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb libatk1.0-0 libatk-bridge2.0-0 \
-            libgdk-pixbuf2.0-0 libgtk-3-0 libgbm-dev libnss3-dev libxss-dev \
+            libgdk-pixbuf-xlib-2.0-0 libgtk-3-0 libgbm-dev libnss3-dev libxss-dev \
             libasound2t64
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
@@ -247,7 +247,7 @@ jobs:
 
       - name: Report E2E results
         if: always()
-        uses: daun/playwright-report-summary@v3
+        uses: daun/playwright-report-summary@v4
         with:
           report-file: e2e/results.json
           report-tag: release-${{ matrix.os }}

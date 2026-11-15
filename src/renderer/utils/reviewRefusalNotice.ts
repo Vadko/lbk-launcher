@@ -1,5 +1,5 @@
 import type { ToastNotification } from '../store/subscriptions/types';
-import { type ReviewRefusalReason, reviewRefusalMessage } from './reviewRefusalMessage';
+import type { ReviewRefusalReason } from './reviewRefusalMessage';
 
 export type RefusalNotice = Omit<ToastNotification, 'id' | 'timestamp'>;
 
@@ -24,6 +24,6 @@ export function reviewRefusalNotice({
     gameName,
     feedbackId,
     entryId,
-    message: reviewRefusalMessage(reason),
+    refusalReason: reason,
   };
 }

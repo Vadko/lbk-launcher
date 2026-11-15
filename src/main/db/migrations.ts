@@ -1161,6 +1161,20 @@ const migrations: Migration[] = [
         'migration_resync_artwork_localized_done'
       ),
   },
+  {
+    name: 'add_downloads_30d_column',
+    up: (db) => {
+      const added = addColumnIfMissing(
+        db,
+        'downloads_30d',
+        'ALTER TABLE games ADD COLUMN downloads_30d INTEGER NOT NULL DEFAULT 0;'
+      );
+      // A counter is skipped on upsert conflict, so only a full counters catch-up fills it
+      if (added) {
+        db.exec(`DELETE FROM sync_metadata WHERE key = 'game_counters_synced_at'`);
+      }
+    },
+  },
 ];
 
 /**

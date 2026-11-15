@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import type { ReviewEvent } from '@/shared/game-reviews-types';
 import { reviewEvent } from '../utils/reviewEvent.fixture';
 import { reviewModerationKey } from '../utils/reviewModerationKey';
-import { reviewRefusalMessage } from '../utils/reviewRefusalMessage';
 import { feedbackPostsKey } from './gameReviewsQueryKey';
 import {
   deferAnswer,
@@ -161,7 +160,7 @@ describe('handleReviewEvents moderation', () => {
       expect.objectContaining({
         type: 'review-rejected',
         entryId: 'held',
-        message: reviewRefusalMessage(reason),
+        refusalReason: reason,
       }),
     ]);
     expect(mocks.addNotification).toHaveBeenCalledWith(expect.anything(), false);

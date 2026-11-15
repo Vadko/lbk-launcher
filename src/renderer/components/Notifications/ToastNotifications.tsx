@@ -17,6 +17,7 @@ import { useChangelogStore } from '../../store/useChangelogStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { gameLink } from '../../utils/gameLink';
+import { notificationMessage } from '../../utils/notificationMessage';
 
 const getToastIcon = (type: ToastNotification['type']) => {
   switch (type) {
@@ -139,7 +140,7 @@ export function ToastNotifications() {
                   {t(`notificationToast.${toast.type}`)}
                 </h4>
                 <p className="text-xs text-text-muted">
-                  {toast.gameName} • {toast.message}
+                  {toast.gameName} • {notificationMessage(toast)}
                 </p>
               </div>
               <button

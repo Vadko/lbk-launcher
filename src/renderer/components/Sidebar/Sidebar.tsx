@@ -8,6 +8,7 @@ import { useFacetData } from '../../hooks/useFacetData';
 import { useGames } from '../../hooks/useGames';
 import { useResource } from '../../hooks/useResource';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useSidebarGroupsStore } from '../../store/useSidebarGroupsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { deriveGroupNaming } from '../../utils/groupName';
@@ -216,7 +217,8 @@ export function Sidebar({ onOpenHistory, isHorizontal = false }: SidebarProps) {
     group.variantById = naming.variantById;
   }
 
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
+  const expandedGroups = useSidebarGroupsStore((state) => state.expanded);
+  const toggleGroupExpanded = useSidebarGroupsStore((state) => state.toggle);
 
   const listRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -267,18 +269,6 @@ export function Sidebar({ onOpenHistory, isHorizontal = false }: SidebarProps) {
       document.body.style.userSelect = '';
     };
   }, [isResizing, setSidebarWidth]);
-
-  const toggleGroupExpanded = (key: string) => {
-    setExpandedGroups((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(key)) {
-        newSet.delete(key);
-      } else {
-        newSet.add(key);
-      }
-      return newSet;
-    });
-  };
 
   const handleSelectGame = (game: Game) => navigate(`/game/${game.id}`);
 

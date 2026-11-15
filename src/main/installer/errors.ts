@@ -1,4 +1,5 @@
 import { t } from '@/shared/i18n/i18n';
+import { currentLocale } from '@/shared/i18n/locale';
 
 /**
  * Error that requires manual folder selection
@@ -55,7 +56,7 @@ export class RateLimitError extends Error {
   ) {
     const nextTime = nextAvailableAt ? new Date(nextAvailableAt) : null;
     const timeStr = nextTime
-      ? nextTime.toLocaleString('uk-UA', {
+      ? nextTime.toLocaleString(currentLocale(), {
           day: 'numeric',
           month: 'long',
           hour: '2-digit',

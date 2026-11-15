@@ -11,6 +11,7 @@ import { getPluginHostState } from '@/main/plugin-host/state';
 import { getStoreDiscountsByApp } from '@/main/store-discounts-by-app';
 import { getSteamBridgeStatus } from '@/main/utils/steam-bridge';
 import { readHideAiTranslations } from '@/main/utils/store-storage';
+import { listWineBottles } from '@/main/wine/bottles';
 import type { ResourceKey } from '@/shared/resources';
 import {
   defineResource,
@@ -89,6 +90,7 @@ const DEFINITIONS: { [K in ResourceKey]: ResourceDefinition<K> } = {
   steamBridgeStatus: { read: getSteamBridgeStatus, on: [] },
   // steamRunning and canRestartSteam follow Steam, which the owner does not republish for
   pluginHostState: { read: getPluginHostState, on: ['steam-started', 'steam-exited'] },
+  wineBottles: { read: listWineBottles, on: ['wine-prefixes-changed'] },
 };
 
 const define = <K extends ResourceKey>(key: K): Resource =>

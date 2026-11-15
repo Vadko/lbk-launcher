@@ -20,6 +20,7 @@ import { useState } from 'react';
 import { Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
+import { currentLocale, perLocale } from '@/shared/i18n/locale';
 import type { Notification } from '../../store/subscriptions/types';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -29,8 +30,11 @@ import { Modal } from '../Modal/Modal';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
+import { NotificationText } from './NotificationText';
 
-const RELATIVE_TIME = new Intl.RelativeTimeFormat('uk-UA', { numeric: 'always' });
+const relativeTime = perLocale(
+  (locale) => new Intl.RelativeTimeFormat(locale, { numeric: 'always' })
+);
 
 interface NotificationModalProps {
   isOpen: boolean;
@@ -90,16 +94,16 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
       return t('notificationCenter.justNow');
     }
     if (minutes < 60) {
-      return RELATIVE_TIME.format(-minutes, 'minute');
+      return relativeTime().format(-minutes, 'minute');
     }
     if (hours < 24) {
-      return RELATIVE_TIME.format(-hours, 'hour');
+      return relativeTime().format(-hours, 'hour');
     }
     if (days < 7) {
-      return RELATIVE_TIME.format(-days, 'day');
+      return relativeTime().format(-days, 'day');
     }
 
-    return date.toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv' });
+    return date.toLocaleDateString(currentLocale(), { timeZone: 'Europe/Kyiv' });
   };
 
   const getNotificationIcon = (type: Notification['type']) => {
@@ -149,66 +153,6 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
         return 'bg-green-500/20';
       default:
         return 'bg-color-accent/20';
-    }
-  };
-
-  const getNotificationText = (notification: Notification) => {
-    switch (notification.type) {
-      case 'status-change':
-        return t('notificationCenter.statusChange', {
-          from: notification.oldValue ?? '',
-          to: notification.newValue ?? '',
-        });
-      case 'version-update':
-        return t('notificationCenter.versionUpdate', {
-          from: notification.oldValue ?? '',
-          to: notification.newValue ?? '',
-        });
-      case 'app-update':
-        return t('notificationCenter.appUpdate', {
-          version: notification.newValue ?? '',
-        });
-      case 'progress-change':
-        return <>{notification.newValue}</>;
-      case 'team-new-game':
-        return (
-          <Trans
-            i18nKey="notificationCenter.teamNewGame"
-            components={{
-              team: <span className="text-yellow-400">{notification.teamName}</span>,
-            }}
-          />
-        );
-      case 'team-status-change':
-        return (
-          <Trans
-            i18nKey="notificationCenter.teamStatusChange"
-            components={{
-              team: <span className="text-cyan-400">{notification.teamName}</span>,
-              status: <>{notification.newValue}</>,
-            }}
-          />
-        );
-      case 'feedback-reply':
-        return (
-          <>
-            <span className="text-color-main">
-              {t('notificationCenter.feedbackReply')}
-            </span>{' '}
-            {notification.message}
-          </>
-        );
-      case 'review-rejected':
-        return (
-          <>
-            <span className="text-red-400">{t('notificationCenter.reviewRejected')}</span>{' '}
-            {notification.message}
-          </>
-        );
-      case 'review-published':
-        return t('notificationMessage.reviewPublished');
-      default:
-        return t('notificationCenter.fallback');
     }
   };
 
@@ -376,7 +320,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
                               </h3>
                             </div>
                             <p className="text-sm text-text-muted">
-                              {getNotificationText(notification)}
+                              <NotificationText notification={notification} />
                             </p>
                             <p className="text-xs text-text-muted mt-1">
                               {formatTimestamp(notification.timestamp)}

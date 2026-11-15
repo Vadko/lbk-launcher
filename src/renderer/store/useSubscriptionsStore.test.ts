@@ -10,6 +10,7 @@ vi.mock('../utils/notificationSounds', () => ({ playNotificationSound }));
 
 const { useSubscriptionsStore } = await import('./useSubscriptionsStore');
 const { reviewEvent } = await import('../utils/reviewEvent.fixture');
+const { notificationMessage } = await import('../utils/notificationMessage');
 const store = () => useSubscriptionsStore.getState();
 
 describe('useSubscriptionsStore caps', () => {
@@ -69,14 +70,14 @@ describe('useSubscriptionsStore showToast', () => {
       type: 'review-rejected',
       gameId: 'g1',
       gameName: 'Game',
-      message: 'refused',
+      refusalReason: 'banned',
     });
 
     expect(store().toasts).toEqual([
       expect.objectContaining({
         type: 'review-rejected',
         gameId: 'g1',
-        message: 'refused',
+        refusalReason: 'banned',
       }),
     ]);
     expect(playNotificationSound).toHaveBeenCalledWith('review-rejected');
@@ -89,7 +90,7 @@ describe('useSubscriptionsStore showToast', () => {
       type: 'review-rejected',
       gameId: 'g1',
       gameName: 'Game',
-      message: 'refused',
+      refusalReason: 'banned',
     });
     vi.runAllTimers();
 
@@ -123,12 +124,19 @@ describe('useSubscriptionsStore review notices', () => {
   it('shows a reply as who wrote it and what, linked to its thread and entry', () => {
     store().addReplyNotification(reply, true);
 
-    const message = t('notifications.replyBy', { name: 'Nick', message: 'thanks' });
-    const link = { gameId: 'g1', feedbackId: 't', entryId: 'r1', message };
+    const link = {
+      gameId: 'g1',
+      feedbackId: 't',
+      entryId: 'r1',
+      reply: { authorRole: 'player', authorName: 'Nick', message: 'thanks' },
+    };
     expect(store().notifications).toEqual([
       expect.objectContaining({ type: 'feedback-reply', ...link }),
     ]);
     expect(store().toasts).toEqual([expect.objectContaining(link)]);
+    expect(notificationMessage(store().notifications[0])).toBe(
+      t('notifications.replyBy', { name: 'Nick', message: 'thanks' })
+    );
   });
 
   it('keeps a catch-up reply in the list without a toast', () => {
@@ -171,7 +179,7 @@ describe('useSubscriptionsStore review notices', () => {
       gameId: 'g1',
       gameName: 'Game',
       entryId: 'e1',
-      message: 'removed',
+      refusalReason: 'removed' as const,
     };
 
     store().addNotification(notice, true);
@@ -181,12 +189,12 @@ describe('useSubscriptionsStore review notices', () => {
       expect.objectContaining({
         type: 'review-rejected',
         entryId: 'e1',
-        message: 'removed',
+        refusalReason: 'removed',
       }),
     ]);
     expect(store().toasts).toEqual([
-      expect.objectContaining({ entryId: 'e1', message: 'removed' }),
-      expect.objectContaining({ entryId: 'e1', message: 'removed' }),
+      expect.objectContaining({ entryId: 'e1', refusalReason: 'removed' }),
+      expect.objectContaining({ entryId: 'e1', refusalReason: 'removed' }),
     ]);
   });
 
@@ -204,7 +212,7 @@ describe('useSubscriptionsStore review notices', () => {
         gameId: 'g1',
         gameName: 'Game',
         entryId: 'e2',
-        message: 'removed',
+        refusalReason: 'removed',
       },
       false
     );
@@ -231,5 +239,67 @@ describe('useSubscriptionsStore review notices', () => {
 
     expect(store().notifications).toHaveLength(1);
     expect(store().toasts).toEqual([]);
+  });
+});
+
+describe('useSubscriptionsStore stored wording', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    useSubscriptionsStore.setState({ notifications: [], unreadCount: 0, toasts: [] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('keeps progress as its kind and values, worded only when shown', () => {
+    store().addProgressChangeNotification('g1', 'Game', 'voice', 10, 40, true);
+
+    const [notification] = store().notifications;
+    expect(notification).toEqual(
+      expect.objectContaining({ progress: { kind: 'voice', from: 10, to: 40 } })
+    );
+    expect(notification).not.toHaveProperty('newValue');
+    expect(notification).not.toHaveProperty('message');
+    expect(notificationMessage(store().toasts[0])).toBe(
+      t('notifications.progressChange', {
+        kind: t('translationProgress.voice'),
+        from: 10,
+        to: 40,
+      })
+    );
+  });
+
+  it('keeps a team status as the raw status', () => {
+    store().addTeamStatusChangeNotification(
+      'g1',
+      'Game',
+      'Team',
+      'planned',
+      'completed',
+      false
+    );
+
+    expect(store().notifications).toEqual([
+      expect.objectContaining({ oldValue: 'planned', newValue: 'completed' }),
+    ]);
+  });
+
+  it('still words a notice an older launcher stored as text', () => {
+    useSubscriptionsStore.setState({
+      notifications: [
+        {
+          id: 'old',
+          type: 'feedback-reply',
+          gameId: 'g1',
+          gameName: 'Game',
+          message: 'Nick: thanks',
+          timestamp: 0,
+          read: false,
+        },
+      ],
+    });
+
+    expect(notificationMessage(store().notifications[0])).toBe('Nick: thanks');
   });
 });

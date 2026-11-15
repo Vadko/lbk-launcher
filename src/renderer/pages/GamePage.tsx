@@ -52,6 +52,7 @@ import {
 } from '../hooks/useInstalledTranslations';
 import { useTabPanelScroll } from '../hooks/useTabPanelScroll';
 import { useRecommendedGames } from '../queries/useRecommendedGames';
+import { useAuthorPromptStore } from '../store/useAuthorPromptStore';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -101,7 +102,7 @@ export function GamePage() {
     createBackupBeforeInstall,
     steamCustomArtworkEnabled,
   } = useSettingsStore();
-  const { isGamePrompted, markGameAsPrompted } = useSubscriptionsStore();
+  const markGameAsPrompted = useSubscriptionsStore((state) => state.markGameAsPrompted);
   const {
     phase: launchPhase,
     isPending: isLaunching,
@@ -109,7 +110,6 @@ export function GamePage() {
     reset: resetLaunch,
   } = useActionPhase();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   // Each open mounts a fresh form, while a closing one keeps its content through the exit animation
   const [feedbackOpens, setFeedbackOpens] = useState(0);
@@ -288,16 +288,12 @@ export function GamePage() {
     trackBannerImpression('click');
   };
 
-  // Callback for first install - show subscription modal
-  const selectedGameTeam = selectedGame?.team;
-  const handleFirstInstallComplete = () => {
-    if (selectedGameTeam && selectedGameId && !isGamePrompted(selectedGameId)) {
-      setShowAuthorSubscriptionModal(true);
-    }
-  };
-
+  // Offered once a first install of this game finishes, wherever the install was started
+  const showAuthorSubscriptionModal = useAuthorPromptStore(
+    (state) => state.gameId !== null && state.gameId === selectedGameId
+  );
   const handleCloseAuthorSubscriptionModal = () => {
-    setShowAuthorSubscriptionModal(false);
+    useAuthorPromptStore.getState().dismiss();
     if (selectedGameId) {
       markGameAsPrompted(selectedGameId);
     }
@@ -335,7 +331,6 @@ export function GamePage() {
     installationInfo,
     isOnline,
     isCheckingInstallation,
-    onFirstInstallComplete: handleFirstInstallComplete,
   });
 
   const selectedGameUpdatedAt = selectedGame?.updated_at;

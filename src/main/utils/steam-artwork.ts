@@ -85,13 +85,36 @@ function getArtworkStateDir(): string {
   return path.join(app.getPath('userData'), 'steam-artwork');
 }
 
-function getRecordPath(appId: number): string {
-  return path.join(getArtworkStateDir(), `${appId}.json`);
+/** Which Steam's grid to write: the native one (live through the bridge too) or a Steam in a Wine prefix (files only). */
+export interface ArtworkTarget {
+  gridDir: string | null;
+  // Records and backups of the user's own art; one per Steam, so two copies of a game never share them
+  stateDir: string;
+  live: boolean;
 }
 
-function readRecord(appId: number): ArtworkRecord | null {
+function nativeArtworkTarget(): ArtworkTarget {
+  return { gridDir: getSteamGridPath(), stateDir: getArtworkStateDir(), live: true };
+}
+
+export function prefixArtworkTarget(
+  prefix: string,
+  gridDir: string | null
+): ArtworkTarget {
+  return {
+    gridDir,
+    stateDir: path.join(getArtworkStateDir(), 'wine', sha256(prefix).slice(0, 16)),
+    live: false,
+  };
+}
+
+function getRecordPath(target: ArtworkTarget, appId: number): string {
+  return path.join(target.stateDir, `${appId}.json`);
+}
+
+function readRecord(target: ArtworkTarget, appId: number): ArtworkRecord | null {
   try {
-    const raw = fs.readFileSync(getRecordPath(appId), 'utf8');
+    const raw = fs.readFileSync(getRecordPath(target, appId), 'utf8');
     const parsed = JSON.parse(raw) as Partial<ArtworkRecord>;
     const written = Array.isArray(parsed.written)
       ? parsed.written.filter(
@@ -108,25 +131,32 @@ function readRecord(appId: number): ArtworkRecord | null {
 }
 
 // Anything to revert counts: a run whose every slot failed may still have moved the user's own files aside.
-export function hasSteamArtwork(appId: number): boolean {
-  const record = readRecord(appId);
+export function hasSteamArtwork(
+  appId: number,
+  target: ArtworkTarget = nativeArtworkTarget()
+): boolean {
+  const record = readRecord(target, appId);
   return (
     !!record && (record.written.length > 0 || Object.keys(record.backups).length > 0)
   );
 }
 
-function writeRecord(appId: number, record: ArtworkRecord): void {
+function writeRecord(target: ArtworkTarget, appId: number, record: ArtworkRecord): void {
   try {
-    fs.mkdirSync(getArtworkStateDir(), { recursive: true });
-    fs.writeFileSync(getRecordPath(appId), JSON.stringify(record, null, 2), 'utf8');
+    fs.mkdirSync(target.stateDir, { recursive: true });
+    fs.writeFileSync(
+      getRecordPath(target, appId),
+      JSON.stringify(record, null, 2),
+      'utf8'
+    );
   } catch (error) {
     console.warn(`[SteamArtwork] Failed to persist record for ${appId}:`, error);
   }
 }
 
-function deleteRecord(appId: number): void {
+function deleteRecord(target: ArtworkTarget, appId: number): void {
   try {
-    fs.unlinkSync(getRecordPath(appId));
+    fs.unlinkSync(getRecordPath(target, appId));
   } catch {
     // Never existed, or already gone — either way the desired end state.
   }
@@ -294,6 +324,7 @@ function gridFileNamesForSlot(appId: number, slot: ArtworkSlot): string[] {
  */
 function displaceExistingArtwork(
   gridDir: string,
+  backupDir: string,
   appId: number,
   slot: ArtworkSlot,
   ours: Map<string, ArtworkRecordEntry>,
@@ -316,7 +347,6 @@ function displaceExistingArtwork(
     }
 
     try {
-      const backupDir = getArtworkStateDir();
       fs.mkdirSync(backupDir, { recursive: true });
       const backupName = `${appId}${slot.suffix}.user.${path.extname(fileName).slice(1)}`;
       // Overwrites any earlier backup on purpose — the newest is what they'd want back.
@@ -394,7 +424,8 @@ export async function applyArtworkSlot(
  * decoded is skipped, and the rest still land.
  */
 export async function applySteamArtwork(
-  params: SteamArtworkParams
+  params: SteamArtworkParams,
+  target: ArtworkTarget = nativeArtworkTarget()
 ): Promise<SteamArtworkResult> {
   const sources: Array<[ArtworkSlot, string | null]> = [
     [HEADER_SLOT, params.capsulePath],
@@ -408,7 +439,7 @@ export async function applySteamArtwork(
     return { mode: 'noop', installed: [], reason: 'No artwork for this game' };
   }
 
-  const gridDir = getSteamGridPath();
+  const { gridDir } = target;
   if (!gridDir) {
     return { mode: 'noop', installed: [], reason: 'Steam user folder not found' };
   }
@@ -425,14 +456,21 @@ export async function applySteamArtwork(
     return { mode: 'noop', installed: [], reason: 'No artwork could be prepared' };
   }
 
-  const previous = readRecord(params.appId);
+  const previous = readRecord(target, params.appId);
   const priorByName = new Map(
     (previous?.written ?? []).map((entry) => [entry.name, entry])
   );
   const backups: Record<string, string> = { ...(previous?.backups ?? {}) };
 
   for (const asset of prepared) {
-    displaceExistingArtwork(gridDir, params.appId, asset.slot, priorByName, backups);
+    displaceExistingArtwork(
+      gridDir,
+      target.stateDir,
+      params.appId,
+      asset.slot,
+      priorByName,
+      backups
+    );
   }
 
   // Files from an earlier install whose slot failed this time are still ours —
@@ -442,7 +480,7 @@ export async function applySteamArtwork(
     (entry) => !refreshedTypes.has(entry.assetType) && isStillOurs(gridDir, entry)
   );
 
-  const bridge = await getSteamBridge();
+  const bridge = target.live ? await getSteamBridge() : null;
   const installed: ArtworkSlotKey[] = [];
   let anyViaFile = false;
 
@@ -474,7 +512,7 @@ export async function applySteamArtwork(
 
   // Persist even on total failure — user files may already have been moved
   // aside, and those backups need an owner.
-  writeRecord(params.appId, { written, backups });
+  writeRecord(target, params.appId, { written, backups });
 
   if (installed.length === 0) {
     return { mode: 'noop', installed: [], reason: 'Every slot failed to apply' };
@@ -493,18 +531,21 @@ export type RevertMode = 'none' | 'cef' | 'file' | 'failed';
  * Undo `applySteamArtwork` — remove the files we wrote, restore what the user
  * had before. A no-op when we never touched this app.
  */
-export async function removeSteamArtwork(appId: number): Promise<RevertMode> {
-  const record = readRecord(appId);
+export async function removeSteamArtwork(
+  appId: number,
+  target: ArtworkTarget = nativeArtworkTarget()
+): Promise<RevertMode> {
+  const record = readRecord(target, appId);
   if (!record) {
     return 'none';
   }
 
-  const gridDir = getSteamGridPath();
+  const { gridDir } = target;
   if (!gridDir) {
     return 'failed';
   }
 
-  const bridge = await getSteamBridge();
+  const bridge = target.live ? await getSteamBridge() : null;
 
   for (const entry of record.written) {
     const fullPath = path.join(gridDir, entry.name);
@@ -539,7 +580,7 @@ export async function removeSteamArtwork(appId: number): Promise<RevertMode> {
 
   let restoreFailed = false;
   for (const [gridName, backupName] of Object.entries(record.backups)) {
-    const backupPath = path.join(getArtworkStateDir(), backupName);
+    const backupPath = path.join(target.stateDir, backupName);
     if (!fs.existsSync(backupPath)) {
       continue;
     }
@@ -560,7 +601,7 @@ export async function removeSteamArtwork(appId: number): Promise<RevertMode> {
     return 'failed';
   }
 
-  deleteRecord(appId);
+  deleteRecord(target, appId);
   console.log(`[SteamArtwork] App ${appId} artwork reverted`);
   return bridge ? 'cef' : 'file';
 }

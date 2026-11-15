@@ -10,6 +10,7 @@ const steam = vi.hoisted(() => ({
   lastKnownLicensecacheSize: 100,
 }));
 
+vi.mock('./wine/bottle-steam-roots', () => ({ readBottleSteamLibraryFolders: () => [] }));
 vi.mock('./game-detector/steam', () => ({
   getSteamPath: () => steam.path,
   getLicensecachePath: () => path.join(steam.path, 'userdata/1/config/licensecache'),

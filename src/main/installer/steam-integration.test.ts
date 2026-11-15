@@ -25,6 +25,11 @@ vi.mock('@/main/installer/installation-info', () => ({
   rewriteInstallationRecord: mocks.rewriteInstallationRecord,
 }));
 vi.mock('@/main/steam-pending-actions', () => ({ queueSteamAction: vi.fn() }));
+vi.mock('@/main/wine/bottle-steam', () => ({
+  artworkTargetForGame: () => undefined,
+  writeBottleLaunchOptions: vi.fn(),
+}));
+vi.mock('@/main/wine/bottle-steam-roots', () => ({ bottleSteamOf: () => null }));
 vi.mock('@/main/game-detector/steam', () => ({
   getCurrentSteamAccountId: () => null,
 }));
@@ -67,25 +72,28 @@ afterEach(() => {
 describe('applySteamIntegration', () => {
   it('applies the artwork of a game that offers it', async () => {
     await applySteamIntegration(game(), STEAM, true);
-    expect(mocks.applySteamArtwork).toHaveBeenCalledWith({
-      appId: APP_ID,
-      capsulePath: 'stray/capsule.webp',
-      bannerPath: 'stray/banner.webp',
-      logoPath: null,
-      updatedAt: '2026-01-01T00:00:00+00:00',
-    });
+    expect(mocks.applySteamArtwork).toHaveBeenCalledWith(
+      {
+        appId: APP_ID,
+        capsulePath: 'stray/capsule.webp',
+        bannerPath: 'stray/banner.webp',
+        logoPath: null,
+        updatedAt: '2026-01-01T00:00:00+00:00',
+      },
+      undefined
+    );
     expect(mocks.removeSteamArtwork).not.toHaveBeenCalled();
   });
 
   it('removes the artwork when the option is off', async () => {
     await applySteamIntegration(game(), STEAM, false);
-    expect(mocks.removeSteamArtwork).toHaveBeenCalledWith(APP_ID);
+    expect(mocks.removeSteamArtwork).toHaveBeenCalledWith(APP_ID, undefined);
     expect(mocks.applySteamArtwork).not.toHaveBeenCalled();
   });
 
   it.each(notOffered)('removes applied artwork for %s', async (_case, row) => {
     await applySteamIntegration(row, STEAM, true);
-    expect(mocks.removeSteamArtwork).toHaveBeenCalledWith(APP_ID);
+    expect(mocks.removeSteamArtwork).toHaveBeenCalledWith(APP_ID, undefined);
     expect(mocks.applySteamArtwork).not.toHaveBeenCalled();
     expect(mocks.rewriteInstallationRecord).not.toHaveBeenCalled();
   });
@@ -126,7 +134,7 @@ describe('setInstalledSteamArtwork', () => {
     expect(
       await setInstalledSteamArtwork(game({ artwork_localized: false }), false)
     ).toEqual({ success: true, visibleAfterSteamStart: false });
-    expect(mocks.removeSteamArtwork).toHaveBeenCalledWith(APP_ID);
+    expect(mocks.removeSteamArtwork).toHaveBeenCalledWith(APP_ID, undefined);
   });
 
   it('refuses a record of another store', async () => {

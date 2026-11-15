@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { formatDownloads, hasExactDownloads } from './formatters';
-import { t } from './i18n/i18n';
+import { changeLanguage, t } from './i18n/i18n';
 
 describe('downloads', () => {
   it.each([
@@ -20,5 +20,16 @@ describe('downloads', () => {
 
   it('groups thousands', () => {
     expect(formatDownloads(1234)).toBe(new Intl.NumberFormat('uk-UA').format(1234));
+  });
+
+  describe('in another language', () => {
+    afterEach(async () => {
+      await changeLanguage('uk');
+    });
+
+    it('groups thousands the way that language does', async () => {
+      await changeLanguage('en');
+      expect(formatDownloads(1234)).toBe('1,234');
+    });
   });
 });

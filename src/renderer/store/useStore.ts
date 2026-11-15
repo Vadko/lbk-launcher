@@ -1,28 +1,11 @@
 import { create } from 'zustand';
-import { Constants } from '@/lib/database.types';
-import { t } from '@/shared/i18n/i18n';
 import { teamMembers } from '@/shared/team-members';
-import type {
-  DetectedGameInfo,
-  DownloadProgress,
-  Game,
-  InstallationInfo,
-  InstallationStatusTone,
-} from '../../shared/types';
+import type { DetectedGameInfo, Game, InstallationInfo } from '../../shared/types';
 import { trackEvent } from '../utils/analytics';
+import type { InstallationProgress } from './installationProgress';
+import { type GameProgress, PROGRESS_KINDS } from './subscriptions/types';
 import { useSettingsStore } from './useSettingsStore';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
-
-interface InstallationProgress {
-  isInstalling: boolean;
-  isUninstalling: boolean;
-  isPaused: boolean;
-  isWaitingForNetwork: boolean;
-  progress: number;
-  downloadProgress: DownloadProgress | null;
-  statusMessage: string | null;
-  statusTone: InstallationStatusTone | null;
-}
 
 type SyncStatus = 'loading' | 'syncing' | 'ready' | 'error';
 
@@ -74,13 +57,6 @@ interface Store {
   // Subscription Status Check
   checkSubscribedGamesStatus: (games: Game[]) => void;
   checkSubscribedTeamUpdate: (updatedGame: Game, oldGame: Game | null) => void;
-}
-
-function statusLabel(status: string): string {
-  const known = Constants.public.Enums.game_status.find(
-    (candidate) => candidate === status
-  );
-  return known ? t(`gameStatus.${known}`) : status;
 }
 
 // Statuses whose transition to a different status is worth notifying about
@@ -322,7 +298,9 @@ export const useStore = create<Store>((set, get) => ({
         progress: 0,
         downloadProgress: null,
         statusMessage: null,
+        statusKey: null,
         statusTone: null,
+        networkRetry: null,
       };
       newMap.set(gameId, { ...currentProgress, ...progress });
       return { installationProgress: newMap };
@@ -380,15 +358,6 @@ export const useStore = create<Store>((set, get) => ({
     // Create a map of games for quick lookup
     const gamesMap = new Map(games.map((g) => [g.id, g]));
 
-    // Progress type labels
-    const progressLabels: Record<string, string> = {
-      translation_progress: t('translationProgress.translation'),
-      editing_progress: t('translationProgress.editing'),
-      voice_progress: t('translationProgress.voice'),
-      textures_progress: t('translationProgress.textures'),
-      fonts_progress: t('translationProgress.fonts'),
-    };
-
     // Check each subscribed game
     subscribedGames.forEach((gameId) => {
       const game = gamesMap.get(gameId);
@@ -405,11 +374,11 @@ export const useStore = create<Store>((set, get) => ({
         watchedStatuses.has(savedStatus) &&
         game.status !== savedStatus
       ) {
-        const statusText = statusLabel(game.status);
-
         const hasExistingNotification = notifications.some(
           (n) =>
-            n.type === 'status-change' && n.gameId === gameId && n.newValue === statusText
+            n.type === 'status-change' &&
+            n.gameId === gameId &&
+            n.newValue === game.status
         );
 
         if (!hasExistingNotification) {
@@ -421,8 +390,8 @@ export const useStore = create<Store>((set, get) => ({
             type: 'status-change',
             gameId: game.id,
             gameName: game.name,
-            oldValue: statusLabel(savedStatus),
-            newValue: statusText,
+            oldValue: savedStatus,
+            newValue: game.status,
           });
         }
 
@@ -438,7 +407,7 @@ export const useStore = create<Store>((set, get) => ({
       }
 
       // Check progress changes
-      const currentProgress = {
+      const currentProgress: GameProgress = {
         translation_progress: game.translation_progress,
         editing_progress: game.editing_progress,
         voice_progress: game.voice_progress,
@@ -448,31 +417,29 @@ export const useStore = create<Store>((set, get) => ({
 
       if (savedProgress) {
         // Check each progress type for changes
-        (Object.keys(progressLabels) as Array<keyof typeof currentProgress>).forEach(
-          (key) => {
-            const oldVal = savedProgress[key];
-            const newVal = currentProgress[key];
+        (Object.keys(PROGRESS_KINDS) as Array<keyof GameProgress>).forEach((key) => {
+          const oldVal = savedProgress[key];
+          const newVal = currentProgress[key];
 
-            // Only notify if both values are numbers and new value is higher
-            if (
-              typeof oldVal === 'number' &&
-              typeof newVal === 'number' &&
-              newVal > oldVal
-            ) {
-              console.log(
-                `[Store] Progress changed for ${game.name}: ${key} ${oldVal}% -> ${newVal}%`
-              );
+          // Only notify if both values are numbers and new value is higher
+          if (
+            typeof oldVal === 'number' &&
+            typeof newVal === 'number' &&
+            newVal > oldVal
+          ) {
+            console.log(
+              `[Store] Progress changed for ${game.name}: ${key} ${oldVal}% -> ${newVal}%`
+            );
 
-              addProgressChangeNotification(
-                game.id,
-                game.name,
-                progressLabels[key],
-                oldVal,
-                newVal
-              );
-            }
+            addProgressChangeNotification(
+              game.id,
+              game.name,
+              PROGRESS_KINDS[key],
+              oldVal,
+              newVal
+            );
           }
-        );
+        });
       }
 
       // Update saved progress
@@ -512,9 +479,6 @@ export const useStore = create<Store>((set, get) => ({
         watchedStatuses.has(oldGame.status) &&
         updatedGame.status !== oldGame.status
       ) {
-        const oldStatusText = statusLabel(oldGame.status);
-        const newStatusText = statusLabel(updatedGame.status);
-
         const hasExisting = notifications.some(
           (n) =>
             n.type === 'team-status-change' &&
@@ -524,14 +488,14 @@ export const useStore = create<Store>((set, get) => ({
 
         if (!hasExisting) {
           console.log(
-            `[Store] Status change for subscribed team "${updatedGame.team}": ${updatedGame.name} is now ${newStatusText}`
+            `[Store] Status change for subscribed team "${updatedGame.team}": ${updatedGame.name} is now ${updatedGame.status}`
           );
           addTeamStatusChangeNotification(
             updatedGame.id,
             updatedGame.name,
             updatedGame.team,
-            oldStatusText,
-            newStatusText
+            oldGame.status,
+            updatedGame.status
           );
         }
       }

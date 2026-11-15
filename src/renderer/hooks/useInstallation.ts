@@ -14,6 +14,7 @@ import type {
   InstallResult,
   Platform,
 } from '../../shared/types';
+import { useAuthorPromptStore } from '../store/useAuthorPromptStore';
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -39,7 +40,6 @@ interface UseInstallationParams {
   installationInfo: InstallationInfo | undefined;
   isOnline: boolean;
   isCheckingInstallation: boolean;
-  onFirstInstallComplete?: () => void;
 }
 
 interface UseInstallationResult {
@@ -78,7 +78,6 @@ export function useInstallation({
   installationInfo,
   isOnline,
   isCheckingInstallation,
-  onFirstInstallComplete,
 }: UseInstallationParams): UseInstallationResult {
   const { setInstallationProgress, clearInstallationProgress, checkInstallationStatus } =
     useStore();
@@ -130,24 +129,21 @@ export function useInstallation({
   const isWaitingForNetwork = gameProgress?.isWaitingForNetwork || false;
   const installProgress = gameProgress?.progress || 0;
   const downloadProgress = gameProgress?.downloadProgress || null;
-  const statusMessage = gameProgress?.statusMessage || null;
+  const statusKey = gameProgress?.statusKey ?? null;
+  const statusMessage = statusKey ? t(statusKey) : gameProgress?.statusMessage || null;
   const statusTone = gameProgress?.statusTone || null;
+  // In the store, so a retry still runs after the page remounts or the player comes back to it
+  const networkRetry = gameProgress?.networkRetry ?? null;
 
   const isPlanned = selectedGame?.status === 'planned';
   const isTechImprovement = selectedGame?.status === 'tech-improvement';
 
-  // Retry context for auto-retry when network is restored
-  const networkRetryRef = useRef<{
-    customGamePath?: string;
-    options: InstallOptions;
-    autoRetried: boolean;
-  } | null>(null);
-
   const performInstallation = useCallback(
-    (customGamePath?: string, options?: InstallOptions) => {
+    (customGamePath?: string, options?: InstallOptions, isRetry = false) => {
       async function run(
         customGamePath?: string,
-        options?: InstallOptions
+        options?: InstallOptions,
+        isRetry = false
       ): Promise<void> {
         if (!selectedGame) {
           return;
@@ -192,6 +188,7 @@ export function useInstallation({
             progress: 0,
             downloadProgress: null,
             statusMessage: null,
+            statusKey: isRetry ? 'installNetwork.resuming' : null,
           });
 
           // Track download start event
@@ -241,8 +238,9 @@ export function useInstallation({
               });
             } else if (result.error.isNetworkError) {
               // Check if this was already an auto-retry — show modal for manual retry
-              if (networkRetryRef.current?.autoRetried) {
-                networkRetryRef.current = null;
+              const retried = useStore.getState().getInstallationProgress(selectedGame.id)
+                ?.networkRetry?.autoRetried;
+              if (retried) {
                 showModal({
                   title: t('installNetwork.interruptedTitle'),
                   message: t('installNetwork.interruptedMessage'),
@@ -260,17 +258,17 @@ export function useInstallation({
                 clearInstallationProgress(selectedGame.id);
               } else {
                 // First network failure — wait for reconnection and auto-retry
-                networkRetryRef.current = {
-                  customGamePath,
-                  options: effectiveOptions,
-                  autoRetried: false,
-                };
                 setInstallationProgress(selectedGame.id, {
                   isInstalling: true,
                   isWaitingForNetwork: true,
                   downloadProgress: null,
-                  statusMessage: t('installNetwork.waiting'),
+                  statusKey: 'installNetwork.waiting',
                   statusTone: 'waiting',
+                  networkRetry: {
+                    customGamePath,
+                    options: effectiveOptions,
+                    autoRetried: false,
+                  },
                 });
               }
               return;
@@ -285,8 +283,7 @@ export function useInstallation({
             return;
           }
 
-          // Clear network retry context on success
-          networkRetryRef.current = null;
+          setInstallationProgress(selectedGame.id, { networkRetry: null });
 
           setPendingInstallOptions(undefined);
           useStore.getState().clearGameUpdate(selectedGame.id);
@@ -357,9 +354,9 @@ export function useInstallation({
             actions,
           });
 
-          // Trigger callback for first install (not update)
-          if (!isUpdateAvailable && onFirstInstallComplete) {
-            onFirstInstallComplete();
+          // The page offers to follow the team after a first install, not an update
+          if (!isUpdateAvailable) {
+            useAuthorPromptStore.getState().offer(selectedGame);
           }
 
           clearInstallationProgress(selectedGame.id);
@@ -378,7 +375,7 @@ export function useInstallation({
         }
       }
 
-      return run(customGamePath, options);
+      return run(customGamePath, options, isRetry);
     },
     [
       selectedGame,
@@ -390,33 +387,30 @@ export function useInstallation({
       clearInstallationProgress,
       showModal,
       showConfirm,
-      onFirstInstallComplete,
     ]
   );
 
   // Auto-retry download when network is restored (or immediately if still online)
   useEffect(() => {
-    if (!isOnline || !isWaitingForNetwork || !networkRetryRef.current || !selectedGame) {
+    if (!isOnline || !isWaitingForNetwork || !networkRetry || !selectedGame) {
       return;
     }
-
-    const retryContext = networkRetryRef.current;
-    retryContext.autoRetried = true;
 
     // Small delay to let the network stabilize
     const timer = setTimeout(() => {
       console.log('[useInstallation] Auto-retrying download for:', selectedGame.id);
       setInstallationProgress(selectedGame.id, {
         isWaitingForNetwork: false,
-        statusMessage: t('installNetwork.resuming'),
+        networkRetry: { ...networkRetry, autoRetried: true },
       });
-      performInstallation(retryContext.customGamePath, retryContext.options);
+      void performInstallation(networkRetry.customGamePath, networkRetry.options, true);
     }, 2000);
 
     return () => clearTimeout(timer);
   }, [
     isOnline,
     isWaitingForNetwork,
+    networkRetry,
     selectedGame,
     performInstallation,
     setInstallationProgress,
@@ -579,7 +573,7 @@ export function useInstallation({
       try {
         setInstallationProgress(selectedGame.id, {
           isInstalling: true,
-          statusMessage: t('installComponents.removing'),
+          statusKey: 'installComponents.removing',
         });
 
         const result = await window.electronAPI.removeComponents(selectedGame, {
@@ -623,9 +617,9 @@ export function useInstallation({
     if (!needsDownload && removeOptions.updateSteamArtwork) {
       setInstallationProgress(selectedGame.id, {
         isInstalling: true,
-        statusMessage: installOptions.installSteamArtwork
-          ? t('installSteamIntegration.artwork')
-          : t('installSteamIntegration.artworkRevert'),
+        statusKey: installOptions.installSteamArtwork
+          ? 'installSteamIntegration.artwork'
+          : 'installSteamIntegration.artworkRevert',
       });
       artwork = await window.electronAPI
         .setSteamArtwork(selectedGame, installOptions.installSteamArtwork)
@@ -763,7 +757,7 @@ export function useInstallation({
     if (result.success) {
       setInstallationProgress(selectedGame.id, {
         isPaused: true,
-        statusMessage: t('download.paused'),
+        statusKey: 'download.paused',
       });
     } else {
       showModal({
@@ -786,7 +780,7 @@ export function useInstallation({
 
     setInstallationProgress(selectedGame.id, {
       isPaused: false,
-      statusMessage: t('download.resuming'),
+      statusKey: 'download.resuming',
     });
 
     const result = await window.electronAPI.resumeDownload(selectedGame.id);
@@ -806,8 +800,7 @@ export function useInstallation({
       return;
     }
 
-    // Clear network retry context
-    networkRetryRef.current = null;
+    setInstallationProgress(selectedGame.id, { networkRetry: null });
 
     if (isPaused) {
       // Cancel paused download (clears paused state + .part file)

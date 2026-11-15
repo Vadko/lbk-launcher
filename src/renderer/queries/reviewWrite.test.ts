@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReviewEditInput, ReviewReplyInput } from '@/shared/game-reviews-api-types';
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
 import { reviewReply } from '../utils/reviewPages.fixture';
-import { reviewRefusalMessage } from '../utils/reviewRefusalMessage';
 import {
   banned,
   editRefused,
@@ -181,7 +180,7 @@ describe('reviewWriteOptions', () => {
       gameName: 'Game',
       feedbackId: 't',
       entryId: 'mine',
-      message: reviewRefusalMessage('edit_rejected'),
+      refusalReason: 'edit_rejected',
     });
   });
 

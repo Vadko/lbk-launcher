@@ -28,6 +28,7 @@
  * to — otherwise one click would wipe everything not in the catalog out of it.
  */
 
+import { z } from 'zod';
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import { ensureSteamBridge } from '@/main/utils/steam-bridge';
 import {
@@ -40,6 +41,32 @@ import type { SteamCollectionSyncFailure } from '@/shared/types';
 
 const RECORD_KEY = 'steam-collection';
 const MAX_APP_ID = 4294967295;
+
+const collectionIdSchema = z.string().min(1).max(128);
+const namedRecordSchema = z.object({
+  id: collectionIdSchema,
+  name: z.string().min(1).max(128),
+});
+
+type CollectionRecord = z.infer<typeof namedRecordSchema>;
+
+// The op finds the collection by name, so it keeps the name it was created under across UI language switches.
+const recordSchema = z.union([
+  namedRecordSchema,
+  // Launchers before the language picker stored the bare id; the name was then always Ukrainian.
+  collectionIdSchema.transform((id) => ({
+    id,
+    name: t('steamCollection.name', { lng: 'uk' }),
+  })),
+]);
+
+function readRecord(accountId: string | null): CollectionRecord | null {
+  if (!accountId) {
+    return null;
+  }
+  const parsed = recordSchema.safeParse(readSteamAccountValue(RECORD_KEY, accountId));
+  return parsed.success ? parsed.data : null;
+}
 
 type SyncTranslatedCollectionResult =
   | { ok: true; total: number }
@@ -66,14 +93,14 @@ export async function syncTranslatedGamesCollection(
   }
 
   const accountId = getCurrentSteamAccountId();
-  const stored = accountId ? readSteamAccountValue(RECORD_KEY, accountId) : null;
-  const recordedId = typeof stored === 'string' && stored.length <= 128 ? stored : null;
+  const record = readRecord(accountId);
+  const name = record?.name ?? t('steamCollection.name');
 
   try {
     const result = await bridge.invoke('syncCollection', {
-      name: t('steamCollection.name'),
+      name,
       appIds: valid,
-      recordedId,
+      recordedId: record?.id ?? null,
     });
 
     if (result === 'library-unavailable' || result === 'no-matches') {
@@ -88,7 +115,8 @@ export async function syncTranslatedGamesCollection(
     }
 
     if (accountId && result.collectionId) {
-      writeSteamAccountValue(RECORD_KEY, accountId, result.collectionId);
+      const next: CollectionRecord = { id: result.collectionId, name };
+      writeSteamAccountValue(RECORD_KEY, accountId, next);
     }
 
     console.log(

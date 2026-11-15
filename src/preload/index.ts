@@ -56,6 +56,8 @@ const electronAPI: ElectronAPI = {
   fetchNewsFeed: invoke('fetch-news-feed'),
   openExternal: invoke('open-external'),
   selectGameFolder: invoke('select-game-folder'),
+  addWinePrefix: invoke('wine:add-prefix'),
+  removeWinePrefix: invoke('wine:remove-prefix'),
   onDownloadProgress: listen('download-progress'),
   onInstallationStatus: listen('installation-status'),
   checkForUpdates: invoke('check-for-updates'),

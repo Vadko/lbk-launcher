@@ -15,6 +15,7 @@ interface GameCounters {
   subscriptions: number | null;
   reviews: number;
   error_reviews: number;
+  downloads_30d: number;
 }
 
 const PAGE_SIZE = 1000;
@@ -32,6 +33,7 @@ const broadcastSchema = z.object({
         z.number().nullable(),
         z.number(),
         z.number(),
+        z.number(),
       ])
       .rest(z.unknown())
   ),
@@ -43,11 +45,11 @@ function applyGameCounters(rows: GameCounters[]): void {
   const update = db.prepare(`
     UPDATE games
     SET likes = ${likes}, downloads = @downloads, subscriptions = @subscriptions,
-      reviews = @reviews, error_reviews = @error_reviews
+      reviews = @reviews, error_reviews = @error_reviews, downloads_30d = @downloads_30d
     WHERE id = @id
       AND (likes IS NOT ${likes} OR downloads IS NOT @downloads
         OR subscriptions IS NOT @subscriptions OR reviews IS NOT @reviews
-        OR error_reviews IS NOT @error_reviews)
+        OR error_reviews IS NOT @error_reviews OR downloads_30d IS NOT @downloads_30d)
   `);
   const changed = db.transaction((batch: GameCounters[]) =>
     batch.filter((row) => update.run(row).changes > 0).map((row) => row.id)
@@ -87,6 +89,7 @@ const counters = createDeltaStream({
           subscriptions: row.subscriptions,
           reviews: row.reviews,
           error_reviews: row.error_reviews,
+          downloads_30d: row.downloads_30d,
         })),
       };
     }
@@ -100,14 +103,25 @@ const counters = createDeltaStream({
     event: 'counters',
     schema: broadcastSchema,
     toItems: ({ counters: rows }) =>
-      rows.map(([id, likes, downloads, subscriptions, reviews, error_reviews]) => ({
-        id,
-        likes,
-        downloads,
-        subscriptions,
-        reviews,
-        error_reviews,
-      })),
+      rows.map(
+        ([
+          id,
+          likes,
+          downloads,
+          subscriptions,
+          reviews,
+          error_reviews,
+          downloads_30d,
+        ]) => ({
+          id,
+          likes,
+          downloads,
+          subscriptions,
+          reviews,
+          error_reviews,
+          downloads_30d,
+        })
+      ),
   }),
 });
 

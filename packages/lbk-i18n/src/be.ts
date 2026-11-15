@@ -662,6 +662,11 @@ export const be = {
     platformAuto: 'Аўтаматычна ({{platform}})',
     platformManual: 'Ручны выбар ({{platform}})',
     platformFound: 'Знойдзена',
+    platformInBottle: '{{platform}} у бутэльцы «{{bottle}}»',
+    wineTarget:
+      'Гульню знойдзена ў бутэльцы CrossOver «{{bottle}}». Украінізатар усталюецца ў яе, а «Гуляць» запусціць гульню праз лаўнчар гэтай бутэлькі.',
+    wineTarget_steam:
+      'Гульню знойдзена ў бутэльцы CrossOver «{{bottle}}». Украінізатар усталюецца ў яе, а параметры запуску і вокладкі — у Steam гэтай бутэлькі. Дасягненні тут недаступныя: LBK Bridge працуе толькі са Steam для macOS.',
     platformNotFound: 'Не знойдзена (выбар уручную)',
     platformLabel: 'Платформа гульні',
     platformPlaceholder: 'Выберыце платформу',
@@ -704,6 +709,9 @@ export const be = {
     installerFileNotFound: 'файл усталёўшчыка не знойдзены: {{path}}',
     launching: 'Запуск усталёўшчыка...',
     protonSetup: 'Наладжванне і запуск Proton',
+    wineSetup: 'Запуск у бутэльцы Wine «{{bottle}}»...',
+    wineMissing:
+      'Не знойдзены Wine для бутэлькі «{{bottle}}». Усталюйце CrossOver (або Wine для бутэлькі, дададзенай уручную).',
     notCompleted: 'усталяванне не завершанае',
     windowsNeedsProton: 'Усталёўшчыку Windows ({{extensions}}) патрэбны Proton.',
     runFailed: 'Не ўдалося запусціць усталёўшчык: {{error}}',
@@ -814,6 +822,8 @@ export const be = {
     writeFailed: 'Не ўдалося запісаць параметры запуску',
     eglWriteFailed: 'не ўдалося змяніць налады гульні ў Epic Games Launcher',
     eglGameNotFound: 'гульня не знойдзена сярод усталяваных праз Epic Games Launcher',
+    eglInWine:
+      'LBK Launcher не запісвае іх у Epic Games Launcher у бутэльцы Wine, таму дадайце іх у наладах гульні там',
     eglNeedsShell:
       'яны працуюць толькі праз абалонку, праз якую іх запускае Steam, а Epic Games Launcher так не ўмее',
     eglQueued:
@@ -1014,9 +1024,9 @@ export const be = {
     appUpdate: 'Даступная новая версія праграмы: {{version}}',
     teamNewGame: 'Новая лакалізацыя ад <team/>',
     teamStatusChange: '<team/>: стан зменены на «<status/>»',
+    progressChange: '{{kind}}: {{to}}%',
     feedbackReply: 'Новы адказ:',
     reviewRejected: 'Запіс не прыняты:',
-    fallback: 'Новае апавяшчэнне',
     appUpdatesTitle: 'Абнаўленні праграмы',
     appUpdatesDescription: 'Апавяшчэнні пра новыя версіі LBK Launcher',
     gameUpdatesTitle: 'Абнаўленні ўкраінізатараў',
@@ -1037,7 +1047,6 @@ export const be = {
     firstFavorite: 'Націсніце, каб паказаць спіс абранага',
     feedbackReply: 'Новы адказ',
     reviewPublished: 'Ваш допіс прайшоў мадэрацыю, і цяпер яго бачаць усе.',
-    fallback: 'Новае апавяшчэнне',
   },
   notificationToast: {
     'status-change': 'Змена стану',
@@ -1057,6 +1066,7 @@ export const be = {
     teamStatusChange: '{{team}}: стан зменены на «{{status}}»',
     feedbackReplyTitle: 'Новы адказ: {{game}}',
     replyBy: '{{name}}: {{message}}',
+    progressChange: '{{kind}}: {{from}}% → {{to}}%',
   },
   pendingLaunchOptions: {
     queued_one: 'Чакаюць закрыцця Steam: параметры запуску для {{count}} гульні.',
@@ -1469,6 +1479,10 @@ export const be = {
       'Украінізатар для «{{name}}» спампаваны і распакаваны. Усталёўшчык для Windows будзе запушчаны праз выбраную версію Proton.\n\nШлях да папкі будзе скапіяваны ў буфер абмену.',
     scriptProtonMessage:
       'Украінізатар для «{{name}}» спампаваны і распакаваны. Скрыпт для Windows будзе запушчаны праз выбраную версію Proton.\n\nШлях да папкі будзе скапіяваны ў буфер абмену.',
+    exeWineMessage:
+      'Украінізатар для «{{name}}» спампаваны і распакаваны. Усталёўшчык для Windows будзе запушчаны ў бутэльцы «{{bottle}}».\n\nШлях да папкі будзе скапіяваны ў буфер абмену.',
+    scriptWineMessage:
+      'Украінізатар для «{{name}}» спампаваны і распакаваны. Скрыпт для Windows будзе запушчаны ў бутэльцы «{{bottle}}».\n\nШлях да папкі будзе скапіяваны ў буфер абмену.',
     exeAskMessage:
       'Украінізатар для «{{name}}» спампаваны і распакаваны.\n\nЗапусціць усталёўшчык цяпер?',
     scriptAskMessage:
@@ -1499,6 +1513,10 @@ export const be = {
   },
   settings: {
     title: 'Налады',
+    language: {
+      title: 'Мова',
+      description: 'Мова інтэрфейсу лаўнчара',
+    },
     feedback: { title: 'Зваротная сувязь', description: 'Напісаць нам у Telegram' },
     performance: {
       title: 'Рэжым прадукцыйнасці',
@@ -1585,6 +1603,21 @@ export const be = {
       synced_many: 'Сінхранізавана {{count}} гульняў: {{games}}',
       synced_other: 'Сінхранізавана {{count}} гульні: {{games}}',
       none: 'Не знойдзена гульняў, усталяваных праз Kurin, або Kurin не ўсталяваны.',
+    },
+    wine: {
+      title: 'Бутэлькі Wine',
+      description:
+        'Гульні са Steam у бутэльках CrossOver знаходзяцца самі. Бутэльку з іншай папкі або з іншага Wine дадайце ўручную.',
+      none: 'Бутэлек не знойдзена.',
+      withSteam: 'са Steam',
+      noSteam: 'без Steam',
+      remove: 'Прыбраць бутэльку «{{bottle}}»',
+      add: 'Дадаць бутэльку',
+      pickTitle: 'Выберыце папку бутэлькі Wine',
+      pickButton: 'Дадаць',
+      'addFailed_not-a-prefix':
+        'Гэта не бутэлька Wine: у выбранай папцы няма drive_c і system.reg.',
+      addFailed_failed: 'Не ўдалося дадаць бутэльку.',
     },
     lbkShortcut: {
       title: 'LBK Launcher у бібліятэцы Steam',

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
+import { useOpenNewsPage } from '../../hooks/useOpenNewsPage';
 import { SidebarLogo } from './SidebarLogo';
 
 interface SidebarHeaderProps {
@@ -15,6 +16,7 @@ interface SidebarHeaderProps {
 
 export function SidebarHeader({ isCompact = false }: SidebarHeaderProps) {
   const navigate = useNavigate();
+  const openNewsPage = useOpenNewsPage();
   return (
     <div
       className={`relative flex items-center justify-between gap-3 select-none overflow-visible ${
@@ -49,7 +51,7 @@ export function SidebarHeader({ isCompact = false }: SidebarHeaderProps) {
             <TrophyIcon size={20} />
           </button>
           <button
-            onClick={() => navigate('/news')}
+            onClick={openNewsPage}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
             title={t('sidebarNav.news')}
           >

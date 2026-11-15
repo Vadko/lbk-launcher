@@ -25,6 +25,16 @@ export function afterCursor(
   return `${column}.gt."${value}",and(${column}.eq."${value}",${tie}.gt."${tieValue}")`;
 }
 
+// The descending twin of afterCursor: (column, tie) < (value, tieValue)
+export function beforeCursor(
+  column: string,
+  value: string,
+  tie: string,
+  tieValue: string | number
+): string {
+  return `${column}.lt."${value}",and(${column}.eq."${value}",${tie}.lt."${tieValue}")`;
+}
+
 // Each page starts after the last row of the previous one, so rows changing mid-run cannot shift a page
 export async function* keysetPages<T>(
   fetchPage: (last: T | undefined) => Promise<T[]>,

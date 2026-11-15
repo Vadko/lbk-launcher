@@ -15,6 +15,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
 import { hasExactDownloads } from '@/shared/formatters';
 import { t } from '@/shared/i18n/i18n';
+import { currentLocale } from '@/shared/i18n/locale';
 import type { Game } from '../../../shared/types';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
@@ -49,7 +50,7 @@ const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) {
     return '';
   }
-  return new Date(dateString).toLocaleString('uk-UA', {
+  return new Date(dateString).toLocaleString(currentLocale(), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',

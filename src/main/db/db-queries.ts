@@ -159,6 +159,7 @@ function gameToInsertParams(game: Game): GameInsertParams {
     likes: game.likes ?? 0,
     reviews: game.reviews ?? 0,
     error_reviews: game.error_reviews ?? 0,
+    downloads_30d: game.downloads_30d ?? 0,
   };
 }
 
@@ -264,6 +265,7 @@ const SYNCED_COLUMNS = [
   'likes',
   'reviews',
   'error_reviews',
+  'downloads_30d',
 ] as const;
 
 function _assertNever<_T extends never>(): void {
@@ -290,6 +292,7 @@ const COUNTER_COLUMNS: ReadonlySet<SyncedColumn> = new Set([
   'subscriptions',
   'reviews',
   'error_reviews',
+  'downloads_30d',
 ]);
 
 /**

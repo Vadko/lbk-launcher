@@ -1,5 +1,5 @@
+import { D } from '@mobily/ts-belt';
 import type { GameLinkTarget } from '@/shared/game-link-target';
-import { t } from '@/shared/i18n/i18n';
 import { playNotificationSound } from '../../utils/notificationSounds';
 import { useSettingsStore } from '../useSettingsStore';
 import type { Notification, ToastNotification } from './types';
@@ -13,51 +13,6 @@ export function playNotificationSoundIfEnabled(type: ToastNotification['type']):
   const { notificationSoundsEnabled } = useSettingsStore.getState();
   if (notificationSoundsEnabled) {
     playNotificationSound(type);
-  }
-}
-
-/**
- * Generate notification message based on type
- */
-export function getNotificationMessage(
-  notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
-): string {
-  switch (notification.type) {
-    case 'status-change':
-      return t('notificationMessage.statusChange', {
-        status: notification.newValue ?? '',
-      });
-    case 'version-update':
-      return t('notifications.versionAvailable', {
-        version: notification.newValue ?? '',
-      });
-    case 'app-update':
-      return t('notifications.versionAvailable', {
-        version: notification.newValue ?? '',
-      });
-    case 'progress-change':
-      return t('notificationMessage.progressChange', {
-        progress: notification.newValue ?? '',
-      });
-    case 'team-new-game':
-      return t('notifications.teamNewGame', { team: notification.teamName ?? '' });
-    case 'team-status-change':
-      return t('notifications.teamStatusChange', {
-        team: notification.teamName ?? '',
-        status: notification.newValue ?? '',
-      });
-    case 'first-favorite':
-      return t('notificationMessage.firstFavorite');
-    case 'feedback-reply':
-      return notification.message
-        ? `${notification.gameName}: ${notification.message}`
-        : t('notificationMessage.feedbackReply');
-    case 'review-rejected':
-      return notification.message ?? t('gameReviews.rejected.generic');
-    case 'review-published':
-      return t('notificationMessage.reviewPublished');
-    default:
-      return t('notificationMessage.fallback');
   }
 }
 
@@ -79,20 +34,8 @@ export function createNotification(
 /**
  * Create a toast notification from a notification
  */
-export function createToast(
-  notification: Notification,
-  message: string
-): ToastNotification {
-  return {
-    id: notification.id,
-    type: notification.type,
-    gameId: notification.gameId,
-    gameName: notification.gameName,
-    feedbackId: notification.feedbackId,
-    entryId: notification.entryId,
-    message,
-    timestamp: Date.now(),
-  };
+export function createToast(notification: Notification): ToastNotification {
+  return { ...D.deleteKeys(notification, ['read', 'sourceId']), timestamp: Date.now() };
 }
 
 /**

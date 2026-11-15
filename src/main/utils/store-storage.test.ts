@@ -103,6 +103,43 @@ describe('the settings events', () => {
     }
   );
 
+  it.each<[string, object | null, object, number]>([
+    ['switches the language', { language: 'uk' }, { language: 'en' }, 1],
+    [
+      'changes another setting',
+      { language: 'en', uiSoundsEnabled: true },
+      { language: 'en', uiSoundsEnabled: false },
+      0,
+    ],
+    ['writes the default first', null, { language: 'uk' }, 0],
+    [
+      'writes a first settings envelope without a language',
+      null,
+      { uiSoundsEnabled: true },
+      0,
+    ],
+    ['writes a non-default language first', null, { language: 'be' }, 1],
+    [
+      'stores an unknown language over a known one',
+      { language: 'en' },
+      { language: 'xx' },
+      1,
+    ],
+  ])(
+    'emits language-changed as often as a write that %s needs',
+    (_label, before, after, times) => {
+      if (before) {
+        write('lbk-settings', before);
+      }
+      const changed = vi.fn();
+      appEvents.on('language-changed', changed);
+
+      write('lbk-settings', after);
+
+      expect(changed).toHaveBeenCalledTimes(times);
+    }
+  );
+
   it('emits workshop-installs-changed for every write that changes the Workshop installs', () => {
     const changed = vi.fn();
     appEvents.on('workshop-installs-changed', changed);
@@ -112,5 +149,22 @@ describe('the settings events', () => {
     write('workshop-installs-storage', { installedAt: {} });
 
     expect(changed).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('readLanguage', () => {
+  it.each<[string, object | null, string]>([
+    ['nothing stored as uk', null, 'uk'],
+    ['a stored be as be', { language: 'be' }, 'be'],
+    ['a stored en as en', { language: 'en' }, 'en'],
+    ['an unknown language as uk', { language: 'xx' }, 'uk'],
+    ['a settings envelope without one as uk', { uiSoundsEnabled: true }, 'uk'],
+  ])('reads %s', async (_label, state, expected) => {
+    const { readLanguage } = await import('./store-storage');
+    if (state) {
+      write('lbk-settings', state);
+    }
+
+    expect(readLanguage()).toBe(expected);
   });
 });

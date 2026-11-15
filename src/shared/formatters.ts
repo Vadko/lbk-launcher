@@ -1,4 +1,5 @@
 import { t } from '@/shared/i18n/i18n';
+import { perLocale } from '@/shared/i18n/locale';
 /**
  * Formats bytes into a readable form (B, KB, MB, GB)
  */
@@ -41,7 +42,7 @@ export function formatTime(seconds: number): string {
 }
 
 const MIN_SHOWN_DOWNLOADS = 20;
-const downloadsFormat = new Intl.NumberFormat('uk-UA');
+const downloadsFormat = perLocale((locale) => new Intl.NumberFormat(locale));
 
 export function hasExactDownloads(
   downloads: number | null | undefined
@@ -51,6 +52,6 @@ export function hasExactDownloads(
 
 export function formatDownloads(downloads: number | null | undefined): string {
   return hasExactDownloads(downloads)
-    ? downloadsFormat.format(downloads)
+    ? downloadsFormat().format(downloads)
     : t('gameInfo.downloadsUnder20');
 }

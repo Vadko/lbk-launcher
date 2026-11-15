@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import type { NewsFeedFilter, NewsFeedItem } from '../../shared/types';
+import type { NewsFeedCursor, NewsFeedFilter, NewsFeedItem } from '../../shared/types';
 
-type Cursor = string | undefined;
+type Cursor = NewsFeedCursor | undefined;
 
 const PAGE_SIZE = 20;
 const THIRTY_MINUTES = 30 * 60 * 1000;
@@ -12,10 +12,11 @@ export function useNewsFeed(filter: NewsFeedFilter) {
     queryFn: ({ pageParam }) => window.electronAPI.fetchNewsFeed(filter, pageParam),
     initialPageParam: undefined as Cursor,
     getNextPageParam: (lastPage: NewsFeedItem[]): Cursor => {
-      if (lastPage.length < PAGE_SIZE) {
+      const last = lastPage.at(-1);
+      if (lastPage.length < PAGE_SIZE || !last) {
         return undefined;
       }
-      return lastPage[lastPage.length - 1]?.publishedAt;
+      return { publishedAt: last.publishedAt, postId: last.postId };
     },
     staleTime: THIRTY_MINUTES,
     gcTime: THIRTY_MINUTES,

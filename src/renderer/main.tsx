@@ -6,8 +6,12 @@ import ReactDOM from 'react-dom/client';
 import { I18nextProvider } from 'react-i18next';
 import { i18n } from '@/shared/i18n/i18n';
 import { App } from './App';
+import { LanguageBoundary } from './components/LanguageBoundary';
 import { queryClient } from './queries/queryClient';
+import { initAppUpdates } from './store/appUpdatesBridge';
 import { initEverInstalled } from './store/everInstalledBridge';
+import { initInstalledScans } from './store/installedScansBridge';
+import { initLanguage } from './store/languageBridge';
 import { initLikes } from './store/likesBridge';
 import { initResources } from './store/resourcesBridge';
 import { initReviewEvents } from './store/reviewEventsBridge';
@@ -39,6 +43,9 @@ sentryInit(
 // Initialize global error handlers before React renders
 initGlobalErrorHandlers();
 
+// Load the saved language before the first render, and follow later changes — once, outside React.
+const languageReady = initLanguage();
+
 // Bridge review events (IPC) into the notifications and the reviews cache — once, outside React.
 initReviewEvents();
 
@@ -54,27 +61,39 @@ initEverInstalled();
 // Bridge main's run-installer prompts (IPC) into the global modal — once, outside React, so no page leaves one unanswered.
 initRunInstallerPrompts();
 
-console.log('[Renderer] Starting React application...');
+// Keep the update main announces once in a store — once, outside React, so a language switch does not lose it.
+initAppUpdates();
 
-try {
-  const root = document.getElementById('root');
-  if (!root) {
-    throw new Error('Root element not found');
+// Rescan installed translations and games each time the sync finishes — once, outside React, not on every remount.
+initInstalledScans();
+
+function renderApp(): void {
+  console.log('[Renderer] Starting React application...');
+
+  try {
+    const root = document.getElementById('root');
+    if (!root) {
+      throw new Error('Root element not found');
+    }
+
+    ReactDOM.createRoot(root).render(
+      <StrictMode>
+        <I18nextProvider i18n={i18n}>
+          <QueryClientProvider client={queryClient}>
+            <LanguageBoundary>
+              <App />
+            </LanguageBoundary>
+          </QueryClientProvider>
+        </I18nextProvider>
+      </StrictMode>
+    );
+
+    console.log('[Renderer] React application rendered successfully');
+  } catch (error) {
+    console.error('[Renderer] Failed to render React application:', error);
+    // A throw here would reach the global handler as a rejection; reportError keeps it an uncaught error.
+    reportError(error);
   }
-
-  ReactDOM.createRoot(root).render(
-    <StrictMode>
-      <I18nextProvider i18n={i18n}>
-        <QueryClientProvider client={queryClient}>
-          <App />
-        </QueryClientProvider>
-      </I18nextProvider>
-    </StrictMode>
-  );
-
-  console.log('[Renderer] React application rendered successfully');
-} catch (error) {
-  console.error('[Renderer] Failed to render React application:', error);
-  // Error will be caught by global error handler
-  throw error;
 }
+
+void languageReady.then(renderApp);
