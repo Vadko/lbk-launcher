@@ -4,19 +4,17 @@ import { StatusBadge } from '../Elements/StatusBadge';
 
 interface TranslationSummaryProps {
   game: Game;
-  variant?: string;
 }
 
-export function TranslationSummary({ game, variant }: TranslationSummaryProps) {
+export function TranslationSummary({ game }: TranslationSummaryProps) {
   const averageProgress = Math.round(
     (game.translation_progress + game.editing_progress) / 2
   );
 
   return (
-    <div className="p-3 bg-glass-hover rounded-xl">
+    <div className="p-3 bg-glass-hover rounded-xl mt-auto">
       <h4 className="font-semibold mb-2 truncate" title={game.team}>
         {game.team}
-        {variant && <span className="text-text-muted text-xs"> {variant}</span>}
       </h4>
 
       <div className="flex gap-3 items-center w-full flex-wrap">

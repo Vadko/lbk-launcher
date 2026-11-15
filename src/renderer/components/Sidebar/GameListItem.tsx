@@ -14,6 +14,7 @@ import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 import { TranslationSummary } from './TranslationSummary';
+import { TranslationsFoundSummary } from './TranslationsFoundSummary';
 
 interface GameListItemProps {
   game: Game;
@@ -28,8 +29,7 @@ interface GameListItemProps {
   isTranslationAvailable?: boolean;
   variant?: string;
   imageDeferred?: boolean;
-  cardTranslations?: Game[];
-  variantById?: Map<string, string>;
+  translations?: Game[];
 }
 
 export const GameListItem = memo(function GameListItem({
@@ -45,8 +45,7 @@ export const GameListItem = memo(function GameListItem({
   isTranslationAvailable = true,
   variant,
   imageDeferred = false,
-  cardTranslations,
-  variantById,
+  translations,
 }: GameListItemProps) {
   const [imageLoading, setImageLoading] = useState(true);
   const [erroredUrl, setErroredUrl] = useState<string | null>(null);
@@ -208,15 +207,11 @@ export const GameListItem = memo(function GameListItem({
               </span>
             </div>
           )}
-          <div className="mt-auto flex flex-col gap-2">
-            {(cardTranslations ?? [game]).map((translation) => (
-              <TranslationSummary
-                key={translation.id}
-                game={translation}
-                variant={variantById?.get(translation.id)}
-              />
-            ))}
-          </div>
+          {translations && translations.length > 1 ? (
+            <TranslationsFoundSummary translations={translations} />
+          ) : (
+            <TranslationSummary game={game} />
+          )}
         </div>
       </div>
     );

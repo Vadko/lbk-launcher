@@ -212,11 +212,7 @@ export function InstalledGamesSection({
                   isSelected={false}
                   isCardStyle={true}
                   showDownloadCounter={false}
-                  cardTranslations={[
-                    game,
-                    ...group.translations.filter((translation) => translation !== game),
-                  ]}
-                  variantById={group.variantById}
+                  translations={group.translations}
                   onClick={() => {
                     if (group.translations.length > 1) {
                       setPickerGroup(group);
