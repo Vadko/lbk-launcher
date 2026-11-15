@@ -22,7 +22,7 @@ interface FakeButton {
 
 declare global {
   interface Window {
-    __e2eGamepad?: { buttons: FakeButton[] };
+    __e2eGamepad?: { buttons: FakeButton[]; reads: number };
   }
 }
 
@@ -38,10 +38,14 @@ export async function connectGamepad(page: Page) {
       axes: [0, 0, 0, 0],
       buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })),
       vibrationActuator: null,
+      reads: 0,
     };
     Object.defineProperty(navigator, 'getGamepads', {
       configurable: true,
-      value: () => [pad, null, null, null],
+      value: () => {
+        pad.reads++;
+        return [pad, null, null, null];
+      },
     });
     window.__e2eGamepad = pad;
     // Any mouse move leaves gamepad mode, so a real cursor over the window must not reach the app
@@ -52,23 +56,29 @@ export async function connectGamepad(page: Page) {
   });
 }
 
+// Returns how many times the page had read the pad before the change
 const setButton = (page: Page, button: Button, pressed: boolean) =>
   page.evaluate(
     ({ index, down }) => {
-      const state = window.__e2eGamepad?.buttons[index];
-      if (state) {
-        state.pressed = down;
-        state.touched = down;
-        state.value = down ? 1 : 0;
+      const pad = window.__e2eGamepad;
+      if (!pad) {
+        throw new Error('connectGamepad() first');
       }
+      const state = pad.buttons[index];
+      state.pressed = down;
+      state.touched = down;
+      state.value = down ? 1 : 0;
+      return pad.reads;
     },
     { index: button, down: pressed }
   );
 
-// Held for a few frames, so the loop sees one press edge, and released well before its 380 ms repeat
+const waitForRead = (page: Page, after: number) =>
+  page.waitForFunction((count) => (window.__e2eGamepad?.reads ?? 0) > count, after);
+
+// A busy main thread drops frames, so a timed press can begin and end between two polls; each change waits for the loop to read it
 export async function press(page: Page, button: Button) {
-  await setButton(page, button, true);
-  await page.waitForTimeout(80);
-  await setButton(page, button, false);
-  await page.waitForTimeout(250);
+  await waitForRead(page, await setButton(page, button, true));
+  await waitForRead(page, await setButton(page, button, false));
+  await page.waitForTimeout(150);
 }
