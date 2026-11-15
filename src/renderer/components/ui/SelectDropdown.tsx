@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDownIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
+import { useCloseOnOutsideMouseDown } from '../../hooks/useCloseOnOutsideMouseDown';
 
 export interface SelectOption {
   name: string;
@@ -80,22 +81,7 @@ export function SelectDropdown({
     }
   }, [isOpen, customMaxHeight]); // Add customMaxHeight to dependencies
 
-  // Close menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
+  useCloseOnOutsideMouseDown(menuRef, isOpen, () => setIsOpen(false));
 
   // Handle option selection
   const handleOptionSelect = (value: string) => {

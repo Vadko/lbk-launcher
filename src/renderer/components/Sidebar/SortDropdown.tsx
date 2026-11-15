@@ -7,9 +7,10 @@ import {
   TrendingUpIcon,
   UsersIcon,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { SortOrderType } from '../../../shared/types';
+import { useCloseOnOutsideMouseDown } from '../../hooks/useCloseOnOutsideMouseDown';
 import { Button } from '../ui/Button';
 import { SORT_OPTIONS } from './types';
 
@@ -39,18 +40,7 @@ export function SortDropdown({
     setIsOpen(false);
   };
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  useCloseOnOutsideMouseDown(menuRef, isOpen, () => setIsOpen(false));
 
   const headerItemProps = isHorizontal ? { 'data-gamepad-header-item': true } : {};
 

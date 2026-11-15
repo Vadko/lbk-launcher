@@ -83,34 +83,38 @@ describe('launchEglGame', () => {
     expect(mocks.spawnOnHost).toHaveBeenCalledOnce();
   });
 
-  it('cold-starts EGL from where AppImages are kept when it is not running', async () => {
-    const downloads = path.join(os.homedir(), 'Downloads');
-    fs.mkdirSync(downloads);
-    fs.writeFileSync(path.join(downloads, 'EpicGamesLauncher-old.AppImage'), '');
-    fs.writeFileSync(path.join(downloads, 'EpicGamesLauncher-x86_64.AppImage'), '', {
-      mode: 0o755,
-    });
+  // Windows has no exec bit: access(X_OK) passes for every file
+  it.skipIf(process.platform === 'win32')(
+    'cold-starts EGL from where AppImages are kept when it is not running',
+    async () => {
+      const downloads = path.join(os.homedir(), 'Downloads');
+      fs.mkdirSync(downloads);
+      fs.writeFileSync(path.join(downloads, 'EpicGamesLauncher-old.AppImage'), '');
+      fs.writeFileSync(path.join(downloads, 'EpicGamesLauncher-x86_64.AppImage'), '', {
+        mode: 0o755,
+      });
 
-    await expect(launchEglGame(GAME_DIR, null)).resolves.toBe(true);
+      await expect(launchEglGame(GAME_DIR, null)).resolves.toBe(true);
 
-    expect(mocks.spawnOnHost).toHaveBeenCalledWith(
-      path.join(downloads, 'EpicGamesLauncher-x86_64.AppImage'),
-      [LINK]
-    );
-  });
+      expect(mocks.spawnOnHost).toHaveBeenCalledWith(
+        path.join(downloads, 'EpicGamesLauncher-x86_64.AppImage'),
+        [LINK]
+      );
+    }
+  );
 
   it('runs the game the way EGL does, its Proton on the host, when there is no AppImage', async () => {
     await expect(launchEglGame(GAME_DIR, null)).resolves.toBe(true);
 
     expect(mocks.spawnOnHost).toHaveBeenCalledOnce();
     expect(mocks.spawnOnHost).toHaveBeenCalledWith(
-      `${TARGET.protonDir}/proton`,
+      path.join(TARGET.protonDir, 'proton'),
       ['waitforexitandrun', TARGET.executable, '-nosplash'],
       {
         STEAM_COMPAT_CLIENT_INSTALL_PATH: TARGET.protonDir,
         STEAM_COMPAT_DATA_PATH: TARGET.prefix,
         STEAM_COMPAT_INSTALL_PATH: GAME_DIR,
-        WINEPREFIX: `${TARGET.prefix}/pfx`,
+        WINEPREFIX: path.join(TARGET.prefix, 'pfx'),
       },
       `${GAME_DIR}/Binaries`
     );
@@ -132,7 +136,7 @@ describe('launchEglGame', () => {
     ).resolves.toBe(true);
 
     expect(mocks.spawnOnHost).toHaveBeenCalledWith(
-      `${TARGET.protonDir}/proton`,
+      path.join(TARGET.protonDir, 'proton'),
       ['waitforexitandrun', TARGET.executable, '-nosplash', '-load-mods'],
       expect.objectContaining({
         WINEDLLOVERRIDES: 'winhttp=n,b',

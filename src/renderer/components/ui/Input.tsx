@@ -1,21 +1,20 @@
 import { useCompositionSafeChange } from '../../hooks/useCompositionSafeChange';
 
-interface InputProps {
+interface InputProps
+  extends Omit<React.ComponentProps<'input'>, 'value' | 'onChange' | 'className'> {
   value: string;
   onChange: (value: string) => void;
-  placeholder?: string;
   icon?: React.ReactNode;
-  type?: string;
   className?: string;
 }
 
 export function Input({
   value,
   onChange,
-  placeholder,
   icon,
   type = 'text',
   className = '',
+  ...inputProps
 }: InputProps) {
   const changeHandlers = useCompositionSafeChange(onChange);
 
@@ -27,10 +26,10 @@ export function Input({
         </div>
       )}
       <input
+        {...inputProps}
         type={type}
         value={value}
         {...changeHandlers}
-        placeholder={placeholder}
         className={`w-full px-4 py-3 ${
           icon ? 'pl-12' : ''
         } bg-glass border border-border rounded-xl text-text-main placeholder:text-text-muted outline-hidden transition-all duration-300 backdrop-blur-lg relative z-0 glass-input`}
