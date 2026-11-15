@@ -202,7 +202,7 @@ export const GameListItem = memo(function GameListItem({
               <DownloadIcon size={16} />
               <span>{t('gameCard.downloadedByPlayers')}</span>
               <span className="ml-auto">
-                <AppNumberFlow value={game.downloads ?? 0} />
+                <AppNumberFlow value={game.downloads_30d ?? 0} />
               </span>
             </div>
           )}
