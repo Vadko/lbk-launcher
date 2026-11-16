@@ -353,7 +353,7 @@ export const en = {
   gameAuthors: { many: 'Localization creators', one: 'Localization creator' },
   gameCard: {
     unknownAuthor: 'Unknown creator',
-    downloadsLastMonth: 'in the last month',
+    downloadsLast30Days: 'in the last 30 days',
     translationsFound_one: '{{count}} translation found',
     translationsFound_few: '{{count}} translations found',
     translationsFound_many: '{{count}} translations found',

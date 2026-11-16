@@ -358,7 +358,7 @@ export const be = {
   gameAuthors: { many: 'Аўтары лакалізацыі', one: 'Аўтар лакалізацыі' },
   gameCard: {
     unknownAuthor: 'Невядомы аўтар',
-    downloadsLastMonth: 'за апошні месяц',
+    downloadsLast30Days: 'за апошнія 30 дзён',
     translationsFound_one: 'Знойдзены {{count}} пераклад',
     translationsFound_few: 'Знойдзены {{count}} пераклады',
     translationsFound_many: 'Знойдзена {{count}} перакладаў',
