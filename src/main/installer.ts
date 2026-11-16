@@ -29,6 +29,7 @@ import { backupFiles } from './installer/backup';
 import { readInstallationInfo, saveInstallationInfo } from './installer/cache';
 import { checkDiskSpace } from './installer/disk';
 import { downloadAndExtractArchive } from './installer/download-and-extract';
+import { droppedFiles, revertDroppedFiles } from './installer/dropped-files';
 import { applyEglIntegration } from './installer/egl-integration';
 import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
@@ -376,7 +377,8 @@ export async function installTranslation(
     }
 
     // 5.3 Achievements (Steam only)
-    const existingInfo = readInstallationInfo(gamePath.path);
+    // Replaced once dropped files are reverted, so the record built below no longer lists them.
+    let existingInfo = readInstallationInfo(gamePath.path);
     const achievements = await prepareAchievements({
       game,
       platform: gamePath.platform,
@@ -406,6 +408,26 @@ export async function installTranslation(
         beforeSave,
       });
 
+    const revertPrevious = async (nextFiles: string[]) => {
+      const previous = existingInfo;
+      if (previous?.gameId !== game.id) {
+        return [];
+      }
+      const dropped = droppedFiles(
+        gamePath.path,
+        previous,
+        { installText, installVoice },
+        nextFiles
+      );
+      const { record, reverted } = await revertDroppedFiles(
+        gamePath.path,
+        previous,
+        dropped
+      );
+      existingInfo = record;
+      return reverted;
+    };
+
     // 6. Check for executable installer
     if (installerFileName && isExecutableInstaller(installerFileName) && !installText) {
       // Achievements only: the shipped installer already ran and nothing was extracted to copy.
@@ -433,6 +455,16 @@ export async function installTranslation(
     if (installerFileName && isExecutableInstaller(installerFileName)) {
       const fullTargetPath = gamePath.path;
       console.log(`[Installer] Found executable installer: ${installerFileName}`);
+
+      const reverted = await revertPrevious(await getAllFiles(extractDir));
+      const revertSigned = await resignMacBundles(
+        gamePath.path,
+        reverted,
+        onStatus
+      ).catch((error) => {
+        console.error('[Installer] Re-signing macOS bundle after restore failed:', error);
+        return false;
+      });
 
       onStatus?.({ message: t('installSteps.copying'), phase: 'install' });
       await copyDirectory(extractDir, fullTargetPath);
@@ -475,6 +507,7 @@ export async function installTranslation(
           gamePath: gamePath.path,
           hasBackup: false,
           isCustomPath: !!customGamePath,
+          ...(revertSigned ? {} : { hasInstallError: true }),
           protonPath: decision.protonPath,
           installerPath,
           installedFiles: [],
@@ -535,6 +568,7 @@ export async function installTranslation(
       ? path.join(gamePath.path, additionalPath)
       : gamePath.path;
     let installedFiles: string[] = [];
+    let revertedFiles: string[] = [];
     let macSigningFailed = false;
 
     // Helper to prefix paths with additional_path
@@ -549,6 +583,8 @@ export async function installTranslation(
         console.log(`[Installer] Using additional_path: ${additionalPath}`);
         await mkdir(fullTargetPath, { recursive: true });
       }
+
+      revertedFiles = await revertPrevious(prefixPaths(installedFiles));
 
       if (createBackup) {
         onStatus?.({ message: t('installSteps.backingUp'), phase: 'install' });
@@ -570,7 +606,7 @@ export async function installTranslation(
       try {
         macSigningFailed = !(await resignMacBundles(
           gamePath.path,
-          prefixPaths(installedFiles),
+          [...prefixPaths(installedFiles), ...revertedFiles],
           onStatus
         ));
       } catch (error) {

@@ -762,6 +762,8 @@ export const en = {
       'Installation canceled: permission to run the script was declined.\n\nThe files have been extracted to the game folder. You can run the script later by selecting “Reinstall”.',
     macBundleUnresolved:
       'Could not determine the installation location inside the macOS app bundle (.app).\n\nThis game requires a separate macOS translation archive.',
+    revertFailed:
+      'Could not remove {{file}}, which the new version of the translation no longer uses. Close the game and try again.',
     status: 'Achievements: {{message}}',
   },
   installSuccess: {

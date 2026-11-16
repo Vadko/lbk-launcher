@@ -3,6 +3,7 @@ import path from 'path';
 import { promisify } from 'util';
 import { t } from '@/shared/i18n/i18n';
 import { isMacOS, isWindows } from '../utils/platform';
+import { BACKUP_DIR_NAME, BACKUP_DIR_NAME_LEGACY } from './backup';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -129,4 +130,47 @@ export async function deleteDirectory(dirPath: string): Promise<void> {
   }
 
   await fs.promises.rmdir(dirPath);
+}
+
+// Walks up removing parents left empty, stopping at `rootDir` or the backup directory.
+export async function deleteFileAndCleanupDirs(
+  filePath: string,
+  rootDir: string
+): Promise<void> {
+  try {
+    if (filePath.includes(BACKUP_DIR_NAME) || filePath.includes(BACKUP_DIR_NAME_LEGACY)) {
+      console.warn(`[Installer] Skipping deletion of backup file: ${filePath}`);
+      return;
+    }
+
+    if (fs.existsSync(filePath)) {
+      await unlink(filePath);
+      console.log(`[Installer] Deleted: ${path.relative(rootDir, filePath)}`);
+
+      let dirPath = path.dirname(filePath);
+      while (dirPath !== rootDir) {
+        if (
+          dirPath.includes(BACKUP_DIR_NAME) ||
+          dirPath.includes(BACKUP_DIR_NAME_LEGACY) ||
+          path.basename(dirPath) === BACKUP_DIR_NAME ||
+          path.basename(dirPath) === BACKUP_DIR_NAME_LEGACY
+        ) {
+          break;
+        }
+        try {
+          const entries = await readdir(dirPath);
+          if (entries.length === 0) {
+            await fs.promises.rmdir(dirPath);
+            dirPath = path.dirname(dirPath);
+          } else {
+            break;
+          }
+        } catch {
+          break;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(`[Installer] Failed to delete ${filePath}:`, error);
+  }
 }

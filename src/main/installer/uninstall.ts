@@ -8,8 +8,6 @@ import { removeInstalledAchievements } from '../achievements/install';
 import { removeSteamArtwork } from '../utils/steam-artwork';
 import { artworkTargetForGame } from '../wine/bottle-steam';
 import {
-  BACKUP_DIR_NAME,
-  BACKUP_DIR_NAME_LEGACY,
   BACKUP_SUFFIX,
   cleanupEmptyDirectories,
   findBackupDir,
@@ -21,13 +19,12 @@ import {
   deleteCachedInstallationInfo,
   saveInstallationInfo,
 } from './cache';
-import { deleteDirectory } from './files';
+import { deleteDirectory, deleteFileAndCleanupDirs } from './files';
 import { findInstallationInfoFile } from './installation-info';
 import { resignMacBundles } from './mac-codesign';
 import { runUninstaller } from './platform';
 
 const unlink = promisify(fs.unlink);
-const readdir = promisify(fs.readdir);
 
 /**
  * Uninstall translation. Runs the bundled uninstaller (if any) first, then
@@ -227,51 +224,5 @@ async function restoreOrDeleteFile(
     }
   } catch (error) {
     console.warn(`[Installer] Failed to restore/delete ${filePath}:`, error);
-  }
-}
-
-/**
- * Delete a file then walk up removing now-empty parent dirs, stopping at
- * `rootDir` or the backup directory.
- */
-async function deleteFileAndCleanupDirs(
-  filePath: string,
-  rootDir: string
-): Promise<void> {
-  try {
-    if (filePath.includes(BACKUP_DIR_NAME) || filePath.includes(BACKUP_DIR_NAME_LEGACY)) {
-      console.warn(`[Installer] Skipping deletion of backup file: ${filePath}`);
-      return;
-    }
-
-    if (fs.existsSync(filePath)) {
-      await unlink(filePath);
-      console.log(`[Installer] Deleted: ${path.relative(rootDir, filePath)}`);
-
-      let dirPath = path.dirname(filePath);
-      while (dirPath !== rootDir) {
-        if (
-          dirPath.includes(BACKUP_DIR_NAME) ||
-          dirPath.includes(BACKUP_DIR_NAME_LEGACY) ||
-          path.basename(dirPath) === BACKUP_DIR_NAME ||
-          path.basename(dirPath) === BACKUP_DIR_NAME_LEGACY
-        ) {
-          break;
-        }
-        try {
-          const entries = await readdir(dirPath);
-          if (entries.length === 0) {
-            await fs.promises.rmdir(dirPath);
-            dirPath = path.dirname(dirPath);
-          } else {
-            break;
-          }
-        } catch {
-          break;
-        }
-      }
-    }
-  } catch (error) {
-    console.warn(`[Installer] Failed to delete ${filePath}:`, error);
   }
 }
