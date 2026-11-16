@@ -765,6 +765,8 @@ export const pl = {
       'Instalacja anulowana: odmówiono zgody na uruchomienie skryptu.\n\nPliki zostały rozpakowane do folderu gry. Skrypt możesz uruchomić później, wybierając „Zainstaluj ponownie”.',
     macBundleUnresolved:
       'Nie udało się ustalić miejsca instalacji wewnątrz pakietu aplikacji macOS (.app).\n\nTa gra wymaga osobnego archiwum lokalizacji dla macOS.',
+    revertFailed:
+      'Nie udało się usunąć {{file}}, którego nowa wersja lokalizacji już nie używa. Zamknij grę i spróbuj ponownie.',
     status: 'Osiągnięcia: {{message}}',
   },
   installSuccess: {

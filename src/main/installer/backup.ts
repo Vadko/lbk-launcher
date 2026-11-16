@@ -191,6 +191,26 @@ export async function restoreBackupLegacy(
   }
 }
 
+// Deepest first; rmdir refuses a dir that still holds anything.
+async function removeEmptyDirs(dir: string): Promise<void> {
+  const entries = await fs.promises.readdir(dir, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      await removeEmptyDirs(path.join(dir, entry.name));
+    }
+  }
+  await fs.promises.rmdir(dir).catch(() => undefined);
+}
+
+export function hasBackupOf(gamePath: string, relativePath: string): boolean {
+  const target = path.join(gamePath, relativePath);
+  return [
+    path.join(findBackupDir(gamePath), relativePath),
+    target + BACKUP_SUFFIX,
+    target + KURIN_BACKUP_SUFFIX,
+  ].some((backup) => fs.existsSync(backup));
+}
+
 /**
  * Restore files from backup with backward compatibility
  * Priority: 1) .littlebit-backup/ directory (new format)
@@ -198,7 +218,7 @@ export async function restoreBackupLegacy(
  */
 export async function restoreBackupNew(
   targetDir: string,
-  installedFiles: string[]
+  installedFiles: readonly string[]
 ): Promise<void> {
   try {
     let restoredCount = 0;
@@ -260,19 +280,8 @@ export async function restoreBackupNew(
       }
     }
 
-    // Clean up empty backup directory
     if (hasBackupDir) {
-      await cleanupEmptyDirectories(backupDir, backupDir);
-      // Remove backup dir if empty
-      try {
-        const remaining = await readdir(backupDir);
-        if (remaining.length === 0) {
-          await fs.promises.rmdir(backupDir);
-          console.log(`[Restore] Removed empty backup directory`);
-        }
-      } catch {
-        // Ignore errors
-      }
+      await removeEmptyDirs(backupDir);
     }
 
     if (restoredCount > 0) {

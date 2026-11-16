@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { A } from '@mobily/ts-belt';
 import { app } from 'electron';
 import { z } from 'zod';
 import { Constants } from '@/lib/database.types';
@@ -151,7 +150,7 @@ export function keepInstalledText(
     version: existing.version,
     hasBackup: !!(existing.hasBackup || record.hasBackup),
     installedFiles: [
-      ...A.uniq([...(existing.installedFiles ?? []), ...(record.installedFiles ?? [])]),
+      ...new Set([...(existing.installedFiles ?? []), ...(record.installedFiles ?? [])]),
     ],
     components: { ...record.components, text, ...(voice ? { voice } : {}) },
   };

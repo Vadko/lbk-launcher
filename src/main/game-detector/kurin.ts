@@ -78,8 +78,8 @@ function getKurinInstalledData() {
     )?.name;
 
     const files = (game.files || [])
-      .map((file) => file.path && file.isInstaller !== true)
-      .filter(Boolean) as string[];
+      .filter((file) => file.path && file.isInstaller !== true)
+      .map((file) => file.path);
     const hasBackup = (game.files || []).some((file) => file.hadBackup);
 
     return {
