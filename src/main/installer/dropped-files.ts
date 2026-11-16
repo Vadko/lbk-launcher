@@ -10,8 +10,12 @@ import { rewriteInstallationRecord } from './installation-info';
 
 type Reinstalled = Pick<InstallOptions, 'installText' | 'installVoice'>;
 
-const filesOf = (component?: { installed: boolean; files: string[] }) =>
-  component?.installed ? component.files : [];
+interface Component {
+  installed: boolean;
+  files: string[];
+}
+
+const filesOf = (component?: Component) => (component?.installed ? component.files : []);
 
 // Files the previous version of a reinstalled component wrote that the new one no longer ships.
 export function droppedFiles(
@@ -28,11 +32,14 @@ export function droppedFiles(
     ...(reinstalled.installText ? [] : text),
     ...(reinstalled.installVoice ? [] : voice),
   ]);
-  // The folder's record is anyone's to write, and Kurin imports put booleans in `files`.
-  return A.uniq([
-    ...(reinstalled.installText ? text : []),
-    ...(reinstalled.installVoice ? voice : []),
-  ]).filter(
+  // A.uniq and A.difference are quadratic, and a translation can ship tens of thousands of files.
+  return [
+    ...new Set([
+      ...(reinstalled.installText ? text : []),
+      ...(reinstalled.installVoice ? voice : []),
+    ]),
+  ].filter(
+    // The folder's record is anyone's to write, and Kurin imports put booleans in `files`.
     (file) =>
       G.isString(file) &&
       !kept.has(file) &&
@@ -46,10 +53,11 @@ export async function revertDroppedFiles(
   existing: InstallationInfo,
   dropped: string[]
 ): Promise<{ record: InstallationInfo; reverted: string[] }> {
-  const restored = dropped.filter((file) => hasBackupOf(gamePath, file));
+  const [restored, unbacked] = A.partition(dropped, (file) =>
+    hasBackupOf(gamePath, file)
+  );
   // Without a backup a replaced original cannot be told from an added file, so it stays.
-  const added =
-    existing.hasBackup === true ? dropped.filter((file) => !restored.includes(file)) : [];
+  const added = existing.hasBackup === true ? unbacked : [];
   if (restored.length === 0 && added.length === 0) {
     return { record: existing, reverted: [] };
   }
@@ -68,25 +76,18 @@ export async function revertDroppedFiles(
   const reverted = [...restored, ...added];
   const gone = new Set(reverted);
   const keep = (files: string[]) => files.filter((file) => !gone.has(file));
+  const strip = <C extends Component>(component: C): C => ({
+    ...component,
+    files: keep(component.files),
+  });
   const update = (info: InstallationInfo): InstallationInfo => ({
     ...info,
-    ...(info.installedFiles ? { installedFiles: keep(info.installedFiles) } : {}),
-    ...(info.components
-      ? {
-          components: {
-            ...info.components,
-            text: { ...info.components.text, files: keep(info.components.text.files) },
-            ...(info.components.voice
-              ? {
-                  voice: {
-                    ...info.components.voice,
-                    files: keep(info.components.voice.files),
-                  },
-                }
-              : {}),
-          },
-        }
-      : {}),
+    installedFiles: info.installedFiles && keep(info.installedFiles),
+    components: info.components && {
+      ...info.components,
+      text: strip(info.components.text),
+      voice: info.components.voice && strip(info.components.voice),
+    },
   });
   await rewriteInstallationRecord({ ...existing, gamePath }, update);
   return { record: update(existing), reverted };

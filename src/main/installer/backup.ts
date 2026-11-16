@@ -218,7 +218,7 @@ export function hasBackupOf(gamePath: string, relativePath: string): boolean {
  */
 export async function restoreBackupNew(
   targetDir: string,
-  installedFiles: string[]
+  installedFiles: readonly string[]
 ): Promise<void> {
   try {
     let restoredCount = 0;
