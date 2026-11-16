@@ -977,6 +977,12 @@ export function useGamepadModeNavigation(enabled = true) {
       const buttons = gp.buttons.map((b) => b?.pressed ?? false);
       const previous = prevButtons;
       prevButtons = buttons;
+      // Chromium keeps reporting the pad to a window in the background, so a game played with it pressed our buttons
+      if (!document.hasFocus()) {
+        heldDirection = readDirection(gp);
+        suppressDirection = true;
+        return;
+      }
       const direction = updateDirection(gp, now);
       const f: Frame = {
         now,

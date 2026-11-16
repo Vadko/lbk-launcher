@@ -191,7 +191,7 @@ export function App() {
 
     let rafId = 0;
     const tick = () => {
-      if (!useGamepadModeStore.getState().isGamepadMode) {
+      if (!useGamepadModeStore.getState().isGamepadMode && document.hasFocus()) {
         for (const pad of navigator.getGamepads()) {
           if (!pad || !pad.connected || !isValidGamepad(pad)) {
             continue;
