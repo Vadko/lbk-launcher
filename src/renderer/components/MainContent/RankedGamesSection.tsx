@@ -58,7 +58,7 @@ export function RankedGamesSection<K extends RankedGamesKey>({
     <section>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
-        <div className="flex flex-col items-end gap-2 ml-auto whitespace-nowrap">
+        <div className="flex flex-wrap items-center gap-4 ml-auto whitespace-nowrap">
           {tabs && (
             <SlidingTabs
               tabs={tabs.keys}

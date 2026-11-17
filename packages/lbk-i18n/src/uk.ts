@@ -606,8 +606,8 @@ export const uk = {
     newStars: 'Нові зірочки у лаунчері',
     popular: 'Популярне у гравців',
     popularTabs: {
-      popularGames: 'Популярне зараз',
-      popularAllTimeGames: 'Популярне за весь час',
+      popularGames: 'Зараз',
+      popularAllTimeGames: 'За весь час',
     },
     installedGames: 'Знайдено встановлені ігри',
     recommended: 'Вас може зацікавити',

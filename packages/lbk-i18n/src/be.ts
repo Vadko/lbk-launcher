@@ -578,8 +578,8 @@ export const be = {
     newStars: 'Новыя зорачкі ў лаўнчары',
     popular: 'Папулярнае сярод гульцоў',
     popularTabs: {
-      popularGames: 'Папулярнае зараз',
-      popularAllTimeGames: 'Папулярнае за ўвесь час',
+      popularGames: 'Зараз',
+      popularAllTimeGames: 'За ўвесь час',
     },
     installedGames: 'Знойдзеныя ўсталяваныя гульні',
     recommended: 'Вас можа зацікавіць',
