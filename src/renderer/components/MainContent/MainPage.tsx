@@ -4,17 +4,13 @@ import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { InstalledGamesSection } from './InstalledGamesSection';
 import { NewGamesSection, type TabConfig } from './NewGamesSection';
 import { RankedGamesPage } from './RankedGamesPage';
-import { RankedGamesSection, type RankedTabs } from './RankedGamesSection';
+import { type RankedGamesKey, RankedGamesSection } from './RankedGamesSection';
 import { WeeklyPicksSection } from './WeeklyPicksSection';
 
-type PageView = 'main' | 'popular' | 'newStars';
-type PopularKey = 'popularGames' | 'popularAllTimeGames';
-
-const POPULAR_KEYS: readonly PopularKey[] = ['popularGames', 'popularAllTimeGames'];
+type PageView = 'main' | RankedGamesKey;
 
 export function MainPage() {
   const [currentView, setCurrentView] = useState<PageView>('main');
-  const [popularKey, setPopularKey] = useState<PopularKey>('popularGames');
   const ContainerRef = useRef<HTMLDivElement>(null);
   const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
 
@@ -46,12 +42,6 @@ export function MainPage() {
     },
   ];
 
-  const popularTabs: RankedTabs<PopularKey> = {
-    keys: POPULAR_KEYS,
-    label: (key) => t(`homeSections.popularTabs.${key}`),
-    onChange: setPopularKey,
-  };
-
   return (
     <div
       ref={ContainerRef}
@@ -74,14 +64,13 @@ export function MainPage() {
           <RankedGamesSection
             title={t('homeSections.newStars')}
             resourceKey="newStarGames"
-            onViewAll={() => setCurrentView('newStars')}
+            onViewAll={() => setCurrentView('newStarGames')}
           />
           <RankedGamesSection
             title={t('homeSections.popular')}
-            resourceKey={popularKey}
+            resourceKey="popularGames"
             showDownloadCounter={true}
-            tabs={popularTabs}
-            onViewAll={() => setCurrentView('popular')}
+            onViewAll={() => setCurrentView('popularGames')}
           />
         </div>
       )}
@@ -89,12 +78,11 @@ export function MainPage() {
         <div
           className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1564px]`}
         >
-          {currentView === 'popular' ? (
+          {currentView === 'popularGames' ? (
             <RankedGamesPage
               title={t('homeSections.popular')}
-              resourceKey={popularKey}
+              resourceKey="popularGames"
               showDownloadCounter={true}
-              tabs={popularTabs}
               onBack={() => setCurrentView('main')}
             />
           ) : (

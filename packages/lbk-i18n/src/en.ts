@@ -577,10 +577,6 @@ export const en = {
     updates: 'Updates',
     newStars: 'New stars in the launcher',
     popular: 'Popular with players',
-    popularTabs: {
-      popularGames: 'Now',
-      popularAllTimeGames: 'All time',
-    },
     installedGames: 'Installed games found',
     recommended: 'You might like',
     weeklyPicks: 'Picks of the week',

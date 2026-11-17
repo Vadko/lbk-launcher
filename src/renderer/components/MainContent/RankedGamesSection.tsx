@@ -9,33 +9,24 @@ import { useResource } from '../../hooks/useResource';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
-import { SlidingTabs } from '../ui/SlidingTabs';
 
-export type RankedGamesKey = 'popularGames' | 'popularAllTimeGames' | 'newStarGames';
+export type RankedGamesKey = 'popularGames' | 'newStarGames';
 
-export interface RankedTabs<K extends RankedGamesKey> {
-  keys: readonly K[];
-  label: (key: K) => string;
-  onChange: (key: K) => void;
-}
-
-interface RankedGamesSectionProps<K extends RankedGamesKey> {
+interface RankedGamesSectionProps {
   title: string;
-  resourceKey: K;
+  resourceKey: RankedGamesKey;
   showLimit?: number;
   showDownloadCounter?: boolean;
-  tabs?: RankedTabs<K>;
   onViewAll?: () => void;
 }
 
-export function RankedGamesSection<K extends RankedGamesKey>({
+export function RankedGamesSection({
   title,
   resourceKey,
   showLimit = 3,
   showDownloadCounter = false,
-  tabs,
   onViewAll,
-}: RankedGamesSectionProps<K>) {
+}: RankedGamesSectionProps) {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
 
@@ -47,46 +38,25 @@ export function RankedGamesSection<K extends RankedGamesKey>({
   );
   const games = useResource(resourceKey);
 
-  const isEmpty = games.status === 'failed' || games.value?.length === 0;
-  // With tabs the header stays, so the player can switch back from a tab that has nothing
-  if (isEmpty && !tabs) {
+  if (games.status === 'failed' || games.value?.length === 0) {
     return null;
   }
   const visibleGames = games.value?.slice(0, showLimit);
 
   return (
     <section>
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+      <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
-        <div className="flex flex-wrap items-center gap-4 ml-auto whitespace-nowrap">
-          {tabs && (
-            <SlidingTabs
-              tabs={tabs.keys}
-              active={resourceKey}
-              label={tabs.label}
-              onChange={tabs.onChange}
-            />
-          )}
-          {onViewAll && (
-            <Button variant="ghost" onClick={onViewAll} data-gamepad-action>
-              {t('homeSections.viewAll')}
-              <ArrowRightIcon size={24} />
-            </Button>
-          )}
-        </div>
+        {onViewAll && (
+          <Button variant="ghost" onClick={onViewAll} data-gamepad-action>
+            {t('homeSections.viewAll')}
+            <ArrowRightIcon size={24} />
+          </Button>
+        )}
       </div>
       <div className="grid grid-cols-3 gap-8">
         <AnimatePresence mode="popLayout">
-          {isEmpty ? (
-            <motion.p
-              key="empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="col-span-3 text-center text-text-muted py-8"
-            >
-              {t('homeSections.noGames')}
-            </motion.p>
-          ) : visibleGames === undefined ? (
+          {visibleGames === undefined ? (
             <motion.div
               key="loader"
               initial={{ opacity: 0 }}

@@ -23,9 +23,7 @@ db.exec(
 
 vi.mock('@/main/db/database', () => ({ getDatabase: () => db }));
 
-const { getNewStarGames, getPopularAllTimeGames, getPopularGames } = await import(
-  './ranked-home-games'
-);
+const { getNewStarGames, getPopularGames } = await import('./ranked-home-games');
 
 function seed(rows: Row[]) {
   const insert = db.prepare(
@@ -104,39 +102,6 @@ describe('getPopularGames', () => {
     seed(rows);
 
     expect(ids(getPopularGames(hideAi))).toEqual(expected);
-  });
-});
-
-describe('getPopularAllTimeGames', () => {
-  it.each<[string, Row[], string[]]>([
-    [
-      'orders by translation rating, not the last 30 days',
-      [
-        { id: 'trending', downloads: 300, downloads_30d: 200 },
-        { id: 'classic', downloads: 5000, downloads_30d: 10 },
-      ],
-      ['classic', 'trending'],
-    ],
-    [
-      'puts a manual translation above an AI one with the same counters',
-      [
-        { id: 'ai', downloads: 500, ai: 'generated' },
-        { id: 'manual', downloads: 500 },
-      ],
-      ['manual', 'ai'],
-    ],
-    [
-      'leaves out a translation under 70 downloads in total',
-      [
-        { id: 'popular', downloads: 70 },
-        { id: 'new', downloads: 69, likes: 60 },
-      ],
-      ['popular'],
-    ],
-  ])('%s', (_case, rows, expected) => {
-    seed(rows);
-
-    expect(ids(getPopularAllTimeGames(false))).toEqual(expected);
   });
 });
 

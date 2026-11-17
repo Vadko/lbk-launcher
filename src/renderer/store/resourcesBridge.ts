@@ -7,14 +7,13 @@ import {
 } from '@/shared/resources';
 import { useResourcesStore } from './useResourcesStore';
 
-// Start: the home page and the game list; idle: a home tab not shown first, the filters, ratings and Steam, whose reads list processes
+// Start: the home page and the game list; idle: the filters, ratings and Steam, whose reads list processes
 const SUBSCRIBE_AT = {
   likedGameIds: 'start',
   storeDiscounts: 'start',
   homeInstalled: 'start',
   weeklyPicks: 'start',
   popularGames: 'start',
-  popularAllTimeGames: 'idle',
   newStarGames: 'start',
   facetRows: 'idle',
   catalogOptions: 'idle',
