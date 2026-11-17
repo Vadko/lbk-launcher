@@ -2,21 +2,27 @@ import { motion } from 'framer-motion';
 import { ArrowLeftIcon } from 'lucide-react';
 import { t } from '@/shared/i18n/i18n';
 import { Button } from '../ui/Button';
-import { type RankedGamesKey, RankedGamesSection } from './RankedGamesSection';
+import {
+  type RankedGamesKey,
+  RankedGamesSection,
+  type RankedTabs,
+} from './RankedGamesSection';
 
-interface RankedGamesPageProps {
+interface RankedGamesPageProps<K extends RankedGamesKey> {
   title: string;
-  resourceKey: RankedGamesKey;
+  resourceKey: K;
   showDownloadCounter?: boolean;
+  tabs?: RankedTabs<K>;
   onBack: () => void;
 }
 
-export function RankedGamesPage({
+export function RankedGamesPage<K extends RankedGamesKey>({
   title,
   resourceKey,
   showDownloadCounter = false,
+  tabs,
   onBack,
-}: RankedGamesPageProps) {
+}: RankedGamesPageProps<K>) {
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -42,6 +48,7 @@ export function RankedGamesPage({
         title={title}
         resourceKey={resourceKey}
         showDownloadCounter={showDownloadCounter}
+        tabs={tabs}
         showLimit={30}
       />
     </motion.section>

@@ -9,24 +9,33 @@ import { useResource } from '../../hooks/useResource';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { SlidingTabs } from '../ui/SlidingTabs';
 
-export type RankedGamesKey = 'popularGames' | 'newStarGames';
+export type RankedGamesKey = 'popularGames' | 'popularAllTimeGames' | 'newStarGames';
 
-interface RankedGamesSectionProps {
+export interface RankedTabs<K extends RankedGamesKey> {
+  keys: readonly K[];
+  label: (key: K) => string;
+  onChange: (key: K) => void;
+}
+
+interface RankedGamesSectionProps<K extends RankedGamesKey> {
   title: string;
-  resourceKey: RankedGamesKey;
+  resourceKey: K;
   showLimit?: number;
   showDownloadCounter?: boolean;
+  tabs?: RankedTabs<K>;
   onViewAll?: () => void;
 }
 
-export function RankedGamesSection({
+export function RankedGamesSection<K extends RankedGamesKey>({
   title,
   resourceKey,
   showLimit = 3,
   showDownloadCounter = false,
+  tabs,
   onViewAll,
-}: RankedGamesSectionProps) {
+}: RankedGamesSectionProps<K>) {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
 
@@ -38,14 +47,18 @@ export function RankedGamesSection({
   );
   const games = useResource(resourceKey);
 
-  if (games.status === 'failed' || games.value?.length === 0) {
+  const isEmpty = games.status === 'failed' || games.value?.length === 0;
+  // With tabs the header stays, so the player can switch back from a tab that has nothing
+  if (isEmpty && !tabs) {
     return null;
   }
   const visibleGames = games.value?.slice(0, showLimit);
 
   return (
     <section>
-      <div className="flex items-center justify-between mb-8">
+      <div
+        className={`flex items-center justify-between gap-4 ${tabs ? 'mb-6' : 'mb-8'}`}
+      >
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
         {onViewAll && (
           <Button variant="ghost" onClick={onViewAll} data-gamepad-action>
@@ -54,9 +67,28 @@ export function RankedGamesSection({
           </Button>
         )}
       </div>
+      {tabs && (
+        <div className="mb-8 whitespace-nowrap">
+          <SlidingTabs
+            tabs={tabs.keys}
+            active={resourceKey}
+            label={tabs.label}
+            onChange={tabs.onChange}
+          />
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-8">
         <AnimatePresence mode="popLayout">
-          {visibleGames === undefined ? (
+          {isEmpty ? (
+            <motion.p
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="col-span-3 text-center text-text-muted py-8"
+            >
+              {t('homeSections.noGames')}
+            </motion.p>
+          ) : visibleGames === undefined ? (
             <motion.div
               key="loader"
               initial={{ opacity: 0 }}

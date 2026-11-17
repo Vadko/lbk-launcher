@@ -1,6 +1,10 @@
 import { D } from '@mobily/ts-belt';
 import { GamesRepository } from '@/main/db/games-repository';
-import { getNewStarGames, getPopularGames } from '@/main/db/ranked-home-games';
+import {
+  getNewStarGames,
+  getPopularAllTimeGames,
+  getPopularGames,
+} from '@/main/db/ranked-home-games';
 import { getGamesRating, getTeamsRating } from '@/main/db/ratings-queries';
 import { getWeeklyPicks } from '@/main/db/weekly-picks';
 import { getHomeInstalledGames } from '@/main/home-installed-games';
@@ -78,6 +82,11 @@ const DEFINITIONS: { [K in ResourceKey]: ResourceDefinition<K> } = {
   // The order follows the counters, so new counters read the list again
   popularGames: {
     read: () => getPopularGames(readHideAiTranslations()),
+    on: ['counters-changed', 'catalog-changed', 'hide-ai-changed'],
+    afterCatalogSync: true,
+  },
+  popularAllTimeGames: {
+    read: () => getPopularAllTimeGames(readHideAiTranslations()),
     on: ['counters-changed', 'catalog-changed', 'hide-ai-changed'],
     afterCatalogSync: true,
   },

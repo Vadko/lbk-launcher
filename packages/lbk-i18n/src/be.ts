@@ -577,6 +577,10 @@ export const be = {
     updates: 'Абнаўленні',
     newStars: 'Новыя зорачкі ў лаўнчары',
     popular: 'Папулярнае сярод гульцоў',
+    popularTabs: {
+      popularGames: 'Папулярнае зараз',
+      popularAllTimeGames: 'Папулярнае за ўвесь час',
+    },
     installedGames: 'Знойдзеныя ўсталяваныя гульні',
     recommended: 'Вас можа зацікавіць',
     weeklyPicks: 'Падборка тыдня',
