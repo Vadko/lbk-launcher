@@ -176,7 +176,7 @@ export default function Gallery({
       const pads = navigator.getGamepads();
       const gp = pads.find((pad) => pad?.connected && isValidGamepad(pad)) ?? null;
 
-      if (gp) {
+      if (gp && document.hasFocus()) {
         const leftPressed =
           gp.buttons[GAMEPAD_DPAD_LEFT]?.pressed ||
           gp.axes[GAMEPAD_AXIS_LEFT_X] < -GAMEPAD_DEADZONE;
