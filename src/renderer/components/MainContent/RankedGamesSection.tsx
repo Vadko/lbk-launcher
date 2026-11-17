@@ -56,27 +56,25 @@ export function RankedGamesSection<K extends RankedGamesKey>({
 
   return (
     <section>
-      <div
-        className={`flex items-center justify-between gap-4 ${tabs ? 'mb-6' : 'mb-8'}`}
-      >
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
-        {onViewAll && (
-          <Button variant="ghost" onClick={onViewAll} data-gamepad-action>
-            {t('homeSections.viewAll')}
-            <ArrowRightIcon size={24} />
-          </Button>
-        )}
-      </div>
-      {tabs && (
-        <div className="mb-8 whitespace-nowrap">
-          <SlidingTabs
-            tabs={tabs.keys}
-            active={resourceKey}
-            label={tabs.label}
-            onChange={tabs.onChange}
-          />
+        <div className="flex flex-col items-end gap-2 ml-auto whitespace-nowrap">
+          {tabs && (
+            <SlidingTabs
+              tabs={tabs.keys}
+              active={resourceKey}
+              label={tabs.label}
+              onChange={tabs.onChange}
+            />
+          )}
+          {onViewAll && (
+            <Button variant="ghost" onClick={onViewAll} data-gamepad-action>
+              {t('homeSections.viewAll')}
+              <ArrowRightIcon size={24} />
+            </Button>
+          )}
         </div>
-      )}
+      </div>
       <div className="grid grid-cols-3 gap-8">
         <AnimatePresence mode="popLayout">
           {isEmpty ? (
