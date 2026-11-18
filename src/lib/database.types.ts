@@ -3958,6 +3958,22 @@ export type Database = {
         Returns: string
       }
       scan_verdict_rank: { Args: { verdict: string }; Returns: number }
+      search_game_ids: {
+        Args: {
+          p_exclude_kuli?: boolean
+          p_hidden_only?: boolean
+          p_kuli_only?: boolean
+          p_limit?: number
+          p_listed_only?: boolean
+          p_owner_id?: string
+          p_query: string
+          p_query_translit?: string
+        }
+        Returns: {
+          id: string
+          score: number
+        }[]
+      }
       search_steam_apps: {
         Args: { limit_val?: number; offset_val?: number; search_query: string }
         Returns: {
