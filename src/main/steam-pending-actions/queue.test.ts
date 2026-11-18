@@ -81,6 +81,12 @@ describe('reducePendingQueue', () => {
     expect(q).toEqual([other, latest]);
   });
 
+  it('lets a reinstall replace a queued removal of the same game', () => {
+    const removal = launchOptions('a', { remove: true });
+    const write = launchOptions('a', { queuedAt: new Date(NOW).toISOString() });
+    expect(reducePendingQueue([removal], write)).toEqual([write]);
+  });
+
   it('collapses plugin enable then disable to the last one', () => {
     const enable = plugin(true, '2026-10-08T00:00:00.000Z');
     const disable = plugin(false, '2026-10-09T00:00:00.000Z');
@@ -110,6 +116,24 @@ describe('classifyPendingAction', () => {
       {},
     ],
     ['a game that is no longer installed', 'drop', launchOptions('gone'), {}],
+    [
+      'a removal for an uninstalled game',
+      'apply',
+      launchOptions('gone', { remove: true }),
+      {},
+    ],
+    [
+      'a removal for a game installed again since',
+      'drop',
+      launchOptions('a', { remove: true }),
+      {},
+    ],
+    [
+      'a removal for another account',
+      'keep',
+      launchOptions('gone', { remove: true, accountId: '999' }),
+      {},
+    ],
     [
       'an old item for another account',
       'drop',

@@ -24,6 +24,7 @@ import { isSteamRunning } from '@/main/steam-process/lifecycle';
 import { writeFileAtomic } from '@/main/utils/atomic-write';
 import {
   mergeLaunchOptions,
+  removeLaunchOptions,
   resolveGameDirToken,
   usesGameDirToken,
 } from '@/main/utils/launch-options-value';
@@ -177,11 +178,14 @@ interface MergePlan {
   merged: string;
 }
 
-/** Parse the localconfig file once and compute the merged LaunchOptions value. */
-function readAndPlanMerge(
+type PlanValue = (existing: string | null, ours: string) => string;
+
+/** Parse the localconfig file once and compute the new LaunchOptions value. */
+function readAndPlan(
   localConfigPath: string,
   appId: string,
-  value: string
+  value: string,
+  planValue: PlanValue
 ): MergePlan {
   const raw = fs.readFileSync(localConfigPath, 'utf8');
   const root = vdfParse(raw);
@@ -190,7 +194,7 @@ function readAndPlanMerge(
     [...LAUNCH_OPTIONS_PARENT, appId],
     'LaunchOptions'
   );
-  const merged = mergeLaunchOptions(existing, value);
+  const merged = planValue(existing, value);
   return { root, existing, merged };
 }
 
@@ -219,7 +223,7 @@ export function mergeLaunchOptionsIntoFile(
   value: string
 ): 'written' | 'already-set' {
   const appIdStr = String(appId);
-  const plan = readAndPlanMerge(localConfigPath, appIdStr, value);
+  const plan = readAndPlan(localConfigPath, appIdStr, value, mergeLaunchOptions);
   if (plan.merged === (plan.existing ?? '').trim()) {
     return 'already-set';
   }
@@ -231,8 +235,22 @@ export function mergeLaunchOptionsIntoFile(
  * Apply the requested LaunchOptions value for `params.appId`, choosing the bridge
  * or the file based on Steam's current state. See module docstring for details.
  */
-export async function writeSteamLaunchOptions(
+export function writeSteamLaunchOptions(
   params: WriteLaunchOptionsParams
+): Promise<WriteLaunchOptionsResult> {
+  return applySteamLaunchOptions(params, mergeLaunchOptions);
+}
+
+/** Take this translation's value back out of the LaunchOptions, keeping the player's own args. */
+export function clearSteamLaunchOptions(
+  params: WriteLaunchOptionsParams
+): Promise<WriteLaunchOptionsResult> {
+  return applySteamLaunchOptions(params, removeLaunchOptions);
+}
+
+async function applySteamLaunchOptions(
+  params: WriteLaunchOptionsParams,
+  planValue: PlanValue
 ): Promise<WriteLaunchOptionsResult> {
   // Trimmed once, here: the idempotency checks downstream compare against a
   // trimmed existing value, so stray whitespace from the admin form would make
@@ -259,7 +277,7 @@ export async function writeSteamLaunchOptions(
   const appIdStr = String(params.appId);
   let plan: MergePlan;
   try {
-    plan = readAndPlanMerge(localConfigPath, appIdStr, value);
+    plan = readAndPlan(localConfigPath, appIdStr, value, planValue);
   } catch (error) {
     return {
       mode: 'failed',
@@ -269,9 +287,9 @@ export async function writeSteamLaunchOptions(
 
   if (plan.merged === (plan.existing ?? '').trim()) {
     console.log(
-      `[SteamLaunchOptions] App ${params.appId} already contains our LaunchOptions — nothing to do`
+      `[SteamLaunchOptions] App ${params.appId} LaunchOptions already as wanted — nothing to do`
     );
-    return { mode: 'noop', reason: 'LaunchOptions already include our value' };
+    return { mode: 'noop', reason: 'LaunchOptions already as wanted' };
   }
 
   // Steam off → file is safe to edit directly; there is no bridge to talk to anyway.

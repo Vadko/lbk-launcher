@@ -5,7 +5,10 @@ import {
   removeMillenniumPluginFiles,
   setMillenniumPluginEnabledInConfig,
 } from '@/main/utils/millennium-plugin';
-import { writeSteamLaunchOptions } from '@/main/utils/steam-launch-options';
+import {
+  clearSteamLaunchOptions,
+  writeSteamLaunchOptions,
+} from '@/main/utils/steam-launch-options';
 import { errorMessage } from '@/shared/errors';
 import type { PendingActionKind, PendingActionOf, PendingTrigger } from './queue';
 
@@ -68,7 +71,9 @@ async function applyLaunchOptions(
   let mode: string;
   let reason: string | undefined;
   try {
-    const write = await writeSteamLaunchOptions(action.params);
+    const write = await (action.remove
+      ? clearSteamLaunchOptions
+      : writeSteamLaunchOptions)(action.params);
     mode = write.mode;
     reason = write.reason;
   } catch (error) {
@@ -76,7 +81,7 @@ async function applyLaunchOptions(
     reason = errorMessage(error);
   }
   console.log(
-    `[PendingActions] Launch options for ${action.gameName} (${trigger}) mode=${mode}${reason ? ` — ${reason}` : ''}`
+    `[PendingActions] Launch options ${action.remove ? 'removal ' : ''}for ${action.gameName} (${trigger}) mode=${mode}${reason ? ` — ${reason}` : ''}`
   );
   if (mode === 'needs-shutdown') {
     return keep;

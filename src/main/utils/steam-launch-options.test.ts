@@ -1,14 +1,21 @@
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const localConfig = vi.hoisted(() => ({ path: null as string | null }));
 
 // The module reaches into Steam and the filesystem; the OS split and the
 // no-fallback rule are decided long before any of that, so it is all stubbed.
-vi.mock('@/main/game-detector/steam', () => ({ getLocalConfigPath: () => null }));
+vi.mock('@/main/game-detector/steam', () => ({
+  getLocalConfigPath: () => localConfig.path,
+}));
 vi.mock('@/main/utils/steam-bridge', () => ({
   getSteamBridge: () => Promise.resolve(null),
 }));
 vi.mock('@/main/steam-process/lifecycle', () => ({ isSteamRunning: () => false }));
 
-const { needsGameDir, writeSteamLaunchOptions } = await import(
+const { clearSteamLaunchOptions, needsGameDir, writeSteamLaunchOptions } = await import(
   '@/main/utils/steam-launch-options'
 );
 
@@ -44,6 +51,7 @@ const NOTHING_FOR_THIS_OS = 'No launch options for current OS';
 
 beforeEach(() => {
   runningOn('linux');
+  localConfig.path = null;
 });
 
 describe('per-OS value selection', () => {
@@ -126,5 +134,39 @@ describe('needsGameDir', () => {
     runningOn('windows');
     expect(needsGameDir(game({ windows: '"{GAME_DIR}\\x.exe"' }))).toBe(true);
     expect(needsGameDir(game({ macos: '"{GAME_DIR}/x"' }))).toBe(false);
+  });
+});
+
+describe('clearSteamLaunchOptions', () => {
+  const WRAPPER = '"{GAME_DIR}\\loader.exe" %command%';
+
+  function localConfigWith(launchOptions: string): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-localconfig-'));
+    const file = path.join(dir, 'localconfig.vdf');
+    fs.writeFileSync(
+      file,
+      `"UserLocalConfigStore"\n{\n\t"Software"\n\t{\n\t\t"Valve"\n\t\t{\n\t\t\t"Steam"\n\t\t\t{\n\t\t\t\t"apps"\n\t\t\t\t{\n\t\t\t\t\t"413150"\n\t\t\t\t\t{\n\t\t\t\t\t\t"LaunchOptions"\t\t${JSON.stringify(launchOptions)}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n}\n`
+    );
+    return file;
+  }
+
+  const params = {
+    appId: 413150,
+    windowsOptions: WRAPPER,
+    linuxOptions: null,
+    macosOptions: null,
+    gamePath: 'D:\\Games\\SDV',
+  };
+
+  it("keeps the player's flags in the file and writes nothing the second time", async () => {
+    runningOn('windows');
+    localConfig.path = localConfigWith('"D:\\Games\\SDV\\loader.exe" %command% -dx11');
+
+    expect((await clearSteamLaunchOptions(params)).mode).toBe('file');
+    const written = fs.readFileSync(localConfig.path, 'utf8');
+    expect(written).toContain('"LaunchOptions"');
+    expect(written).toContain('-dx11');
+    expect(written).not.toContain('loader.exe');
+    expect((await clearSteamLaunchOptions(params)).mode).toBe('noop');
   });
 });

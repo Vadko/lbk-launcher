@@ -109,7 +109,11 @@ async function applyQueue(
       continue;
     }
     removed.add(actionKey(action));
-    if (action.kind === 'launch-options' && handled?.outcome === 'applied') {
+    if (
+      action.kind === 'launch-options' &&
+      handled?.outcome === 'applied' &&
+      !action.remove
+    ) {
       result.appliedGameIds.push(action.gameId);
       appliedNames.push(action.gameName);
     } else if (action.kind === 'launch-options' && handled?.outcome === 'failed') {
