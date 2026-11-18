@@ -22,7 +22,7 @@ export interface ResourceMap {
   likedGameIds: ReadonlySet<string>;
   homeInstalled: { games: readonly Game[]; installedPathsCount: number };
   weeklyPicks: WeeklyPicks | null;
-  // Both by translation rating: at least 70 downloads, and added in the last 21 days with fewer
+  // At least 70 downloads, by the last 30 days' downloads; added in the last 21 days with fewer, by translation rating
   popularGames: readonly Game[];
   newStarGames: readonly Game[];
   steamBridgeStatus: SteamBridgeStatus;

@@ -9,20 +9,31 @@ const POPULAR_MIN_DOWNLOADS = 70;
 const NEW_STAR_DAYS = 21;
 const RANKED_LIMIT = 30;
 
-function readRanked(hideAi: boolean, where: string, params: (string | number)[]): Game[] {
+function readRanked(
+  hideAi: boolean,
+  where: string,
+  orderBy: string,
+  params: (string | number)[]
+): Game[] {
   const rows = getDatabase()
     .prepare<(string | number)[], GameRow>(
       `SELECT * FROM games
        WHERE ${VISIBLE_GAMES_SQL}${hideAi ? ' AND ai IS NULL' : ''} AND ${where}
-       ORDER BY ${TRANSLATION_RATING_SQL} DESC, id
+       ORDER BY ${orderBy}, id
        LIMIT ?`
     )
     .all(...params, RANKED_LIMIT);
   return rows.map(rowToGame);
 }
 
+// The total breaks ties, which also orders the list before the counters catch-up fills downloads_30d
 export function getPopularGames(hideAi: boolean): Game[] {
-  return readRanked(hideAi, 'COALESCE(downloads, 0) >= ?', [POPULAR_MIN_DOWNLOADS]);
+  return readRanked(
+    hideAi,
+    'COALESCE(downloads, 0) >= ?',
+    'COALESCE(downloads_30d, 0) DESC, COALESCE(downloads, 0) DESC',
+    [POPULAR_MIN_DOWNLOADS]
+  );
 }
 
 // A planned translation has nothing to download, so it could never earn its way out
@@ -31,6 +42,7 @@ export function getNewStarGames(hideAi: boolean): Game[] {
     hideAi,
     `COALESCE(downloads, 0) < ? AND status != 'planned'
        AND julianday(created_at) >= julianday('now', ?)`,
+    `${TRANSLATION_RATING_SQL} DESC`,
     [POPULAR_MIN_DOWNLOADS, `-${NEW_STAR_DAYS} days`]
   );
 }
