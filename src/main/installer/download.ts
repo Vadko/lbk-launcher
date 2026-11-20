@@ -11,6 +11,7 @@ import type {
   InstallOptions,
   PausedDownloadState,
 } from '../../shared/types';
+import { classifyDownloadError } from './download-error';
 import { NetworkError } from './errors';
 
 const unlink = promisify(fs.unlink);
@@ -340,11 +341,8 @@ export async function downloadFile(
           await cleanupPartialFile(partialPath);
           throw error;
         }
-        if (
-          message.includes(t('download.cancelled').toLowerCase()) ||
-          message.includes('aborted')
-        ) {
-          if (!message.includes('paused')) {
+        if (signal?.aborted) {
+          if (signal.reason !== 'PAUSED') {
             await cleanupPartialFile(partialPath);
           }
           throw error;
@@ -561,82 +559,11 @@ async function downloadFileAttempt(
       error instanceof HTTPError ? `HTTP ${error.response.statusCode}` : error
     );
 
-    // Provide more specific error messages and notify UI
-    if (error instanceof Error) {
-      const message = error.message.toLowerCase();
-
-      // Check for pause - don't show error message
-      if (message === 'paused') {
-        throw error;
-      }
-
-      if (error instanceof HTTPError) {
-        const { statusCode, statusMessage = '' } = error.response;
-        if ([408, 504, 524].includes(statusCode) || /timeout/i.test(statusMessage)) {
-          onStatus?.({
-            message: t('download.timeout'),
-            tone: 'error',
-          });
-          throw new NetworkError(t('download.timeout'));
-        }
-        onStatus?.({ message: t('download.failed'), tone: 'error' });
-        throw new Error(t('download.httpError', { statusCode, statusMessage }).trim());
-      }
-
-      // Check for cancellation
-      if (
-        message.includes(t('download.cancelled').toLowerCase()) ||
-        message.includes('aborted')
-      ) {
-        onStatus?.({ message: error.message, tone: 'error' });
-        throw error;
-      }
-
-      if (message.includes('enotfound') || message.includes('getaddrinfo')) {
-        onStatus?.({ message: t('download.noInternet'), tone: 'error' });
-        throw new NetworkError(t('download.connectFailed'));
-      }
-
-      if (message.includes('etimedout') || message.includes('timeout')) {
-        onStatus?.({
-          message: t('download.timeout'),
-          tone: 'error',
-        });
-        throw new NetworkError(t('download.timeout'));
-      }
-
-      if (
-        message.includes('econnreset') ||
-        message.includes('socket hang up') ||
-        (error as { code?: string }).code === 'ERR_HTTP_CONTENT_LENGTH_MISMATCH'
-      ) {
-        onStatus?.({
-          message: t('download.connectionReset'),
-          tone: 'error',
-        });
-        throw new NetworkError(t('download.connectionReset'));
-      }
-
-      if (message.includes('econnrefused')) {
-        onStatus?.({ message: t('download.serverUnavailable'), tone: 'error' });
-        throw new NetworkError(t('download.serverUnavailableRetry'));
-      }
-
-      // Network lost abort from offline detection
-      if (message === 'network_lost') {
-        throw new NetworkError(t('download.connectionLost'));
-      }
+    const classified = classifyDownloadError(error, signal);
+    if (classified.status) {
+      onStatus?.(classified.status);
     }
-
-    onStatus?.({
-      message: t('download.failedCheckConnection'),
-      tone: 'error',
-    });
-    throw new Error(
-      t('download.failedWithError', {
-        error: error instanceof Error ? error.message : t('common.unknownError'),
-      })
-    );
+    throw classified.error;
   } finally {
     writeStream.close();
   }
