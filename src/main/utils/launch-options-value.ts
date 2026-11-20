@@ -114,3 +114,41 @@ export function mergeLaunchOptions(existing: string | null, ours: string): strin
 
   return `${existingTrim} ${ours}`;
 }
+
+// The player's args mergeLaunchOptions() left after our %command%, or null when `existing` is not our wrapped value.
+function userArgsInsideOurs(existing: string, ours: string): string | null {
+  const at = ours.indexOf(COMMAND_TOKEN);
+  const prefix = ours.slice(0, at + COMMAND_TOKEN.length);
+  const suffix = ours.slice(at + COMMAND_TOKEN.length);
+  if (
+    !existing.startsWith(prefix) ||
+    !existing.endsWith(suffix) ||
+    existing.length < prefix.length + suffix.length
+  ) {
+    return null;
+  }
+  return existing.slice(prefix.length, existing.length - suffix.length).trim();
+}
+
+/** Undo mergeLaunchOptions(): drop our value and keep what the player added to it. */
+export function removeLaunchOptions(existing: string | null, ours: string): string {
+  const existingTrim = (existing ?? '').trim();
+  if (!existingTrim || existingTrim === ours) {
+    return '';
+  }
+
+  if (ours.includes(COMMAND_TOKEN)) {
+    const userArgs = userArgsInsideOurs(existingTrim, ours);
+    if (userArgs !== null) {
+      return userArgs;
+    }
+  }
+
+  const at = existingTrim.indexOf(ours);
+  if (at === -1) {
+    return existingTrim;
+  }
+  return `${existingTrim.slice(0, at)} ${existingTrim.slice(at + ours.length)}`
+    .replace(/\s+/g, ' ')
+    .trim();
+}

@@ -24,6 +24,8 @@ const launchOptionsItem = z.object({
   gameName: z.string(),
   accountId: z.string().nullable(),
   params: launchOptionsParamsSchema,
+  // Set by an uninstall: take the translation's value out instead of writing it.
+  remove: z.literal(true).optional(),
   queuedAt,
 });
 const pluginToggleItem = z.object({
@@ -186,7 +188,8 @@ export function classifyPendingAction(
     // A toggle flipped back while the item waited makes it stale.
     return a.enable === ctx.settingOn ? 'apply' : 'drop';
   }
-  if (!ctx.installedGameIds.has(a.gameId)) {
+  // A reinstall since an uninstall's removal was queued has written its own options.
+  if (ctx.installedGameIds.has(a.gameId) === (a.remove === true)) {
     return 'drop';
   }
   // localconfig.vdf is per account; another user's file must not get this game's options.

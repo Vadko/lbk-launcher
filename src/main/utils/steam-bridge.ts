@@ -211,7 +211,7 @@ function isPluginConfigUsable(configPath: string | null): boolean {
 function pendingLaunchOptions(): SteamBridgeStatus['pendingLaunchOptions'] {
   const items: SteamBridgeStatus['pendingLaunchOptions'] = [];
   for (const action of getPendingSteamActions()) {
-    if (action.kind === 'launch-options') {
+    if (action.kind === 'launch-options' && !action.remove) {
       items.push({ gameId: action.gameId, gameName: action.gameName });
     }
   }

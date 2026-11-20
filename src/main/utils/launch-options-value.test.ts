@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   mergeLaunchOptions,
+  removeLaunchOptions,
   resolveGameDirToken,
   usesGameDirToken,
 } from './launch-options-value';
@@ -121,5 +122,59 @@ describe('mergeLaunchOptions', () => {
     expect(mergeLaunchOptions('-windowed', 'WRAP %command%')).toBe(
       'WRAP %command% -windowed'
     );
+  });
+});
+
+const CMD_WRAPPER =
+  'cmd /c ""%LOCALAPPDATA%\\BlueRepo\\BlueRepo.exe" %command% || pause"';
+
+describe('removeLaunchOptions', () => {
+  it.each([
+    ['nothing set', null, 'A %command%', ''],
+    ['only our wrapper', 'A %command%', 'A %command%', ''],
+    [
+      'our wrapper with the player flags',
+      'A %command% -windowed',
+      'A %command%',
+      '-windowed',
+    ],
+    ['a cmd wrapper', CMD_WRAPPER, CMD_WRAPPER, ''],
+    [
+      'a cmd wrapper with the player flags',
+      'cmd /c ""%LOCALAPPDATA%\\BlueRepo\\BlueRepo.exe" %command% -dx11 || pause"',
+      CMD_WRAPPER,
+      '-dx11',
+    ],
+    [
+      'plain flags after the player flags',
+      '-novid -language ukrainian',
+      '-language ukrainian',
+      '-novid',
+    ],
+    [
+      'plain flags between the player flags',
+      '-a -language ukrainian -b',
+      '-language ukrainian',
+      '-a -b',
+    ],
+    ['a value the player changed', 'B %command% -x', 'A %command%', 'B %command% -x'],
+  ])('%s', (_label, existing, ours, expected) => {
+    expect(removeLaunchOptions(existing, ours)).toBe(expected);
+  });
+
+  it.each([
+    ['nothing under a wrapper', '', 'A %command%', ''],
+    [
+      'plain flags under a wrapper',
+      '-windowed -novid',
+      'A %command%',
+      '-windowed -novid',
+    ],
+    ['the player wrapper under ours', 'gamemoderun %command% -x', 'A %command%', '-x'],
+    ['nothing under a cmd wrapper', '', CMD_WRAPPER, ''],
+    ['plain flags under a cmd wrapper', '-windowed', CMD_WRAPPER, '-windowed'],
+    ['plain flags beside plain flags', '-novid', '-language ukrainian', '-novid'],
+  ])('undoes a merge: %s', (_label, before, ours, expected) => {
+    expect(removeLaunchOptions(mergeLaunchOptions(before, ours), ours)).toBe(expected);
   });
 });

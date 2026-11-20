@@ -23,6 +23,7 @@ import { deleteDirectory, deleteFileAndCleanupDirs } from './files';
 import { findInstallationInfoFile } from './installation-info';
 import { resignMacBundles } from './mac-codesign';
 import { runUninstaller } from './platform';
+import { removeSteamLaunchOptions } from './remove-steam-launch-options';
 
 const unlink = promisify(fs.unlink);
 
@@ -115,6 +116,7 @@ export async function uninstallTranslation(game: Game): Promise<void> {
       } catch (artworkError) {
         console.warn('[Uninstall] Could not revert Steam artwork:', artworkError);
       }
+      await removeSteamLaunchOptions(game, gamePath);
     }
 
     console.log(`[Installer] Translation for ${game.id} uninstalled successfully`);

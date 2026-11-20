@@ -107,7 +107,7 @@ export async function restartSteamOrchestrated(opts: {
 
 function isQueuedFor(gameId: string): boolean {
   return getPendingSteamActions().some(
-    (a) => a.kind === 'launch-options' && a.gameId === gameId
+    (a) => a.kind === 'launch-options' && !a.remove && a.gameId === gameId
   );
 }
 
