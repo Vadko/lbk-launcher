@@ -2,8 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { A } from '@mobily/ts-belt';
 import {
-  EPIC_INSTALLED_ITEMS_DIR,
-  readEpicInstalledItems,
+  EPIC_INSTALLED_ITEMS_DIRS,
+  readAllEpicInstalledItems,
 } from '@/main/game-detector/epic-installed-items';
 import { parseEpicManifest } from '@/main/game-detector/epic-manifest';
 import type { WinePrefixRef } from '@/shared/wine-types';
@@ -23,7 +23,7 @@ const EGL_SCHEME = 'com.epicgames.launcher';
 
 /** The folders EGL records its installs in: the .item manifests of older EGL, the .egi items of EGL from 2026. */
 export function bottleEpicRecordDirs(prefix: string): string[] {
-  return [MANIFESTS, EPIC_INSTALLED_ITEMS_DIR].flatMap(
+  return [MANIFESTS, ...EPIC_INSTALLED_ITEMS_DIRS].flatMap(
     (dir) => wineToHostPath(prefix, dir) ?? []
   );
 }
@@ -63,8 +63,10 @@ function manifestGames(prefix: string): BottleEpicGame[] {
 }
 
 function installedItemGames(prefix: string): BottleEpicGame[] {
-  const dir = wineToHostPath(prefix, EPIC_INSTALLED_ITEMS_DIR);
-  return (dir ? readEpicInstalledItems(dir) : []).map((item) => ({
+  const dirs = EPIC_INSTALLED_ITEMS_DIRS.flatMap(
+    (dir) => wineToHostPath(prefix, dir) ?? []
+  );
+  return readAllEpicInstalledItems(dirs).map((item) => ({
     path: item.dir,
     launchId: item.appId,
   }));

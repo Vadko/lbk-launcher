@@ -76,7 +76,7 @@ function getEpicPath(): string | null {
     console.error('[Epic] Error detecting path:', error);
   }
 
-  logIfChanged('epic-path', '[Epic] Epic Games Launcher not found', 'warn');
+  logIfChanged('epic-path', '[Epic] No Data\\Manifests (.item) folder', 'warn');
   return null;
 }
 
@@ -168,11 +168,7 @@ export function findEpicGame(gameFolderName: string): string | null {
 
   const epicManifestPath = getEpicPath();
   if (!epicManifestPath) {
-    logIfChanged(
-      'epic-search',
-      '[Epic] Cannot search - Epic Games Launcher not found',
-      'warn'
-    );
+    logIfChanged('epic-search', '[Epic] No .egi or .item record of this game', 'warn');
     return null;
   }
 

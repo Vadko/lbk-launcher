@@ -1,12 +1,16 @@
+import { A } from '@mobily/ts-belt';
 import * as fs from 'fs';
 import * as path from 'path';
 import { z } from 'zod';
 import { readJsonFile } from '../utils/json-file';
 import { isWindows } from '../utils/platform';
 
-// EGL from 2026 (its EOS install helper) records each install here instead of a Data\Manifests .item
-export const EPIC_INSTALLED_ITEMS_DIR =
-  'C:\\ProgramData\\Epic\\EpicOnlineServices\\InstallHelper\\InstalledItems';
+// EGL from 2026 (its EOS install helper) records each install as an .egi instead of a Data\Manifests .item; EGL 20.3 keeps the games in the Shared helper and only its own EOS components in the other
+const INSTALL_HELPERS = ['EpicOnlineServicesShared', 'EpicOnlineServices'];
+
+export const EPIC_INSTALLED_ITEMS_DIRS = INSTALL_HELPERS.map(
+  (helper) => `C:\\ProgramData\\Epic\\${helper}\\InstallHelper\\InstalledItems`
+);
 
 const installedItemSchema = z.object({
   v4: z.object({
@@ -29,7 +33,7 @@ export interface EpicInstalledItem {
 }
 
 /** The finished installs of one InstalledItems folder. */
-export function readEpicInstalledItems(itemsDir: string): EpicInstalledItem[] {
+function readEpicInstalledItems(itemsDir: string): EpicInstalledItem[] {
   let files: string[] = [];
   try {
     files = fs.readdirSync(itemsDir).filter((name) => name.endsWith('.egi'));
@@ -55,22 +59,28 @@ export function readEpicInstalledItems(itemsDir: string): EpicInstalledItem[] {
   });
 }
 
+/** The installs of every InstalledItems folder, each install once. */
+export function readAllEpicInstalledItems(
+  itemsDirs: readonly string[]
+): readonly EpicInstalledItem[] {
+  return A.uniqBy(itemsDirs.flatMap(readEpicInstalledItems), (item) =>
+    item.dir.toLowerCase()
+  );
+}
+
 /** Where EGL on Windows records its installs as .egi items, whether or not it is installed. */
-export function getEpicInstalledItemsPath(): string | null {
+export function getEpicInstalledItemsPaths(): string[] {
   const programData = isWindows() ? process.env.PROGRAMDATA : undefined;
   return programData
-    ? path.join(
-        programData,
-        'Epic',
-        'EpicOnlineServices',
-        'InstallHelper',
-        'InstalledItems'
+    ? INSTALL_HELPERS.map((helper) =>
+        path.join(programData, 'Epic', helper, 'InstallHelper', 'InstalledItems')
       )
-    : null;
+    : [];
 }
 
 /** The .egi installs of this machine's EGL whose folder exists. */
-export function getNativeEpicInstalledItems(): EpicInstalledItem[] {
-  const dir = getEpicInstalledItemsPath();
-  return dir ? readEpicInstalledItems(dir).filter((item) => fs.existsSync(item.dir)) : [];
+export function getNativeEpicInstalledItems(): readonly EpicInstalledItem[] {
+  return readAllEpicInstalledItems(getEpicInstalledItemsPaths()).filter((item) =>
+    fs.existsSync(item.dir)
+  );
 }
