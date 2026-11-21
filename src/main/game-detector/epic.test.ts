@@ -85,26 +85,28 @@ function egi(dir: string, state: string, id: string): Record<string, unknown> {
   };
 }
 
-function setUpInstalledItems(items: Record<string, unknown>[]): string {
+type InstallHelper = 'EpicOnlineServicesShared' | 'EpicOnlineServices';
+
+function setUpInstalledItems(
+  helpers: readonly (readonly [InstallHelper, readonly Record<string, unknown>[]])[]
+): void {
   const programData = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-epic-egi-'));
   dirs.push(programData);
   vi.stubEnv('PROGRAMDATA', programData);
-  const dir = path.join(
-    programData,
-    'Epic',
-    'EpicOnlineServices',
-    'InstallHelper',
-    'InstalledItems'
-  );
-  fs.mkdirSync(dir, { recursive: true });
-  items.forEach((item, i) => {
-    fs.writeFileSync(path.join(dir, `${i}.egi`), JSON.stringify(item));
-  });
-  return programData;
+  for (const [helper, items] of helpers) {
+    const dir = path.join(programData, 'Epic', helper, 'InstallHelper', 'InstalledItems');
+    fs.mkdirSync(dir, { recursive: true });
+    items.forEach((item, i) => {
+      fs.writeFileSync(path.join(dir, `${i}.egi`), JSON.stringify(item));
+    });
+  }
 }
 
 describe('an EGL that records installs only as .egi items', () => {
-  function setUp(): string {
+  // EGL 20.3 records the games in the Shared helper and only its own EOS components in the other
+  function setUp(
+    gameHelpers: readonly InstallHelper[] = ['EpicOnlineServicesShared']
+  ): string {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-epic-games-'));
     dirs.push(root);
     const game = path.join(root, 'Snakebird');
@@ -114,18 +116,35 @@ describe('an EGL that records installs only as .egi items', () => {
     fs.mkdirSync(pending);
     const eosService = path.join(root, 'Epic Online Services');
     fs.mkdirSync(eosService);
-    setUpInstalledItems([
+    const games = [
       egi(game, 'Installed', GAME_ID),
       egi(gone, 'Installed', 'B'.repeat(32)),
       egi(pending, 'Installing', 'C'.repeat(32)),
+    ];
+    const helpers = new Map<InstallHelper, Record<string, unknown>[]>(
+      gameHelpers.map((helper) => [helper, games])
+    );
+    helpers.set('EpicOnlineServices', [
+      ...(helpers.get('EpicOnlineServices') ?? []),
       egi(eosService, 'Installed', 'service'),
     ]);
+    setUpInstalledItems([...helpers]);
     return game;
   }
 
   it("lists the finished game installs whose folder exists, not EGL's own components", () => {
     setUp();
     expect(getInstalledEpicGamePaths()).toEqual(['Snakebird']);
+  });
+
+  it.each<[string, InstallHelper[]]>([
+    ['the Shared install helper', ['EpicOnlineServicesShared']],
+    ['the EOS install helper', ['EpicOnlineServices']],
+    ['both install helpers, once', ['EpicOnlineServicesShared', 'EpicOnlineServices']],
+  ])('lists a game recorded by %s', (_label, helpers) => {
+    const game = setUp(helpers);
+    expect(getInstalledEpicGamePaths()).toEqual(['Snakebird']);
+    expect(findEpicGame('Snakebird')).toBe(game);
   });
 
   it.each([
