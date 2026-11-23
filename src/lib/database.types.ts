@@ -1962,6 +1962,47 @@ export type Database = {
           },
         ]
       }
+      impact_report_sends: {
+        Row: {
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          period: Database["public"]["Enums"]["impact_report_frequency"]
+          period_start: string
+          sent_at: string | null
+          status: string
+          user_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          period: Database["public"]["Enums"]["impact_report_frequency"]
+          period_start: string
+          sent_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          period?: Database["public"]["Enums"]["impact_report_frequency"]
+          period_start?: string
+          sent_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impact_report_sends_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kuli_games: {
         Row: {
           game_category_names: string[] | null
@@ -3139,6 +3180,50 @@ export type Database = {
           },
         ]
       }
+      translation_stats_snapshots: {
+        Row: {
+          day: string
+          downloads: number
+          game_id: string
+          likes: number
+          rank: number | null
+          ranked_count: number
+          taken_at: string
+        }
+        ComputedFields: never
+        Insert: {
+          day: string
+          downloads: number
+          game_id: string
+          likes: number
+          rank?: number | null
+          ranked_count: number
+          taken_at?: string
+        }
+        Update: {
+          day?: string
+          downloads?: number
+          game_id?: string
+          likes?: number
+          rank?: number | null
+          ranked_count?: number
+          taken_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "translation_stats_snapshots_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "translation_stats_snapshots_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
       translation_uninstalls: {
         Row: {
           game_id: string
@@ -3218,6 +3303,7 @@ export type Database = {
           game_update_telegram: boolean
           game_update_watch: boolean
           id: string
+          impact_report_frequency: Database["public"]["Enums"]["impact_report_frequency"]
           notification_prefs: NonNullable<Json>
           reuse_submit_fields: boolean
           role: Database["public"]["Enums"]["user_role"]
@@ -3244,6 +3330,7 @@ export type Database = {
           game_update_telegram?: boolean
           game_update_watch?: boolean
           id?: string
+          impact_report_frequency?: Database["public"]["Enums"]["impact_report_frequency"]
           notification_prefs?: NonNullable<Json>
           reuse_submit_fields?: boolean
           role?: Database["public"]["Enums"]["user_role"]
@@ -3269,6 +3356,7 @@ export type Database = {
           game_update_telegram?: boolean
           game_update_watch?: boolean
           id?: string
+          impact_report_frequency?: Database["public"]["Enums"]["impact_report_frequency"]
           notification_prefs?: NonNullable<Json>
           reuse_submit_fields?: boolean
           role?: Database["public"]["Enums"]["user_role"]
@@ -3388,6 +3476,14 @@ export type Database = {
       check_steam_library_rate_limit: {
         Args: { p_daily_limit?: number; p_machine_id: string }
         Returns: number
+      }
+      claim_impact_report_send: {
+        Args: {
+          p_period: Database["public"]["Enums"]["impact_report_frequency"]
+          p_period_start: string
+          p_user_id: string
+        }
+        Returns: boolean
       }
       claim_review_alert: {
         Args: { p_every?: string; p_key: string }
@@ -3691,6 +3787,21 @@ export type Database = {
           game_ids: string[]
           starts_at: string
           title: string
+        }[]
+      }
+      get_impact_report: {
+        Args: {
+          p_period: Database["public"]["Enums"]["impact_report_frequency"]
+          p_period_start: string
+        }
+        Returns: {
+          email: string
+          full_name: string
+          games: Json
+          unsubscribe_token: string
+          user_id: string
+          users_count: number
+          users_count_prev: number
         }[]
       }
       get_landing_stats: {
@@ -4060,7 +4171,15 @@ export type Database = {
         Returns: undefined
       }
       sync_news_broadcasts: { Args: { p_entries: Json }; Returns: Json }
+      take_due_translation_stats_snapshot: {
+        Args: { p_now?: string }
+        Returns: number
+      }
       take_store_discount_batch: { Args: { p_limit: number }; Returns: Json }
+      take_translation_stats_snapshot: {
+        Args: { p_day: string }
+        Returns: number
+      }
       translation_rating: {
         Args: {
           p_ai: string
@@ -4070,6 +4189,7 @@ export type Database = {
         }
         Returns: number
       }
+      translation_stats_due_day: { Args: { p_now: string }; Returns: string }
       validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
     Enums: {
@@ -4079,6 +4199,7 @@ export type Database = {
       feedback_status: "new" | "in_progress" | "fixed" | "rejected"
       feedback_type: "feedback" | "error"
       game_status: "completed" | "in-progress" | "planned" | "tech-improvement"
+      impact_report_frequency: "weekly" | "monthly" | "off"
       install_source:
         | "steam"
         | "gog"
@@ -4256,6 +4377,7 @@ export const Constants = {
       feedback_status: ["new", "in_progress", "fixed", "rejected"],
       feedback_type: ["feedback", "error"],
       game_status: ["completed", "in-progress", "planned", "tech-improvement"],
+      impact_report_frequency: ["weekly", "monthly", "off"],
       install_source: [
         "steam",
         "gog",
