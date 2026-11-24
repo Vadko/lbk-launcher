@@ -3290,6 +3290,8 @@ export type Database = {
       users: {
         Row: {
           analytics_enabled: boolean
+          approval_email: boolean
+          approval_telegram: boolean
           approved: boolean
           approved_at: string | null
           approved_by: string | null
@@ -3297,6 +3299,7 @@ export type Database = {
           email: string
           email_notifications: boolean
           feedback_email_notifications: boolean
+          feedback_telegram: boolean
           full_name: string | null
           game_update_auto_tech: boolean
           game_update_email: boolean
@@ -3313,10 +3316,14 @@ export type Database = {
           unsubscribe_token: string
           updated_at: string
           verified_user: boolean
+          workshop_update_email: boolean
+          workshop_update_telegram: boolean
         }
         ComputedFields: never
         Insert: {
           analytics_enabled?: boolean
+          approval_email?: boolean
+          approval_telegram?: boolean
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -3324,6 +3331,7 @@ export type Database = {
           email: string
           email_notifications?: boolean
           feedback_email_notifications?: boolean
+          feedback_telegram?: boolean
           full_name?: string | null
           game_update_auto_tech?: boolean
           game_update_email?: boolean
@@ -3340,9 +3348,13 @@ export type Database = {
           unsubscribe_token?: string
           updated_at?: string
           verified_user?: boolean
+          workshop_update_email?: boolean
+          workshop_update_telegram?: boolean
         }
         Update: {
           analytics_enabled?: boolean
+          approval_email?: boolean
+          approval_telegram?: boolean
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -3350,6 +3362,7 @@ export type Database = {
           email?: string
           email_notifications?: boolean
           feedback_email_notifications?: boolean
+          feedback_telegram?: boolean
           full_name?: string | null
           game_update_auto_tech?: boolean
           game_update_email?: boolean
@@ -3366,6 +3379,8 @@ export type Database = {
           unsubscribe_token?: string
           updated_at?: string
           verified_user?: boolean
+          workshop_update_email?: boolean
+          workshop_update_telegram?: boolean
         }
         Relationships: []
       }
