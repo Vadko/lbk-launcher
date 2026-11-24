@@ -3948,6 +3948,14 @@ export type Database = {
           unique_users_uninstalled: number
         }[]
       }
+      impact_report_cron: { Args: { p_now?: string }; Returns: undefined }
+      impact_report_due_periods: {
+        Args: { p_now: string }
+        Returns: {
+          period: Database["public"]["Enums"]["impact_report_frequency"]
+          period_start: string
+        }[]
+      }
       increment_game_downloads:
         | {
             Args: { p_game_id: string; p_user_identifier: string }
