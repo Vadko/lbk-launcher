@@ -31,7 +31,7 @@ import {
   getFirstAvailableGamePath,
   getHeroicGame,
 } from '../game-detector';
-import { getEglInstallDirs } from '../game-detector/egl-linux';
+import { isEglInstall } from '../game-detector/egl-v2';
 import { getEpicAppName } from '../game-detector/epic';
 import { getGOGGalaxyClientPath, getGOGGameId } from '../game-detector/gog';
 import { syncKurinGames } from '../game-detector/kurin';
@@ -62,7 +62,7 @@ import { flushEglLaunchArgs } from '../utils/egl-windows-settings';
 import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
-import { getPlatform } from '../utils/platform';
+import { getPlatform, isLinux } from '../utils/platform';
 import { syncTranslatedGamesCollection } from '../utils/steam-collections';
 import { launchSteamGame } from '../utils/steam-launcher';
 import { addLbkLauncherToSteamLibrary } from '../utils/steam-self-shortcut';
@@ -440,8 +440,8 @@ export function setupGamesHandlers(): void {
         }
       }
 
-      // EGLv2 on Linux has no appName for getEpicAppName and launches through its own AppImage
-      if (gamePath.platform === 'epic' && getEglInstallDirs().includes(gamePath.path)) {
+      // EGLv2 on Linux registers no link handler and launches through its own AppImage; on Windows its link goes the Epic way below
+      if (gamePath.platform === 'epic' && isLinux() && isEglInstall(gamePath.path)) {
         return (await launchEglGame(gamePath.path, game.steam_launch_options_linux))
           ? { success: true }
           : { success: false, error: t('launch.failed') };

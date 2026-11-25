@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
-import { getEglAppId, getEglDataRoot } from '../game-detector/egl-linux';
+import { getEglAppId, getEglDataRoot } from '../game-detector/egl-v2';
 import { writeFileAtomic } from './atomic-write';
 import { readJsonFile } from './json-file';
 import { parseLaunchCommand } from './launch-command';

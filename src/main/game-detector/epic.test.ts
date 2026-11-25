@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   findEpicGame,
   getEpicAppName,
@@ -16,6 +16,13 @@ vi.mock('@/main/utils/platform', () => ({
 }));
 
 const dirs: string[] = [];
+
+// The EGL preview of the machine running the tests must not reach these EGL v1 cases
+beforeEach(() => {
+  const localAppData = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-epic-local-'));
+  dirs.push(localAppData);
+  vi.stubEnv('LOCALAPPDATA', localAppData);
+});
 
 afterEach(() => {
   vi.unstubAllEnvs();

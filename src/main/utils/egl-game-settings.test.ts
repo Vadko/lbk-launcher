@@ -4,10 +4,12 @@ import * as path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { addEglLaunchArgs, readEglLaunchArgs } from './egl-game-settings';
 
+const platform = vi.hoisted(() => ({ windows: false }));
+
 vi.mock('./platform', () => ({
-  isLinux: () => true,
+  isLinux: () => !platform.windows,
   isMacOS: () => false,
-  isWindows: () => false,
+  isWindows: () => platform.windows,
 }));
 
 const APP_ID =
@@ -16,6 +18,7 @@ const APP_ID =
 const homes: string[] = [];
 
 afterEach(() => {
+  platform.windows = false;
   vi.unstubAllEnvs();
   for (const home of homes.splice(0)) {
     fs.rmSync(home, { recursive: true, force: true });
@@ -29,7 +32,10 @@ function setUpHome(settings?: unknown) {
   vi.stubEnv('USERPROFILE', home);
   vi.stubEnv('XDG_DATA_HOME', undefined);
   vi.stubEnv('FLATPAK_ID', undefined);
-  const root = path.join(home, '.local/share/com.epicgames.eglv2');
+  vi.stubEnv('LOCALAPPDATA', path.join(home, 'AppData', 'Local'));
+  const root = platform.windows
+    ? path.join(home, 'AppData', 'Local', 'com.epicgames.eglv2')
+    : path.join(home, '.local/share/com.epicgames.eglv2');
   const dir = path.join(home, 'Games', 'DokiDokiLitClubPlus');
   fs.mkdirSync(dir, { recursive: true });
   fs.mkdirSync(root, { recursive: true });
@@ -163,6 +169,43 @@ describe('EGL per-game launch arguments', () => {
           additionalCommands: '-load-mods',
         },
       },
+    });
+  });
+});
+
+describe('EGL preview launch arguments on Windows', () => {
+  it('turns on the args of the entry the preview made for the game', () => {
+    platform.windows = true;
+    // What the preview 0.122.0 wrote once the game was installed and its options opened
+    const { dir, file } = setUpHome({
+      games: {
+        [APP_ID]: {
+          autoUpdate: true,
+          priorityDownload: false,
+          additionalCommandsEnabled: false,
+          additionalCommands: '',
+        },
+      },
+      addons: {},
+      cloudSaves: {},
+      pendingShortcuts: {},
+    });
+
+    expect(addEglLaunchArgs(dir, '-load-mods')).toBe(true);
+
+    expect(file).toContain(path.join('AppData', 'Local', 'com.epicgames.eglv2'));
+    expect(readSettings(file)).toEqual({
+      games: {
+        [APP_ID]: {
+          autoUpdate: true,
+          priorityDownload: false,
+          additionalCommandsEnabled: true,
+          additionalCommands: '-load-mods',
+        },
+      },
+      addons: {},
+      cloudSaves: {},
+      pendingShortcuts: {},
     });
   });
 });

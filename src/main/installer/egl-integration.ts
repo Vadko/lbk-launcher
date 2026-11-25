@@ -1,7 +1,11 @@
-import { getEglInstallDirs } from '@/main/game-detector/egl-linux';
+import { A, D, F } from '@mobily/ts-belt';
+import { isEglInstall, isEglPreviewInstalled } from '@/main/game-detector/egl-v2';
 import { getEpicManifestAppId } from '@/main/game-detector/epic';
 import { addEglLaunchArgs } from '@/main/utils/egl-game-settings';
-import { setEglWindowsLaunchArgs } from '@/main/utils/egl-windows-settings';
+import {
+  type EglLaunchArgsResult,
+  setEglWindowsLaunchArgs,
+} from '@/main/utils/egl-windows-settings';
 import { type LaunchCommand, parseLaunchCommand } from '@/main/utils/launch-command';
 import { resolveGameDirToken } from '@/main/utils/launch-options-value';
 import { isLinux, isWindows } from '@/main/utils/platform';
@@ -37,8 +41,12 @@ function parseOptions(
   return options;
 }
 
-// EGLv2 re-reads its JSON before every launch, so it is written right away
-function applyLinux(value: string, gameDir: string): EglIntegrationResult {
+// EGLv2 re-reads its JSON before every launch, on Linux and on Windows alike, so it is written right away
+function applyEglV2(
+  value: string,
+  gameDir: string,
+  envNote: 'launchOptions.eglEnvOnlyFromLbk' | 'launchOptions.eglEnvUnsupported'
+): EglIntegrationResult {
   const options = parseOptions(value, gameDir);
   if (!('args' in options)) {
     return options;
@@ -52,73 +60,72 @@ function applyLinux(value: string, gameDir: string): EglIntegrationResult {
     return { launchOptionsError: t('launchOptions.eglWriteFailed') };
   }
   console.log('[Installer] EGL launch options applied:', value);
-  return Object.keys(options.env).length > 0
-    ? { eglLaunchOptionsNotes: [t('launchOptions.eglEnvOnlyFromLbk')] }
-    : {};
+  return D.isNotEmpty(options.env) ? { eglLaunchOptionsNotes: [t(envNote)] } : {};
 }
 
-async function applyWindows(
-  value: string,
-  gameDir: string,
-  appId: string
-): Promise<EglIntegrationResult> {
-  const options = parseOptions(value, gameDir);
-  if (!('args' in options)) {
-    return options;
-  }
-  const result = options.argsText
-    ? await setEglWindowsLaunchArgs(appId, options.argsText).catch((error: unknown) => {
-        console.warn('[Installer] EGL launch args failed:', error);
-        return 'failed' as const;
-      })
-    : 'written';
+function eglV1Result(
+  result: EglLaunchArgsResult,
+  options: LaunchCommand,
+  value: string
+): EglIntegrationResult {
   console.log(`[Installer] EGL launch options ${result}:`, value);
   if (result === 'failed') {
     return { launchOptionsError: t('launchOptions.eglWriteFailed') };
   }
   // Windows has no Proton fallback, so env assignments reach the game from nowhere
-  const notes = [
-    ...(result === 'queued' ? [t('launchOptions.eglQueued')] : []),
-    ...(Object.keys(options.env).length > 0
-      ? [t('launchOptions.eglEnvUnsupported')]
-      : []),
-  ];
-  return notes.length > 0 ? { eglLaunchOptionsNotes: notes } : {};
+  const notes = A.concat(
+    result === 'queued' ? [t('launchOptions.eglQueued')] : [],
+    D.isNotEmpty(options.env) ? [t('launchOptions.eglEnvUnsupported')] : []
+  );
+  return A.isNotEmpty(notes) ? { eglLaunchOptionsNotes: F.toMutable(notes) } : {};
 }
 
 // The Epic Games Launcher counterpart of the Steam launch options: the args land in EGL's own per-game arguments
-export function applyEglIntegration(
+export async function applyEglIntegration(
   game: Game,
   target: EglIntegrationTarget
 ): Promise<EglIntegrationResult> {
   if (target.platform !== 'epic') {
-    return Promise.resolve({});
+    return {};
   }
   // The EGL in a CrossOver bottle keeps its settings inside the bottle, which LBK does not edit
   if (target.wine) {
-    return Promise.resolve(
-      game.steam_launch_options_windows?.trim()
-        ? { launchOptionsError: t('launchOptions.eglInWine') }
-        : {}
-    );
+    return game.steam_launch_options_windows?.trim()
+      ? { launchOptionsError: t('launchOptions.eglInWine') }
+      : {};
   }
   const windowsOptions = isWindows() ? game.steam_launch_options_windows : null;
   if (windowsOptions) {
-    const appId = getEpicManifestAppId(target.path);
-    return appId
-      ? applyWindows(windowsOptions, target.path, appId)
-      : Promise.resolve(notInEgl(target.path));
+    const v1AppId = getEpicManifestAppId(target.path);
+    // The installed preview handles the links over EGL v1; a log it left behind does not
+    if (isEglInstall(target.path) && (!v1AppId || isEglPreviewInstalled())) {
+      return applyEglV2(windowsOptions, target.path, 'launchOptions.eglEnvUnsupported');
+    }
+    if (!v1AppId) {
+      return notInEgl(target.path);
+    }
+    const options = parseOptions(windowsOptions, target.path);
+    if (!('args' in options)) {
+      return options;
+    }
+    const result = options.argsText
+      ? await setEglWindowsLaunchArgs(v1AppId, options.argsText).catch(
+          (error: unknown) => {
+            console.warn('[Installer] EGL launch args failed:', error);
+            return 'failed' as const;
+          }
+        )
+      : 'written';
+    return eglV1Result(result, options, windowsOptions);
   }
   const linuxOptions = isLinux() ? game.steam_launch_options_linux : null;
   if (linuxOptions) {
     // A Heroic or Lutris install has no EGL settings for the args to go into
-    return Promise.resolve(
-      getEglInstallDirs().includes(target.path)
-        ? applyLinux(linuxOptions, target.path)
-        : notInEgl(target.path)
-    );
+    return isEglInstall(target.path)
+      ? applyEglV2(linuxOptions, target.path, 'launchOptions.eglEnvOnlyFromLbk')
+      : notInEgl(target.path);
   }
-  return Promise.resolve({});
+  return {};
 }
 
 // Without its launch options the translation runs unmodded, so the install says so
