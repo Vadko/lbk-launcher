@@ -11,12 +11,12 @@ import {
   fetchSteamLibraryFromApi,
   invalidateSteamLibraryCache,
   readSteamLibraryCache,
-  steam3ToSteam64,
   writeSteamLibraryCache,
 } from '../steam-library-api';
 import { forCurrentOS, getPlatform, isWindows } from '../utils/platform';
 import { getRegistryString } from '../utils/registry';
 import { getSteamBridge } from '../utils/steam-bridge';
+import { isSteamAccountId, steam3ToSteam64, steam64ToSteam3 } from '../utils/steam-id';
 import {
   parseLocalConfigPlaytime,
   parseMostRecentUser,
@@ -235,15 +235,6 @@ function detectSteamPathLinux(): string | null {
 // ============================================================================
 
 /**
- * Convert Steam64 ID to Steam3 ID (internal)
- */
-function steam64ToSteam3(steam64Id: string): string {
-  const steam64 = BigInt(steam64Id);
-  const steam3 = steam64 - BigInt('76561197960265728');
-  return steam3.toString();
-}
-
-/**
  * Get the current Steam3 user ID (active/most recent user) (internal)
  * @param steamPath - Steam installation path
  */
@@ -254,8 +245,10 @@ function getCurrentSteamUserId(steamPath: string): string | null {
     if (fs.existsSync(loginUsersPath)) {
       const content = fs.readFileSync(loginUsersPath, 'utf8');
       const steam64Id = parseMostRecentUser(content);
-      if (steam64Id) {
-        const steam3Id = steam64ToSteam3(steam64Id);
+      const steam3Id = steam64Id ? steam64ToSteam3(steam64Id) : null;
+      if (steam3Id && !isSteamAccountId(steam3Id)) {
+        console.warn(`[Steam] Most recent user ${steam64Id} is not a Steam account`);
+      } else if (steam3Id) {
         const userdataPath = path.join(steamPath, 'userdata', steam3Id);
         if (fs.existsSync(userdataPath)) {
           return steam3Id;
@@ -278,7 +271,7 @@ function getCurrentSteamUserId(steamPath: string): string | null {
 
     const userFolders = fs
       .readdirSync(userdataPath, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && /^\d+$/.test(entry.name))
+      .filter((entry) => entry.isDirectory() && isSteamAccountId(entry.name))
       .map((entry) => entry.name);
 
     if (userFolders.length > 0) {
