@@ -7,7 +7,7 @@ import { isPathInside, readTextOrNull } from '../utils/fs-safe';
 import { isFlatpak } from '../utils/host-exec';
 import { readJsonFile } from '../utils/json-file';
 import { parseLaunchCommand } from '../utils/launch-command';
-import { isLinux } from '../utils/platform';
+import { isLinux, isWindows } from '../utils/platform';
 
 // One line of EGLv2's append-only install log; the header line has no installationId
 const installationSchema = z.object({
@@ -27,7 +27,16 @@ type InstallationRecord = z.infer<typeof installationSchema>;
 
 type EglInstall = InstallationRecord & { dir: string };
 
+const EGL_DATA_DIR = 'com.epicgames.eglv2';
+
+const localAppData = () =>
+  process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+
 export function getEglDataRoot(): string | null {
+  // The Windows preview keeps the same data root as the Linux build, under LOCALAPPDATA
+  if (isWindows()) {
+    return path.join(localAppData(), EGL_DATA_DIR);
+  }
   if (!isLinux()) {
     return null;
   }
@@ -35,7 +44,7 @@ export function getEglDataRoot(): string | null {
   const dataHome =
     (!isFlatpak() && process.env.XDG_DATA_HOME) ||
     path.join(os.homedir(), '.local/share');
-  return path.join(dataHome, 'com.epicgames.eglv2');
+  return path.join(dataHome, EGL_DATA_DIR);
 }
 
 export function getEglInstallationsPath(): string | null {
@@ -86,6 +95,16 @@ export function getEglInstallDirs(): string[] {
   return getEglInstalls().map(({ dir }) => dir);
 }
 
+export function findEglInstallDir(folderName: string): string | undefined {
+  const dir = getEglInstallDirs().find(
+    (installDir) => path.basename(installDir).toLowerCase() === folderName.toLowerCase()
+  );
+  if (dir) {
+    console.log(`[Epic] ✓ Game found (Epic Games Launcher): ${dir}`);
+  }
+  return dir;
+}
+
 const pinCacheSchema = z.object({ version: z.string().min(1) });
 
 // EGL keeps the GE-Proton it downloaded in a folder named after the version pin-cache.json pins
@@ -98,8 +117,28 @@ function getEglProtonDir(root: string): string | null {
     : null;
 }
 
+// The preview installs per user; its uninstall may leave the log behind
+export function isEglPreviewInstalled(): boolean {
+  return (
+    isWindows() &&
+    fs.existsSync(
+      path.join(localAppData(), 'Epic Games', 'Launcher', 'EpicGamesLauncher.exe')
+    )
+  );
+}
+
+const pathKey = (dir: string) => {
+  const resolved = path.resolve(dir);
+  return isWindows() ? resolved.toLowerCase() : resolved;
+};
+
 function findEglInstall(gameDir: string): EglInstall | undefined {
-  return getEglInstalls().find(({ dir }) => dir === gameDir);
+  const key = pathKey(gameDir);
+  return getEglInstalls().find(({ dir }) => pathKey(dir) === key);
+}
+
+export function isEglInstall(gameDir: string): boolean {
+  return findEglInstall(gameDir) !== undefined;
 }
 
 // EGL's own app id, also the key of its per-game settings
@@ -110,7 +149,7 @@ export function getEglAppId(gameDir: string): string | null {
     : null;
 }
 
-// The Windows deep-link id; EGLv2 0.100 resolves it, and a bare manifest AppName it does not
+// The deep-link id; EGLv2 resolves it, and a bare manifest AppName it does not
 export function getEglDeepLink(gameDir: string): string | null {
   const appId = getEglAppId(gameDir);
   return (
@@ -127,8 +166,9 @@ export interface EglLaunchTarget {
   protonDir: string;
 }
 
+// Proton is the Linux build's own runner; the Windows preview runs the game itself
 export function getEglLaunchTarget(gameDir: string): EglLaunchTarget | null {
-  const root = getEglDataRoot();
+  const root = isLinux() ? getEglDataRoot() : null;
   const install = findEglInstall(gameDir);
   const protonDir = root && getEglProtonDir(root);
   if (!root || !install?.artifactId || !install.launchExecutable || !protonDir) {

@@ -4,7 +4,7 @@ import { LRUCache } from 'lru-cache';
 import * as path from 'path';
 import { bottleStoreGamePaths, bottleStoreSources } from '../wine/bottle-store-games';
 import { getInstalledEAGamePaths } from './ea';
-import { getEglInstallationsPath } from './egl-linux';
+import { getEglInstallationsPath } from './egl-v2';
 import {
   getEpicManifestsCandidatePath,
   getInstalledEpicGamePaths,

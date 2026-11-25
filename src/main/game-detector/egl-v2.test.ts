@@ -7,13 +7,17 @@ import {
   getEglInstallationsPath,
   getEglInstallDirs,
   getEglLaunchTarget,
-} from './egl-linux';
-import { findEpicGame, getInstalledEpicGamePaths } from './epic';
+  isEglInstall,
+  isEglPreviewInstalled,
+} from './egl-v2';
+import { findEpicGame, getEpicAppName, getInstalledEpicGamePaths } from './epic';
+
+const platform = vi.hoisted(() => ({ windows: false }));
 
 vi.mock('../utils/platform', () => ({
-  isLinux: () => true,
+  isLinux: () => !platform.windows,
   isMacOS: () => false,
-  isWindows: () => false,
+  isWindows: () => platform.windows,
 }));
 
 vi.mock('./gog', () => ({
@@ -35,7 +39,9 @@ vi.mock('./lutris', () => ({
 const homes: string[] = [];
 
 afterEach(() => {
+  platform.windows = false;
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
   for (const home of homes.splice(0)) {
     fs.rmSync(home, { recursive: true, force: true });
   }
@@ -248,5 +254,148 @@ describe('EGLv2 installations on Linux', () => {
     ]);
     pinProton('GE-Proton10-34');
     expect(getEglLaunchTarget(other)).toBeNull();
+  });
+});
+
+const SNAKEBIRD_ID = '2696F0EB5BF03ED37F5F5A301DC0F37C';
+const SNAKEBIRD_APP_ID =
+  'efc30c2078a2499ab979d198255e2e4b:1cb5e018771c43ee96aa553b450e9f95:8337d1f975514d35ad0c1176e8a29f26';
+
+// Shaped after the real log of the Windows preview 0.122.0
+function snakebirdRecord(dir: string, fields: Record<string, unknown>) {
+  const [namespace, itemId, artifactId] = SNAKEBIRD_APP_ID.split(':');
+  return {
+    installationId: SNAKEBIRD_ID,
+    dir,
+    platform: 'Windows',
+    namespace,
+    itemId,
+    artifactId,
+    tags: [''],
+    sidecar: { revision: 0 },
+    launchCommand: '',
+    launchExecutable: 'Snakebird Complete.exe',
+    writtenAt: '2026-11-25T01:13:47Z',
+    ...fields,
+  };
+}
+
+function setUpWindows(lines: (dir: string) => unknown[]) {
+  platform.windows = true;
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-egl-win-'));
+  homes.push(home);
+  const localAppData = path.join(home, 'AppData', 'Local');
+  vi.stubEnv('LOCALAPPDATA', localAppData);
+  vi.stubEnv('PROGRAMDATA', path.join(home, 'ProgramData'));
+  const dir = path.join(home, 'Epic Games', 'SnakebirdCompletezp91Z');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'Snakebird Complete.exe'), '');
+  const log = path.join(localAppData, 'com.epicgames.eglv2', 'installations.jsonl');
+  fs.mkdirSync(path.dirname(log), { recursive: true });
+  fs.writeFileSync(
+    log,
+    [{ version: 1, writtenAt: '2026-11-25T01:11:49Z', entries: 15 }, ...lines(dir)]
+      .map((line) => JSON.stringify(line))
+      .join('\n')
+  );
+  return { home, dir, log };
+}
+
+describe('EGLv2 installations on Windows', () => {
+  it('reads the log under LOCALAPPDATA', () => {
+    const { log } = setUpWindows(() => []);
+
+    expect(getEglInstallationsPath()).toBe(log);
+  });
+
+  it('detects a finished install and launches it by namespace, item and artifact', () => {
+    const { dir } = setUpWindows((gameDir) => [
+      snakebirdRecord(gameDir, { complete: false, pendingVersion: 'Win.1.5' }),
+      snakebirdRecord(gameDir, { complete: true, version: 'Win.1.5' }),
+    ]);
+
+    expect(getInstalledEpicGamePaths()).toEqual(['SnakebirdCompletezp91Z']);
+    expect(findEpicGame('SnakebirdCompletezp91Z')).toBe(dir);
+    expect(getEpicAppName(dir)).toBe(SNAKEBIRD_APP_ID);
+  });
+
+  it.each([
+    ['a trailing separator', (dir: string) => `${dir}${path.sep}`],
+    ['another case', (dir: string) => dir.toUpperCase()],
+  ])('matches the folder written with %s', (_, spell) => {
+    const { dir } = setUpWindows((gameDir) => [
+      snakebirdRecord(gameDir, { complete: true }),
+    ]);
+
+    expect(isEglInstall(spell(dir))).toBe(true);
+  });
+
+  it('knows the preview by its per-user launcher', () => {
+    const { home } = setUpWindows(() => []);
+    expect(isEglPreviewInstalled()).toBe(false);
+
+    const launcher = path.join(home, 'AppData/Local/Epic Games/Launcher');
+    fs.mkdirSync(launcher, { recursive: true });
+    fs.writeFileSync(path.join(launcher, 'EpicGamesLauncher.exe'), '');
+
+    expect(isEglPreviewInstalled()).toBe(true);
+  });
+
+  it('finds the folder the preview recorded before an EGL v1 item of the same name', () => {
+    const { home, dir } = setUpWindows((gameDir) => [
+      snakebirdRecord(gameDir, { complete: true }),
+    ]);
+    const v1Dir = path.join(home, 'Program Files/Epic Games/SnakebirdCompletezp91Z');
+    fs.mkdirSync(v1Dir, { recursive: true });
+    const items = path.join(
+      home,
+      'ProgramData/Epic/EpicOnlineServicesShared/InstallHelper/InstalledItems'
+    );
+    fs.mkdirSync(items, { recursive: true });
+    fs.writeFileSync(
+      path.join(items, `${SNAKEBIRD_ID}.egi`),
+      JSON.stringify({
+        v4: { installationId: SNAKEBIRD_ID, state: 'Installed', dir: v1Dir },
+      })
+    );
+
+    expect(findEpicGame('SnakebirdCompletezp91Z')).toBe(dir);
+  });
+
+  it("takes the preview's id over an EGL v1 manifest of the same folder", () => {
+    const { home, dir } = setUpWindows((gameDir) => [
+      snakebirdRecord(gameDir, { complete: true }),
+    ]);
+    const manifests = path.join(
+      home,
+      'ProgramData/Epic/EpicGamesLauncher/Data/Manifests'
+    );
+    fs.mkdirSync(manifests, { recursive: true });
+    fs.writeFileSync(
+      path.join(manifests, 'snakebird.item'),
+      JSON.stringify({
+        InstallLocation: dir,
+        DisplayName: 'Snakebird Complete',
+        AppName: '8337d1f975514d35ad0c1176e8a29f26',
+      })
+    );
+
+    expect(getEpicAppName(dir)).toBe(SNAKEBIRD_APP_ID);
+  });
+
+  it('leaves Proton to the Linux build', () => {
+    const { home, dir } = setUpWindows((gameDir) => [
+      snakebirdRecord(gameDir, { complete: true }),
+    ]);
+    const runtime = path.join(home, 'AppData/Local/com.epicgames.eglv2/compat/runtime');
+    fs.mkdirSync(path.join(runtime, 'GE-Proton10-34'), { recursive: true });
+    fs.writeFileSync(path.join(runtime, 'GE-Proton10-34', 'proton'), '');
+    fs.writeFileSync(
+      path.join(runtime, 'pin-cache.json'),
+      JSON.stringify({ version: 'GE-Proton10-34' })
+    );
+
+    expect(getEglLaunchTarget(dir)).toBeNull();
   });
 });

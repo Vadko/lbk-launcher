@@ -18,7 +18,7 @@ vi.mock('./egl-game-settings', () => ({ readEglLaunchArgs: mocks.readEglLaunchAr
 vi.mock('../steam-process/list-linux', () => ({
   listLinuxProcesses: mocks.listLinuxProcesses,
 }));
-vi.mock('../game-detector/egl-linux', () => ({
+vi.mock('../game-detector/egl-v2', () => ({
   getEglDeepLink: mocks.getEglDeepLink,
   getEglLaunchTarget: mocks.getEglLaunchTarget,
 }));

@@ -4,15 +4,17 @@ import type { Game } from '@/shared/types';
 import { applyEglIntegration } from './egl-integration';
 
 const mocks = vi.hoisted(() => ({
-  getEglInstallDirs: vi.fn(),
+  eglInstallDirs: vi.fn(),
+  isEglPreviewInstalled: vi.fn(),
   addEglLaunchArgs: vi.fn(),
   getEpicManifestAppId: vi.fn(),
   setEglWindowsLaunchArgs: vi.fn(),
   isWindows: vi.fn(),
 }));
 
-vi.mock('@/main/game-detector/egl-linux', () => ({
-  getEglInstallDirs: mocks.getEglInstallDirs,
+vi.mock('@/main/game-detector/egl-v2', () => ({
+  isEglInstall: (dir: string) => mocks.eglInstallDirs().includes(dir),
+  isEglPreviewInstalled: mocks.isEglPreviewInstalled,
 }));
 vi.mock('@/main/utils/egl-game-settings', () => ({
   addEglLaunchArgs: mocks.addEglLaunchArgs,
@@ -39,7 +41,7 @@ function game(linuxOptions: string | null, windowsOptions: string | null = null)
 }
 
 beforeEach(() => {
-  mocks.getEglInstallDirs.mockReturnValue([DIR]);
+  mocks.eglInstallDirs.mockReturnValue([DIR]);
   mocks.addEglLaunchArgs.mockReturnValue(true);
   mocks.isWindows.mockReturnValue(false);
 });
@@ -89,7 +91,7 @@ describe('applyEglIntegration on Linux', () => {
       launchOptionsError: t('launchOptions.eglNeedsShell'),
     });
 
-    mocks.getEglInstallDirs.mockReturnValue(['/games/My Game']);
+    mocks.eglInstallDirs.mockReturnValue(['/games/My Game']);
     expect(
       await applyEglIntegration(game('%command% -mods {GAME_DIR}/Mods'), {
         platform: 'epic',
@@ -98,7 +100,7 @@ describe('applyEglIntegration on Linux', () => {
     ).toEqual({
       launchOptionsError: t('launchOptions.gameDirUnresolved'),
     });
-    mocks.getEglInstallDirs.mockReturnValue([DIR]);
+    mocks.eglInstallDirs.mockReturnValue([DIR]);
 
     const failed = {
       launchOptionsError: t('launchOptions.eglWriteFailed'),
@@ -165,6 +167,45 @@ describe('applyEglIntegration on Windows', () => {
       }
     );
     expect(mocks.setEglWindowsLaunchArgs).toHaveBeenCalledWith(APP_ID, '-a');
+  });
+
+  it.each([
+    ['the installed preview, over a v1 manifest', true, APP_ID],
+    ['a log with no v1 manifest beside it', false, null],
+  ])('writes the args into the EGL preview log for %s', async (_, preview, v1AppId) => {
+    mocks.eglInstallDirs.mockReturnValue([WIN_DIR]);
+    mocks.isEglPreviewInstalled.mockReturnValue(preview);
+    mocks.getEpicManifestAppId.mockReturnValue(v1AppId);
+
+    expect(
+      await applyEglIntegration(game('-linux', '-load-mods "Two Words"'), WIN_EPIC)
+    ).toEqual({});
+    expect(mocks.addEglLaunchArgs).toHaveBeenCalledWith(
+      WIN_DIR,
+      '-load-mods "Two Words"'
+    );
+    expect(mocks.setEglWindowsLaunchArgs).not.toHaveBeenCalled();
+  });
+
+  it('leaves the log of an uninstalled preview to EGL v1', async () => {
+    mocks.eglInstallDirs.mockReturnValue([WIN_DIR]);
+    mocks.isEglPreviewInstalled.mockReturnValue(false);
+
+    expect(await applyEglIntegration(game(null, '-a'), WIN_EPIC)).toEqual({});
+    expect(mocks.setEglWindowsLaunchArgs).toHaveBeenCalledWith(APP_ID, '-a');
+    expect(mocks.addEglLaunchArgs).not.toHaveBeenCalled();
+  });
+
+  it('warns about env assignments, which the EGL preview does not pass on either', async () => {
+    mocks.eglInstallDirs.mockReturnValue([WIN_DIR]);
+    mocks.isEglPreviewInstalled.mockReturnValue(true);
+
+    expect(await applyEglIntegration(game(null, 'FOO=1 %command% -a'), WIN_EPIC)).toEqual(
+      {
+        eglLaunchOptionsNotes: [t('launchOptions.eglEnvUnsupported')],
+      }
+    );
+    expect(mocks.addEglLaunchArgs).toHaveBeenCalledWith(WIN_DIR, '-a');
   });
 
   it('skips games without Windows options', async () => {

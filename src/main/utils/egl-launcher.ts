@@ -3,11 +3,12 @@ import { once } from 'node:events';
 import { constants, promises as fsp } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { D } from '@mobily/ts-belt';
 import {
   type EglLaunchTarget,
   getEglDeepLink,
   getEglLaunchTarget,
-} from '../game-detector/egl-linux';
+} from '../game-detector/egl-v2';
 import { listLinuxProcesses } from '../steam-process/list-linux';
 import { readEglLaunchArgs } from './egl-game-settings';
 import { spawnOnHost } from './host-exec';
@@ -106,7 +107,7 @@ export async function launchEglGame(
   const catalogEnv = catalogOptions
     ? (parseCatalogLaunchOptions(catalogOptions, gameDir)?.env ?? {})
     : {};
-  const needsEnv = Object.keys(catalogEnv).length > 0;
+  const needsEnv = D.isNotEmpty(catalogEnv);
   const linked = needsEnv ? undefined : await launchThroughEgl(gameDir);
   if (linked !== undefined) {
     return linked;
