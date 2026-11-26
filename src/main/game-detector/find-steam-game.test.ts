@@ -28,7 +28,6 @@ vi.mock('../steam-library-api', () => ({
   fetchSteamLibraryFromApi: vi.fn(),
   invalidateSteamLibraryCache: vi.fn(),
   readSteamLibraryCache: vi.fn(),
-  steam3ToSteam64: vi.fn(),
   writeSteamLibraryCache: vi.fn(),
 }));
 

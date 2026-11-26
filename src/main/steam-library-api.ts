@@ -8,6 +8,7 @@ import * as path from 'path';
 import { functionsErrorStatus } from './db/functions-error';
 import { getSupabaseClient } from './db/supabase-client';
 import { getMachineId } from './tracking';
+import { isSteamId64 } from './utils/steam-id';
 
 interface SteamLibraryCache {
   steamId: string;
@@ -91,23 +92,19 @@ export function invalidateSteamLibraryCache(): void {
 }
 
 /**
- * Convert Steam3 ID to Steam64 ID
- * Steam3 ID: 126948360 (folder name in userdata)
- * Steam64 ID: 76561198087214088
- */
-export function steam3ToSteam64(steam3Id: string | number): string {
-  const steam3 = typeof steam3Id === 'string' ? BigInt(steam3Id) : BigInt(steam3Id);
-  const steam64 = steam3 + BigInt('76561197960265728');
-  return steam64.toString();
-}
-
-/**
  * Fetch Steam library from Edge Function
  * Returns null if request fails (rate limit, network error, etc.)
  */
 export async function fetchSteamLibraryFromApi(
   steamId: string
 ): Promise<{ appIds: number[]; remaining: number } | null> {
+  if (!isSteamId64(steamId)) {
+    console.warn(
+      `[SteamLibraryAPI] Not a Steam account id, skipping request: ${steamId}`
+    );
+    return null;
+  }
+
   try {
     const machineId = getMachineId();
     if (!machineId) {
